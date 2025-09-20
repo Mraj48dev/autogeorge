@@ -1,0 +1,88 @@
+{
+  "name": "AutoGeorge Development Environment",
+  "dockerComposeFile": "../docker-compose.dev.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "nodeGypDependencies": true,
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-json",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-playwright.playwright",
+        "vitest.explorer",
+        "Prisma.prisma",
+        "ms-vscode.vscode-todo-highlight",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.vscode-thunder-client"
+      ],
+      "settings": {
+        "typescript.preferences.moduleResolution": "node",
+        "typescript.updateImportsOnFileMove.enabled": "always",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "files.exclude": {
+          "**/.git": true,
+          "**/.DS_Store": true,
+          "**/node_modules": true,
+          "**/.next": true,
+          "**/dist": true
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/.next": true,
+          "**/dist": true,
+          "**/coverage": true
+        },
+        "emmet.includeLanguages": {
+          "typescript": "html",
+          "typescriptreact": "html"
+        },
+        "tailwindCSS.includeLanguages": {
+          "typescript": "html",
+          "typescriptreact": "html"
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [3000, 5432, 6379],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js App",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL Database"
+    },
+    "6379": {
+      "label": "Redis Cache"
+    }
+  },
+
+  "postCreateCommand": "npm install && npm run db:generate && npm run db:push",
+  "postStartCommand": "npm run dev",
+
+  "remoteUser": "node",
+  "containerUser": "node",
+
+  "mounts": [
+    "source=${localWorkspaceFolder}/.env.local,target=/workspace/.env.local,type=bind,consistency=cached"
+  ]
+}

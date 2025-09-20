@@ -1,0 +1,49 @@
+# ==========================================
+# TEMPLATE VARIABILI D'AMBIENTE - VERCEL
+# ==========================================
+# Questo è un template SICURO da committare
+# I valori reali vanno configurati direttamente su Vercel
+# ==========================================
+
+# ==========================================
+# VARIABILI OBBLIGATORIE
+# ==========================================
+
+DATABASE_URL=your-neon-database-url-here
+PERPLEXITY_API_KEY=pplx-your-perplexity-api-key-here
+NEXTAUTH_SECRET=your-32-char-nextauth-secret-here
+JWT_SECRET=your-32-char-jwt-secret-here
+ENCRYPTION_KEY=your-32-char-encryption-key-here
+
+# ==========================================
+# CONFIGURAZIONE BASE
+# ==========================================
+
+NODE_ENV=production
+LOG_LEVEL=warn
+API_RATE_LIMIT_MAX=200
+ENABLE_METRICS=true
+
+# ==========================================
+# VARIABILI OPZIONALI
+# ==========================================
+
+# OpenAI (opzionale)
+OPENAI_API_KEY=sk-your-openai-key-if-you-have-one
+
+# OAuth Social (opzionale)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+
+# Monitoraggio (opzionale)
+SENTRY_DSN=your-sentry-dsn
+
+# ==========================================
+# ISTRUZIONI
+# ==========================================
+# 1. Vai su Vercel Dashboard → Settings → Environment Variables
+# 2. Aggiungi OGNI variabile manualmente (una alla volta)
+# 3. Seleziona "Production" per ogni variabile
+# 4. NON committare mai i valori reali nel codice!

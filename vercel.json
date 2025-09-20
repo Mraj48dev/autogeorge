@@ -1,0 +1,42 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm ci",
+  "devCommand": "npm run dev",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "PERPLEXITY_API_KEY": "@perplexity_api_key",
+    "NEXTAUTH_SECRET": "@nextauth_secret",
+    "JWT_SECRET": "@jwt_secret",
+    "ENCRYPTION_KEY": "@encryption_key"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
+  "regions": ["iad1"],
+  "rewrites": [
+    {
+      "source": "/api/admin/(.*)",
+      "destination": "/api/admin/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
+}

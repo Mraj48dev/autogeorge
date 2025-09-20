@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Generate Article Input",
+  "description": "Schema for validating article generation requests",
+  "type": "object",
+  "required": ["prompt", "model"],
+  "properties": {
+    "prompt": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 5000,
+      "description": "The prompt describing what content to generate",
+      "examples": [
+        "Write an article about renewable energy benefits",
+        "Create a technical guide on microservices architecture"
+      ]
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The AI model to use for generation",
+      "enum": [
+        "sonar",
+        "sonar pro",
+        "sonar reasoning",
+        "sonar reasoning pro",
+        "sonar deep research",
+        "gpt-4",
+        "gpt-3.5-turbo"
+      ],
+      "default": "sonar"
+    },
+    "sourceId": {
+      "type": "string",
+      "description": "Optional source ID that triggered this generation",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "sourceContent": {
+      "type": "string",
+      "maxLength": 50000,
+      "description": "Optional source content to base the article on"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "default": "en",
+      "description": "Target language for the content (ISO 639-1 format)",
+      "examples": ["en", "it", "es", "fr", "de"]
+    },
+    "tone": {
+      "type": "string",
+      "enum": [
+        "formal",
+        "casual",
+        "professional",
+        "friendly",
+        "authoritative",
+        "conversational",
+        "academic",
+        "humorous"
+      ],
+      "description": "Desired tone of the article"
+    },
+    "style": {
+      "type": "string",
+      "enum": [
+        "blog",
+        "news",
+        "academic",
+        "technical",
+        "marketing",
+        "tutorial",
+        "opinion",
+        "review"
+      ],
+      "description": "Writing style for the article"
+    },
+    "targetAudience": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Description of the target audience",
+      "examples": [
+        "software developers",
+        "business executives",
+        "general public",
+        "students"
+      ]
+    },
+    "targetWordCount": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 10000,
+      "description": "Desired length in words (approximate)"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 50
+      },
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "Keywords to include in the content naturally"
+    },
+    "temperature": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 2,
+      "default": 0.7,
+      "description": "Temperature for randomness in generation (0.0-2.0)"
+    },
+    "maxTokens": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 8000,
+      "description": "Maximum tokens to generate"
+    },
+    "topP": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.9,
+      "description": "Top-p sampling parameter"
+    },
+    "frequencyPenalty": {
+      "type": "number",
+      "minimum": -2,
+      "maximum": 2,
+      "default": 0,
+      "description": "Frequency penalty (-2.0 to 2.0)"
+    },
+    "presencePenalty": {
+      "type": "number",
+      "minimum": -2,
+      "maximum": 2,
+      "default": 0,
+      "description": "Presence penalty (-2.0 to 2.0)"
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "prompt": "Write a comprehensive article about the benefits and challenges of renewable energy adoption in developing countries",
+      "model": "llama-3.1-sonar-large-128k-online",
+      "targetWordCount": 1200,
+      "tone": "professional",
+      "style": "blog",
+      "targetAudience": "policy makers and energy sector professionals",
+      "keywords": ["renewable energy", "developing countries", "sustainability", "economic impact"],
+      "language": "en",
+      "temperature": 0.7
+    },
+    {
+      "prompt": "Create a technical tutorial on implementing Clean Architecture in TypeScript applications",
+      "model": "llama-3.1-sonar-large-128k-online",
+      "targetWordCount": 2000,
+      "tone": "technical",
+      "style": "tutorial",
+      "targetAudience": "software developers",
+      "keywords": ["Clean Architecture", "TypeScript", "software design", "dependency injection"],
+      "language": "en",
+      "temperature": 0.5
+    }
+  ]
+}

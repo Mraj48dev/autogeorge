@@ -14,6 +14,8 @@ const createPrismaClient = () => {
         url: process.env.DATABASE_URL,
       },
     },
+    // Optimize for serverless environments like Vercel
+    engineType: 'binary',
   });
 };
 

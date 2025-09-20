@@ -9,13 +9,6 @@
       "maxDuration": 60
     }
   },
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "PERPLEXITY_API_KEY": "@perplexity_api_key",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "JWT_SECRET": "@jwt_secret",
-    "ENCRYPTION_KEY": "@encryption_key"
-  },
   "build": {
     "env": {
       "NODE_ENV": "production"

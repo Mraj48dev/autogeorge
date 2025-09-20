@@ -9,30 +9,30 @@ import { FetchFromSource, FetchFromSourceRequest, FetchFromSourceResponse } from
  */
 export class SourcesAdminFacade {
   constructor(
-    private readonly createSource: CreateSource,
-    private readonly getSources: GetSources,
-    private readonly fetchFromSource: FetchFromSource
+    private readonly createSourceUseCase: CreateSource,
+    private readonly getSourcesUseCase: GetSources,
+    private readonly fetchFromSourceUseCase: FetchFromSource
   ) {}
 
   /**
    * Creates a new source
    */
   async createSource(request: CreateSourceRequest): Promise<Result<CreateSourceResponse, Error>> {
-    return await this.createSource.execute(request);
+    return await this.createSourceUseCase.execute(request);
   }
 
   /**
    * Gets sources with pagination and filtering
    */
   async getSources(request: GetSourcesRequest = {}): Promise<Result<GetSourcesResponse, Error>> {
-    return await this.getSources.execute(request);
+    return await this.getSourcesUseCase.execute(request);
   }
 
   /**
    * Fetches content from a specific source
    */
   async fetchFromSource(request: FetchFromSourceRequest): Promise<Result<FetchFromSourceResponse, Error>> {
-    return await this.fetchFromSource.execute(request);
+    return await this.fetchFromSourceUseCase.execute(request);
   }
 
   /**
@@ -47,7 +47,7 @@ export class SourcesAdminFacade {
 
     // This would create and test the source, then we could optionally not save it
     // For now, we'll use the create with test enabled
-    return await this.createSource.execute(testRequest);
+    return await this.createSourceUseCase.execute(testRequest);
   }
 
   /**
@@ -56,7 +56,7 @@ export class SourcesAdminFacade {
   async getSourcesNeedingAttention(): Promise<Result<GetSourcesResponse, Error>> {
     // This would use a specific use case for getting sources needing attention
     // For now, using the general get sources
-    return await this.getSources.execute({
+    return await this.getSourcesUseCase.execute({
       limit: 50,
       sortBy: 'lastFetchAt',
       sortOrder: 'asc',
@@ -67,7 +67,7 @@ export class SourcesAdminFacade {
    * Gets sources by type
    */
   async getSourcesByType(type: string): Promise<Result<GetSourcesResponse, Error>> {
-    return await this.getSources.execute({
+    return await this.getSourcesUseCase.execute({
       type: type as any,
       limit: 100,
     });

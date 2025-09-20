@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
+import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
 
 /**
  * GET /api/admin/sources
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || undefined;
     const status = searchParams.get('status') || undefined;
 
-    const container = getSourcesContainer();
+    const container = createSourcesContainer();
     const result = await container.sourcesAdminFacade.getSources({
       page,
       limit,
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const container = getSourcesContainer();
+    const container = createSourcesContainer();
     const result = await container.sourcesAdminFacade.createSource({
       name: body.name,
       type: body.type,

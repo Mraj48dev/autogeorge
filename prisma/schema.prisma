@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -29,8 +29,8 @@ model Source {
   type           String           // "rss", "telegram", "calendar"
   status         String           @default("active") // "active", "paused", "error"
   url            String?          // RSS URL or Telegram channel
-  configuration  Json?            // Type-specific config (polling interval, filters, etc.)
-  metadata       Json?            // Last fetch info, stats, etc.
+  configuration  String?          // Type-specific config (polling interval, filters, etc.) - JSON as string
+  metadata       String?          // Last fetch info, stats, etc. - JSON as string
   lastFetchAt    DateTime?
   lastErrorAt    DateTime?
   lastError      String?
@@ -67,12 +67,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

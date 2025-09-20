@@ -16,10 +16,32 @@ model Article {
   content   String
   status    String   @default("generated")
   sourceId  String?
+  source    Source?  @relation(fields: [sourceId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("articles")
+}
+
+model Source {
+  id             String           @id @default(cuid())
+  name           String
+  type           String           // "rss", "telegram", "calendar"
+  status         String           @default("active") // "active", "paused", "error"
+  url            String?          // RSS URL or Telegram channel
+  configuration  Json?            // Type-specific config (polling interval, filters, etc.)
+  metadata       Json?            // Last fetch info, stats, etc.
+  lastFetchAt    DateTime?
+  lastErrorAt    DateTime?
+  lastError      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  articles       Article[]
+
+  @@unique([type, url]) // Prevent duplicate sources
+  @@map("sources")
 }
 
 model User {

@@ -70,7 +70,9 @@ export class SourceType extends ValueObject<string> {
   getValidUrlPattern(): RegExp | null {
     switch (this._value) {
       case 'rss':
-        return /^https?:\/\/.+\.(xml|rss|feed)(\?.*)?$/i;
+        // More flexible RSS pattern - accepts any HTTPS/HTTP URL
+        // RSS feeds can have various formats, not just .xml/.rss/.feed extensions
+        return /^https?:\/\/.+/i;
       case 'telegram':
         return /^https?:\/\/(t\.me|telegram\.me)\/.+$/i;
       default:

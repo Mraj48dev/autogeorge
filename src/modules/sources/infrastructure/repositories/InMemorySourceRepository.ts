@@ -96,7 +96,7 @@ export class InMemorySourceRepository implements SourceRepository {
 
       return Result.success({
         sources: paginatedSources,
-        totalCount: sources.length,
+        total: sources.length,
         page,
         limit,
         totalPages: Math.ceil(sources.length / limit)
@@ -117,7 +117,7 @@ export class InMemorySourceRepository implements SourceRepository {
 
       return Result.success({
         sources: summaries,
-        totalCount: result.value.totalCount,
+        total: result.value.total,
         page: result.value.page,
         limit: result.value.limit,
         totalPages: result.value.totalPages

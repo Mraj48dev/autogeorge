@@ -18,6 +18,7 @@ import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { SourceFetchService } from '../../domain/ports/SourceFetchService';
 import { PrismaSourceRepository } from '../repositories/PrismaSourceRepository';
 import { InMemorySourceRepository } from '../repositories/InMemorySourceRepository';
+import { FallbackSourceRepository } from '../repositories/FallbackSourceRepository';
 import { UniversalFetchService } from '../services/UniversalFetchService';
 import { CreateSource } from '../../application/use-cases/CreateSource';
 import { GetSources } from '../../application/use-cases/GetSources';
@@ -114,12 +115,13 @@ export class SourcesContainer {
   get sourceRepository(): SourceRepository {
     if (!this._sourceRepository) {
       try {
-        // Try to use Prisma repository
-        this._sourceRepository = new PrismaSourceRepository(this.prisma);
-        this.logger.info('Using Prisma database repository');
+        // Always use the fallback repository which automatically handles Prisma/in-memory switching
+        const prismaRepo = new PrismaSourceRepository(this.prisma);
+        this._sourceRepository = new FallbackSourceRepository(prismaRepo);
+        this.logger.info('Using fallback repository (Prisma with in-memory fallback)');
       } catch (error) {
-        // Fallback to in-memory repository
-        this.logger.warn('Database unavailable, using in-memory repository', { error });
+        // Extreme fallback - pure in-memory if even the fallback creation fails
+        this.logger.warn('Failed to create fallback repository, using pure in-memory', { error });
         this._sourceRepository = new InMemorySourceRepository();
       }
     }

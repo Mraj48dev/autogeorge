@@ -8,6 +8,8 @@ import {
 } from '../../domain/ports/SourceRepository';
 import { Source, SourceSummary } from '../../domain/entities/Source';
 import { SourceId } from '../../domain/value-objects/SourceId';
+import { SourceType } from '../../domain/value-objects/SourceType';
+import { SourceStatus } from '../../domain/value-objects/SourceStatus';
 
 /**
  * In-Memory implementation of SourceRepository
@@ -164,23 +166,131 @@ export class InMemorySourceRepository implements SourceRepository {
     try {
       const sources = Array.from(this.sources.values());
 
-      const totalSources = sources.length;
-      const activeSources = sources.filter(s => s.status.getValue() === 'active').length;
-      const errorSources = sources.filter(s => s.status.getValue() === 'error').length;
-      const sourcesByType = sources.reduce((acc, source) => {
+      const total = sources.length;
+      const byStatus: Record<string, number> = {};
+      const byType: Record<string, number> = {};
+
+      sources.forEach(source => {
+        const status = source.status.getValue();
         const type = source.type.getValue();
-        acc[type] = (acc[type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+
+        byStatus[status] = (byStatus[status] || 0) + 1;
+        byType[type] = (byType[type] || 0) + 1;
+      });
 
       return Result.success({
-        totalSources,
-        activeSources,
-        errorSources,
-        sourcesByType
+        total,
+        byType,
+        byStatus,
+        totalFetches: 0,
+        totalItems: 0,
+        totalErrors: byStatus['error'] || 0,
+        lastFetchAt: undefined
       });
     } catch (error) {
       return Result.failure(new Error(`Failed to get statistics: ${error}`));
+    }
+  }
+
+  // Additional methods for compatibility with FallbackSourceRepository
+  async findByType(type: SourceType): Promise<Result<Source[], Error>> {
+    try {
+      const sources = Array.from(this.sources.values()).filter(
+        source => source.type.getValue() === type.getValue()
+      );
+      return Result.success(sources);
+    } catch (error) {
+      return Result.failure(new Error(`Failed to find sources by type: ${error}`));
+    }
+  }
+
+  async findByStatus(status: SourceStatus): Promise<Result<Source[], Error>> {
+    try {
+      const sources = Array.from(this.sources.values()).filter(
+        source => source.status.getValue() === status.getValue()
+      );
+      return Result.success(sources);
+    } catch (error) {
+      return Result.failure(new Error(`Failed to find sources by status: ${error}`));
+    }
+  }
+
+  async findActiveForFetching(): Promise<Result<Source[], Error>> {
+    try {
+      const sources = Array.from(this.sources.values()).filter(
+        source => source.status.getValue() === 'active'
+      );
+      // Sort by lastFetchAt (oldest first, nulls last)
+      sources.sort((a, b) => {
+        if (!a.lastFetchAt && !b.lastFetchAt) return 0;
+        if (!a.lastFetchAt) return 1;
+        if (!b.lastFetchAt) return -1;
+        return a.lastFetchAt.getTime() - b.lastFetchAt.getTime();
+      });
+      return Result.success(sources);
+    } catch (error) {
+      return Result.failure(new Error(`Failed to find active sources: ${error}`));
+    }
+  }
+
+  async findNeedingAttention(): Promise<Result<Source[], Error>> {
+    try {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const sources = Array.from(this.sources.values()).filter(source => {
+        const status = source.status.getValue();
+        if (status === 'error') return true;
+        if (status === 'active') {
+          return !source.lastFetchAt || source.lastFetchAt < oneDayAgo;
+        }
+        return false;
+      });
+
+      // Sort by status (errors first) then by lastFetchAt
+      sources.sort((a, b) => {
+        const statusA = a.status.getValue();
+        const statusB = b.status.getValue();
+        if (statusA === 'error' && statusB !== 'error') return -1;
+        if (statusA !== 'error' && statusB === 'error') return 1;
+
+        if (!a.lastFetchAt && !b.lastFetchAt) return 0;
+        if (!a.lastFetchAt) return -1;
+        if (!b.lastFetchAt) return 1;
+        return a.lastFetchAt.getTime() - b.lastFetchAt.getTime();
+      });
+
+      return Result.success(sources);
+    } catch (error) {
+      return Result.failure(new Error(`Failed to find sources needing attention: ${error}`));
+    }
+  }
+
+  async search(query: string, options: FindSourcesOptions = {}): Promise<Result<Source[], Error>> {
+    try {
+      let sources = Array.from(this.sources.values());
+
+      // Apply filters
+      if (options.type) {
+        sources = sources.filter(s => s.type.getValue() === options.type);
+      }
+      if (options.status) {
+        sources = sources.filter(s => s.status.getValue() === options.status);
+      }
+
+      // Apply search
+      const queryLower = query.toLowerCase();
+      sources = sources.filter(source => {
+        const name = source.name.getValue().toLowerCase();
+        const url = source.url?.getValue()?.toLowerCase() || '';
+        return name.includes(queryLower) || url.includes(queryLower);
+      });
+
+      // Apply limit
+      const limit = options.limit || 50;
+      sources = sources.slice(0, limit);
+
+      return Result.success(sources);
+    } catch (error) {
+      return Result.failure(new Error(`Failed to search sources: ${error}`));
     }
   }
 }

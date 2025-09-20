@@ -96,12 +96,12 @@ export class GenerateArticle extends CommandUseCase<
       // Step 3: Create domain entities from generated content
       const titleResult = this.createTitle(generatedContent.title);
       if (titleResult.isFailure()) {
-        return titleResult;
+        return Result.failure(titleResult.error);
       }
 
       const contentResult = this.createContent(generatedContent.content);
       if (contentResult.isFailure()) {
-        return contentResult;
+        return Result.failure(contentResult.error);
       }
 
       // Step 4: Create article entity

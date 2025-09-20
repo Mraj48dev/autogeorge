@@ -11,6 +11,7 @@
  * - Easy testing with mock implementations
  */
 import { PrismaClient } from '@prisma/client';
+import { prisma as globalPrisma } from '../../../../shared/database/prisma';
 
 // Sources Module Dependencies
 import { SourceRepository } from '../../domain/ports/SourceRepository';
@@ -77,16 +78,8 @@ export class SourcesContainer {
 
   get prisma(): PrismaClient {
     if (!this._prisma) {
-      this._prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: this._config.database.url,
-          },
-        },
-        log: this._config.database.enableLogging
-          ? ['query', 'info', 'warn', 'error']
-          : ['error'],
-      });
+      // Use global singleton Prisma instance to avoid connection issues
+      this._prisma = globalPrisma;
 
       // Setup connection lifecycle
       this._prisma.$connect().catch((error) => {

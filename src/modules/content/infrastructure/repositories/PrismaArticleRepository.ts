@@ -1,5 +1,5 @@
 import { PrismaClient, Article as PrismaArticle, Prisma } from '@prisma/client';
-import { Result } from '../../../../shared/domain/types/Result';
+import { Result } from '../../shared/domain/types/Result';
 import { ArticleRepository, ArticleSearchCriteria, ArticleSearchResult, PaginationOptions, RepositoryError } from '../../domain/ports/ArticleRepository';
 import { Article, GenerationParameters } from '../../domain/entities/Article';
 import { ArticleId } from '../../domain/value-objects/ArticleId';

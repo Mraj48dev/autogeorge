@@ -1,5 +1,5 @@
-import { CommandUseCase, ExecutionContext } from '../../../../shared/application/base/UseCase';
-import { Result } from '../../../../shared/domain/types/Result';
+import { CommandUseCase, ExecutionContext } from '../../shared/application/base/UseCase';
+import { Result } from '../../shared/domain/types/Result';
 import { ArticleRepository } from '../../domain/ports/ArticleRepository';
 import { AiService, ArticleGenerationRequest } from '../../domain/ports/AiService';
 import { Article, GenerationParameters } from '../../domain/entities/Article';

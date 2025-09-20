@@ -16,7 +16,7 @@ import {
   GenerationMetadata,
   ContentFormat
 } from '../../domain/ports/AiService';
-import { Result } from '../../../../shared/domain/types/Result';
+import { Result } from '../../shared/domain/types/Result';
 
 /**
  * Perplexity AI service adapter.

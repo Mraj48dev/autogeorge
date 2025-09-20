@@ -1,4 +1,4 @@
-import { StringValueObject } from '../../../../shared/domain/base/ValueObject';
+import { StringValueObject } from '../../shared/domain/base/ValueObject';
 
 /**
  * Value Object representing article content.

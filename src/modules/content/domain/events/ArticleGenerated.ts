@@ -1,4 +1,4 @@
-import { DomainEvent } from '../../../../shared/domain/base/DomainEvent';
+import { DomainEvent } from '../../shared/domain/base/DomainEvent';
 import { GenerationParameters } from '../entities/Article';
 import { ContentStats } from '../value-objects/Content';
 

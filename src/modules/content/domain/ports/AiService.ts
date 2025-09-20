@@ -1,4 +1,4 @@
-import { Result } from '../../../../shared/domain/types/Result';
+import { Result } from '../../shared/domain/types/Result';
 
 /**
  * Port for AI content generation services.

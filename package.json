@@ -1,6 +1,6 @@
 {
   "name": "autogeorge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Automated article generation and publishing platform with Clean Architecture",
   "private": true,
   "scripts": {

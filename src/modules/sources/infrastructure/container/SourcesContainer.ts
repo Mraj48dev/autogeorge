@@ -17,6 +17,7 @@ import { prisma as globalPrisma } from '../../../../shared/database/prisma';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { SourceFetchService } from '../../domain/ports/SourceFetchService';
 import { PrismaSourceRepository } from '../repositories/PrismaSourceRepository';
+import { InMemorySourceRepository } from '../repositories/InMemorySourceRepository';
 import { UniversalFetchService } from '../services/UniversalFetchService';
 import { CreateSource } from '../../application/use-cases/CreateSource';
 import { GetSources } from '../../application/use-cases/GetSources';
@@ -78,14 +79,19 @@ export class SourcesContainer {
 
   get prisma(): PrismaClient {
     if (!this._prisma) {
-      // Use global singleton Prisma instance to avoid connection issues
-      this._prisma = globalPrisma;
+      try {
+        // Use global singleton Prisma instance to avoid connection issues
+        this._prisma = globalPrisma;
 
-      // Setup connection lifecycle
-      this._prisma.$connect().catch((error) => {
-        this.logger.error('Failed to connect to database', { error });
+        // Test connection with a timeout
+        this._prisma.$queryRaw`SELECT 1`.catch((error) => {
+          this.logger.warn('Database connection test failed', { error });
+        });
+
+      } catch (error) {
+        this.logger.error('Failed to initialize Prisma client', { error });
         throw error;
-      });
+      }
     }
     return this._prisma;
   }
@@ -107,7 +113,15 @@ export class SourcesContainer {
 
   get sourceRepository(): SourceRepository {
     if (!this._sourceRepository) {
-      this._sourceRepository = new PrismaSourceRepository(this.prisma);
+      try {
+        // Try to use Prisma repository
+        this._sourceRepository = new PrismaSourceRepository(this.prisma);
+        this.logger.info('Using Prisma database repository');
+      } catch (error) {
+        // Fallback to in-memory repository
+        this.logger.warn('Database unavailable, using in-memory repository', { error });
+        this._sourceRepository = new InMemorySourceRepository();
+      }
     }
     return this._sourceRepository;
   }

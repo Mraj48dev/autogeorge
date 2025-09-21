@@ -60,7 +60,7 @@ export default function SourceContenutiPage() {
       }
 
       // Fetch contenuti for this source
-      const contenutiResponse = await fetch(`/api/admin/sources/${sourceId}/articles`);
+      const contenutiResponse = await fetch(`/api/admin/sources/${sourceId}/contents`);
       const contenutiData = await contenutiResponse.json();
 
       if (contenutiResponse.ok) {

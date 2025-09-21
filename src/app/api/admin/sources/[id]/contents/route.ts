@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
 
 /**
- * GET /api/admin/sources/[id]/articles
- * Retrieves all articles from a specific source
+ * GET /api/admin/sources/[id]/contents
+ * Retrieves all feed items (contents) from a specific source
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const sourceId = params.id;
+    const resolvedParams = await params;
+    const sourceId = resolvedParams.id;
 
     if (!sourceId) {
       return NextResponse.json(
@@ -37,22 +38,22 @@ export async function GET(
       );
     }
 
-    // Fetch articles for this source
-    const [articles, totalCount] = await Promise.all([
-      prisma.article.findMany({
+    // Fetch feed items (contents) for this source
+    const [feedItems, totalCount] = await Promise.all([
+      prisma.feedItem.findMany({
         where: { sourceId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { publishedAt: 'desc' },
         skip: offset,
         take: limit,
       }),
-      prisma.article.count({
+      prisma.feedItem.count({
         where: { sourceId }
       })
     ]);
 
     return NextResponse.json({
       success: true,
-      articles,
+      contenuti: feedItems,
       pagination: {
         page,
         limit,
@@ -71,7 +72,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching articles for source:', error);
+    console.error('Error fetching contents for source:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

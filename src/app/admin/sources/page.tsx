@@ -342,7 +342,7 @@ export default function SourcesPage() {
                           Fetch
                         </button>
                         <button
-                          onClick={() => window.open(`/admin/sources/${source.id}/articles`, '_blank')}
+                          onClick={() => window.open(`/admin/sources/${source.id}/contents`, '_blank')}
                           className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
                         >
                           Contenuti

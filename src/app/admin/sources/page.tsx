@@ -200,6 +200,32 @@ export default function SourcesPage() {
     }
   };
 
+  const deleteSource = async (sourceId: string, sourceName: string) => {
+    if (!confirm(`Sei sicuro di voler eliminare la source "${sourceName}"? Questa azione non può essere annullata.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/sources/${sourceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        await fetchSources();
+        alert(`Source "${sourceName}" eliminata con successo!`);
+      } else {
+        const data = await response.json();
+        alert('Errore durante l\'eliminazione: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error deleting source:', error);
+      alert('Errore durante l\'eliminazione della source');
+    }
+  };
+
   return (
     <div>
       {/* Header */}
@@ -331,6 +357,12 @@ export default function SourcesPage() {
                         >
                           {source.status === 'active' ? 'Pausa' : 'Attiva'}
                         </button>
+                        <button
+                          onClick={() => deleteSource(source.id, source.name)}
+                          className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                        >
+                          Elimina
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -379,7 +411,7 @@ export default function SourcesPage() {
               {sources.filter(s => s.type === 'telegram').map((source) => (
                 <div key={source.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{source.name}</h4>
                       {source.url && (
                         <p className="text-sm text-gray-600 mt-1">{source.url}</p>
@@ -392,8 +424,16 @@ export default function SourcesPage() {
                         {source.status}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(source.createdAt).toLocaleDateString()}
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className="text-sm text-gray-500">
+                        {new Date(source.createdAt).toLocaleDateString()}
+                      </div>
+                      <button
+                        onClick={() => deleteSource(source.id, source.name)}
+                        className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                      >
+                        Elimina
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -441,7 +481,7 @@ export default function SourcesPage() {
               {sources.filter(s => s.type === 'calendar').map((source) => (
                 <div key={source.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{source.name}</h4>
                       <span className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
                         source.status === 'active'
@@ -451,8 +491,16 @@ export default function SourcesPage() {
                         {source.status}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(source.createdAt).toLocaleDateString()}
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className="text-sm text-gray-500">
+                        {new Date(source.createdAt).toLocaleDateString()}
+                      </div>
+                      <button
+                        onClick={() => deleteSource(source.id, source.name)}
+                        className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                      >
+                        Elimina
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -45,7 +45,17 @@ export default function MonitorPage() {
       const result = await response.json();
 
       if (result.success) {
-        setData(result);
+        // Ordina gli articoli recenti di ogni source dal più recente al più vecchio
+        const sortedResult = {
+          ...result,
+          sources: result.sources.map((source: any) => ({
+            ...source,
+            recentItems: source.recentItems.sort((a: any, b: any) => {
+              return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+            })
+          }))
+        };
+        setData(sortedResult);
         setError(null);
       } else {
         setError(result.error || 'Errore sconosciuto');

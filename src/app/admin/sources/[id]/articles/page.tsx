@@ -61,7 +61,11 @@ export default function SourceArticlesPage() {
       const articlesData = await articlesResponse.json();
 
       if (articlesResponse.ok) {
-        setArticles(articlesData.articles || []);
+        // Ordina gli articoli dal più recente al più vecchio
+        const sortedArticles = (articlesData.articles || []).sort((a: Article, b: Article) => {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        setArticles(sortedArticles);
       } else {
         console.error('Error fetching articles:', articlesData.error);
         setArticles([]);

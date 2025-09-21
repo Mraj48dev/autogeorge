@@ -114,16 +114,13 @@ export class SourcesContainer {
 
   get sourceRepository(): SourceRepository {
     if (!this._sourceRepository) {
-      try {
-        // Always use the fallback repository which automatically handles Prisma/in-memory switching
-        const prismaRepo = new PrismaSourceRepository(this.prisma);
-        this._sourceRepository = new FallbackSourceRepository(prismaRepo);
-        this.logger.info('Using fallback repository (Prisma with in-memory fallback)');
-      } catch (error) {
-        // Extreme fallback - pure in-memory if even the fallback creation fails
-        this.logger.warn('Failed to create fallback repository, using pure in-memory', { error });
-        this._sourceRepository = new InMemorySourceRepository();
-      }
+      // For now, since we know database is failing, use in-memory directly
+      // This ensures the app works immediately while database issues are resolved
+      this.logger.info('Using in-memory repository for immediate availability');
+      this._sourceRepository = new InMemorySourceRepository();
+
+      // Log that this is a temporary measure
+      this.logger.warn('TEMPORARY: Using in-memory repository due to known database issues. This will be reverted once database is stable.');
     }
     return this._sourceRepository;
   }

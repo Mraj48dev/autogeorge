@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
+import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
 
 /**
  * PUT /api/admin/sources/[id]
@@ -29,7 +29,7 @@ export async function PUT(
       );
     }
 
-    const container = getSourcesContainer();
+    const container = createSourcesContainer();
     const result = await container.sourcesAdminFacade.updateSource({
       sourceId,
       name: body.name,
@@ -79,7 +79,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const container = getSourcesContainer();
+    const container = createSourcesContainer();
 
     if (body.status) {
       const result = await container.sourcesAdminFacade.updateSourceStatus({
@@ -133,7 +133,7 @@ export async function DELETE(
       );
     }
 
-    const container = getSourcesContainer();
+    const container = createSourcesContainer();
     const result = await container.sourcesAdminFacade.deleteSource({
       sourceId,
     });

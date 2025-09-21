@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
+import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
 
 /**
  * POST /api/admin/sources/[id]/fetch
@@ -22,7 +22,7 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     const force = body.force || false;
 
-    const container = getSourcesContainer();
+    const container = createSourcesContainer();
     const result = await container.sourcesAdminFacade.fetchFromSource({
       sourceId,
       force,

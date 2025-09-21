@@ -48,19 +48,21 @@ export class UpdateSource implements UseCase<UpdateSourceRequest, UpdateSourceRe
 
       // Update source fields
       if (request.name) {
-        const sourceName = SourceName.create(request.name);
-        if (sourceName.isFailure()) {
-          return Result.failure(sourceName.error);
+        try {
+          const sourceName = SourceName.fromString(request.name);
+          existingSource.updateName(sourceName);
+        } catch (error) {
+          return Result.failure(error instanceof Error ? error : new Error('Invalid source name'));
         }
-        existingSource.updateName(sourceName.value);
       }
 
       if (request.url && existingSource.type.requiresUrl()) {
-        const sourceUrl = SourceUrl.create(request.url);
-        if (sourceUrl.isFailure()) {
-          return Result.failure(sourceUrl.error);
+        try {
+          const sourceUrl = SourceUrl.fromString(request.url);
+          existingSource.updateUrl(sourceUrl);
+        } catch (error) {
+          return Result.failure(error instanceof Error ? error : new Error('Invalid source URL'));
         }
-        existingSource.updateUrl(sourceUrl.value);
       }
 
       if (request.configuration) {

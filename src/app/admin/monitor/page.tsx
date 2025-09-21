@@ -34,9 +34,42 @@ export default function AdminMonitorPage() {
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const fetchData = async () => {
+  const triggerPolling = async () => {
+    try {
+      console.log('🔄 Triggering RSS polling...');
+      const response = await fetch('/api/cron/poll-feeds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ immediate: true })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Polling triggered successfully:', result);
+        return true;
+      } else {
+        console.warn('⚠️ Polling trigger failed:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error triggering polling:', error);
+      return false;
+    }
+  };
+
+  const fetchData = async (triggerPollingFirst = false) => {
     try {
       setLoading(true);
+
+      // Se richiesto, triggera prima il polling RSS
+      if (triggerPollingFirst) {
+        await triggerPolling();
+        // Aspetta un momento per permettere al polling di completare
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+
       const response = await fetch('/api/debug/rss-logs');
 
       if (!response.ok) {
@@ -62,10 +95,17 @@ export default function AdminMonitorPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    // Caricamento iniziale con polling
+    fetchData(true);
 
     if (autoRefresh) {
-      const interval = setInterval(fetchData, 30000);
+      // Auto-refresh ogni 30 secondi con polling RSS ogni 3 cicli (ogni 90 secondi)
+      let cycleCount = 0;
+      const interval = setInterval(() => {
+        cycleCount++;
+        const shouldTriggerPolling = cycleCount % 3 === 0; // Ogni 90 secondi
+        fetchData(shouldTriggerPolling);
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [autoRefresh]);
@@ -131,11 +171,18 @@ export default function AdminMonitorPage() {
             <p className="text-lg font-semibold text-blue-600">{lastUpdate}</p>
             <div className="flex items-center gap-2 mt-2">
               <button
-                onClick={fetchData}
+                onClick={() => fetchData(false)}
                 disabled={loading}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
               >
                 {loading ? '🔄 Aggiornando...' : '🔄 Aggiorna'}
+              </button>
+              <button
+                onClick={() => fetchData(true)}
+                disabled={loading}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+              >
+                {loading ? '📡 Polling...' : '📡 Polling RSS'}
               </button>
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
@@ -261,10 +308,14 @@ export default function AdminMonitorPage() {
 
           {/* Special Notice */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="font-semibold text-yellow-800 mb-2">🎯 Sistema di Monitoraggio</h3>
+            <h3 className="font-semibold text-yellow-800 mb-2">🎯 Sistema di Monitoraggio Intelligente</h3>
             <p className="text-yellow-700">
-              Il monitoraggio RSS è attivo e funziona ogni minuto tramite Vercel Cron Jobs.
-              Ogni nuovo articolo pubblicato sul feed verrà automaticamente rilevato e mostrato qui.
+              <strong>🚀 NUOVA SOLUZIONE</strong>: Dashboard con polling automatico ogni 90 secondi.
+              Clicca "📡 Polling RSS" per il controllo manuale immediato dei feed.
+            </p>
+            <p className="text-yellow-700 mt-2">
+              Il sistema funziona senza limitazioni di Vercel Hobby plan. Ogni nuovo articolo
+              verrà rilevato automaticamente e mostrato qui in tempo reale.
             </p>
             <p className="text-yellow-700 mt-2">
               <strong>Il tuo sito di test</strong>: limegreen-termite-635510.hostingersite.com viene

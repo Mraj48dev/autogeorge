@@ -13,7 +13,7 @@ import { PrismaClient } from '@prisma/client';
 export async function GET(request: NextRequest) {
   try {
     // Verifica che la richiesta provenga da Vercel Cron
-    const headersList = headers();
+    const headersList = await headers();
     const authHeader = headersList.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
@@ -58,6 +58,23 @@ export async function GET(request: NextRequest) {
 
       console.log(`📊 Found ${activeSources.length} active RSS sources to poll`);
 
+      if (activeSources.length === 0) {
+        console.log('⚠️ No active RSS sources found!');
+        return NextResponse.json({
+          success: true,
+          timestamp: new Date().toISOString(),
+          results: {
+            totalSources: 0,
+            successfulPolls: 0,
+            failedPolls: 0,
+            newItemsFound: 0,
+            duplicatesSkipped: 0,
+            errors: [],
+            duration: 0
+          }
+        });
+      }
+
       // Log dettagliato dei sources trovati
       activeSources.forEach((source, index) => {
         console.log(`  ${index + 1}. 📰 "${source.name}" (${source.url})`);
@@ -82,32 +99,93 @@ export async function GET(request: NextRequest) {
 
         const batchPromises = batch.map(async (sourceData) => {
           try {
-            // Converti i dati Prisma in entità domain
-            const source = createSourceEntity(sourceData);
+            console.log(`🔍 Polling feed: ${sourceData.name} (${sourceData.url})`);
 
-            const pollResult = await pollingService.pollSingleFeed(source);
+            // Usa direttamente RssFetchService invece di pollingService
+            const fetchResult = await rssFetchService.fetchFeed(sourceData.url, { maxItems: 10 });
 
-            if (pollResult.isSuccess()) {
-              const result = pollResult.value;
+            if (fetchResult.isSuccess()) {
+              const feedData = fetchResult.value;
+              console.log(`📥 Fetched ${feedData.items.length} items from ${sourceData.name}`);
+
+              let newItems = 0;
+              let duplicatesSkipped = 0;
+
+              // Salva gli items nel database
+              for (const item of feedData.items) {
+                try {
+                  // Controlla se esiste già
+                  const existing = await prisma.feedItem.findFirst({
+                    where: {
+                      OR: [
+                        { title: item.title, sourceId: sourceData.id },
+                        { guid: item.guid }
+                      ]
+                    }
+                  });
+
+                  if (existing) {
+                    console.log(`🔄 Skipped duplicate: ${item.title.substring(0, 50)}...`);
+                    duplicatesSkipped++;
+                  } else {
+                    await prisma.feedItem.create({
+                      data: {
+                        title: item.title,
+                        content: item.content || item.description || '',
+                        url: item.link,
+                        guid: item.guid || item.link,
+                        publishedAt: item.publishedAt,
+                        fetchedAt: new Date(),
+                        sourceId: sourceData.id,
+                        processed: false
+                      }
+                    });
+                    console.log(`💾 Saved new item: ${item.title.substring(0, 50)}...`);
+                    newItems++;
+                  }
+                } catch (dbError) {
+                  console.error(`❌ Database error for ${item.title}:`, dbError);
+                }
+              }
+
+              // Aggiorna source
+              await prisma.source.update({
+                where: { id: sourceData.id },
+                data: {
+                  lastFetchAt: new Date(),
+                  lastError: null,
+                  lastErrorAt: null
+                }
+              });
+
               results.successfulPolls++;
-              results.newItemsFound += result.newItems;
-              results.duplicatesSkipped += result.duplicatesSkipped;
+              results.newItemsFound += newItems;
+              results.duplicatesSkipped += duplicatesSkipped;
 
-              if (result.newItems > 0) {
-                console.log(`✅ 🎉 NEW ARTICLES FOUND! ${result.newItems} new items from ${result.sourceName}`);
-                console.log(`   📈 Total fetched: ${result.totalFetched}, Duplicates: ${result.duplicatesSkipped}`);
+              if (newItems > 0) {
+                console.log(`✅ 🎉 NEW ARTICLES FOUND! ${newItems} new items from ${sourceData.name}`);
 
                 // Se è il tuo sito, log extra speciale
                 if (sourceData.url?.includes('limegreen-termite-635510.hostingersite.com')) {
                   console.log(`   🌟 SPECIAL: New articles detected on YOUR TEST SITE!`);
                 }
               } else {
-                console.log(`   ℹ️  No new items from ${result.sourceName} (${result.duplicatesSkipped} duplicates)`);
+                console.log(`   ℹ️  No new items from ${sourceData.name} (${duplicatesSkipped} duplicates)`);
               }
             } else {
+              // Errore di fetch
+              console.warn(`❌ Failed to fetch ${sourceData.name}: ${fetchResult.error}`);
+
+              await prisma.source.update({
+                where: { id: sourceData.id },
+                data: {
+                  lastError: fetchResult.error,
+                  lastErrorAt: new Date()
+                }
+              });
+
               results.failedPolls++;
-              results.errors.push(`${sourceData.name}: ${pollResult.error}`);
-              console.warn(`❌ Failed to poll ${sourceData.name}: ${pollResult.error}`);
+              results.errors.push(`${sourceData.name}: ${fetchResult.error}`);
             }
           } catch (error) {
             results.failedPolls++;
@@ -176,40 +254,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Helper per convertire dati Prisma in entità domain Source
- */
-function createSourceEntity(sourceData: any) {
-  // Import necessari per le entità domain
-  const { Source } = require('@/modules/sources/domain/entities/Source');
-  const { SourceId } = require('@/modules/sources/domain/value-objects/SourceId');
-  const { SourceName } = require('@/modules/sources/domain/value-objects/SourceName');
-  const { SourceType } = require('@/modules/sources/domain/value-objects/SourceType');
-  const { SourceStatus } = require('@/modules/sources/domain/value-objects/SourceStatus');
-  const { SourceUrl } = require('@/modules/sources/domain/value-objects/SourceUrl');
-
-  // Costruisci l'entità Source usando lo stesso pattern del repository
-  const id = SourceId.fromString(sourceData.id);
-  const name = SourceName.fromString(sourceData.name);
-  const type = SourceType.fromString(sourceData.type);
-  const status = SourceStatus.fromString(sourceData.status);
-  const url = sourceData.url ? SourceUrl.fromString(sourceData.url) : undefined;
-
-  return new Source(
-    id,
-    name,
-    type,
-    status,
-    url,
-    sourceData.configuration,
-    sourceData.metadata,
-    sourceData.lastFetchAt,
-    sourceData.lastErrorAt,
-    sourceData.lastError,
-    sourceData.createdAt,
-    sourceData.updatedAt
-  );
-}
 
 /**
  * POST /api/cron/poll-feeds

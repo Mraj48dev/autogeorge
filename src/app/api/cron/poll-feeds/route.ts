@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
-import { FeedPollingService } from '@/modules/sources/infrastructure/services/FeedPollingService';
-import { RssFetchService } from '@/modules/sources/infrastructure/services/RssFetchService';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -40,10 +37,8 @@ export async function GET(request: NextRequest) {
 
     const startTime = Date.now();
 
-    // Inizializza i servizi
+    // Inizializza solo Prisma
     const prisma = new PrismaClient();
-    const rssFetchService = new RssFetchService();
-    const pollingService = new FeedPollingService(prisma, rssFetchService);
 
     try {
       // Ottieni tutti i feed RSS attivi dal database
@@ -106,8 +101,8 @@ export async function GET(request: NextRequest) {
           try {
             console.log(`🔍 Polling feed: ${sourceData.name} (${sourceData.url})`);
 
-            // Usa direttamente RssFetchService invece di pollingService
-            const fetchResult = await rssFetchService.fetchFeed(sourceData.url, { maxItems: 10 });
+            // Fetch RSS direttamente
+            const fetchResult = await fetchRssFeed(sourceData.url);
 
             if (fetchResult.isSuccess()) {
               const feedData = fetchResult.value;
@@ -281,4 +276,106 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * RSS Feed Fetcher semplificato
+ */
+async function fetchRssFeed(url: string) {
+  try {
+    console.log(`🔄 Fetching RSS from: ${url} (max 10 items)`);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'AutoGeorge RSS Bot/1.0',
+        'Accept': 'application/rss+xml, application/xml, text/xml'
+      },
+      timeout: 10000
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const xmlText = await response.text();
+
+    // Parse XML semplificato per RSS
+    const items = parseRssXml(xmlText);
+
+    console.log(`✅ RSS fetch completed: ${items.length} items in ${Date.now()}ms`);
+
+    return {
+      isSuccess: () => true,
+      value: {
+        items: items.slice(0, 10) // Limita a 10 items
+      }
+    };
+
+  } catch (error) {
+    console.error(`❌ RSS fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return {
+      isSuccess: () => false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Parser XML RSS semplificato
+ */
+function parseRssXml(xmlText: string) {
+  const items: any[] = [];
+
+  try {
+    // Regex semplificato per estrarre items RSS
+    const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+    const matches = xmlText.matchAll(itemRegex);
+
+    for (const match of matches) {
+      const itemXml = match[1];
+
+      const title = extractXmlTag(itemXml, 'title');
+      const link = extractXmlTag(itemXml, 'link');
+      const description = extractXmlTag(itemXml, 'description');
+      const pubDate = extractXmlTag(itemXml, 'pubDate');
+      const guid = extractXmlTag(itemXml, 'guid') || link;
+
+      if (title && link) {
+        items.push({
+          title: cleanXmlText(title),
+          link: cleanXmlText(link),
+          content: cleanXmlText(description),
+          description: cleanXmlText(description),
+          publishedAt: pubDate ? new Date(pubDate) : new Date(),
+          guid: cleanXmlText(guid)
+        });
+      }
+    }
+
+    return items;
+  } catch (error) {
+    console.error('Error parsing RSS XML:', error);
+    return [];
+  }
+}
+
+/**
+ * Estrae contenuto di un tag XML
+ */
+function extractXmlTag(xml: string, tagName: string): string | null {
+  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i');
+  const match = xml.match(regex);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Pulisce testo XML da CDATA e HTML
+ */
+function cleanXmlText(text: string): string {
+  if (!text) return '';
+
+  return text
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+    .replace(/<[^>]+>/g, '')
+    .trim();
 }

@@ -153,29 +153,15 @@ export class RssFetchService {
     const items: FetchedItem[] = [];
 
     try {
-      // Simple XML parsing using browser DOMParser
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlText, 'text/xml');
+      // Server-side XML parsing using regex (simple but effective)
+      // This avoids the need for DOMParser which is browser-only
 
-      // Check for parsing errors
-      const parserError = doc.querySelector('parsererror');
-      if (parserError) {
-        throw new Error('Invalid XML format');
-      }
+      // Extract items/entries from XML
+      const itemMatches = xmlText.match(/<(item|entry)[^>]*>[\s\S]*?<\/(item|entry)>/gi) || [];
+      const limitedItems = itemMatches.slice(0, maxItems);
 
-      // Try RSS 2.0 format first
-      let itemElements = doc.querySelectorAll('item');
-
-      // If no items found, try Atom format
-      if (itemElements.length === 0) {
-        itemElements = doc.querySelectorAll('entry');
-      }
-
-      // Convert NodeList to Array and limit to maxItems
-      const limitedItems = Array.from(itemElements).slice(0, maxItems);
-
-      for (const itemElement of limitedItems) {
-        const item = this.parseRssItem(itemElement);
+      for (const itemXml of limitedItems) {
+        const item = this.parseRssItemFromXml(itemXml);
         if (item) {
           items.push(item);
         }
@@ -189,25 +175,27 @@ export class RssFetchService {
     return items;
   }
 
-  private parseRssItem(itemElement: Element): FetchedItem | null {
+  private parseRssItemFromXml(itemXml: string): FetchedItem | null {
     try {
-      // RSS 2.0 fields
-      const title = this.getElementText(itemElement, 'title');
-      const description = this.getElementText(itemElement, 'description');
-      const link = this.getElementText(itemElement, 'link');
-      const pubDate = this.getElementText(itemElement, 'pubDate');
-      const guid = this.getElementText(itemElement, 'guid');
+      // Extract fields using regex - server-side compatible
+      const title = this.extractXmlTag(itemXml, 'title');
+      const description = this.extractXmlTag(itemXml, 'description');
+      const link = this.extractXmlTag(itemXml, 'link');
+      const pubDate = this.extractXmlTag(itemXml, 'pubDate');
+      const guid = this.extractXmlTag(itemXml, 'guid');
 
       // Atom fields (fallback)
-      const atomTitle = this.getElementText(itemElement, 'title');
-      const atomSummary = this.getElementText(itemElement, 'summary');
-      const atomContent = this.getElementText(itemElement, 'content');
-      const atomLink = itemElement.querySelector('link')?.getAttribute('href');
-      const atomUpdated = this.getElementText(itemElement, 'updated');
-      const atomId = this.getElementText(itemElement, 'id');
+      const atomSummary = this.extractXmlTag(itemXml, 'summary');
+      const atomContent = this.extractXmlTag(itemXml, 'content');
+      const atomUpdated = this.extractXmlTag(itemXml, 'updated');
+      const atomId = this.extractXmlTag(itemXml, 'id');
 
-      const finalTitle = title || atomTitle;
-      const finalContent = description || atomSummary || atomContent;
+      // Extract atom link href
+      const atomLinkMatch = itemXml.match(/<link[^>]*href="([^"]*)"[^>]*>/i);
+      const atomLink = atomLinkMatch ? atomLinkMatch[1] : '';
+
+      const finalTitle = title || 'Untitled';
+      const finalContent = description || atomSummary || atomContent || '';
       const finalLink = link || atomLink;
       const finalDate = pubDate || atomUpdated;
       const finalId = guid || atomId || finalLink;
@@ -218,8 +206,8 @@ export class RssFetchService {
 
       return {
         id: finalId || `item_${Date.now()}_${Math.random()}`,
-        title: finalTitle || 'Untitled',
-        content: finalContent || '',
+        title: finalTitle,
+        content: finalContent,
         url: finalLink,
         publishedAt: finalDate ? new Date(finalDate) : new Date(),
         metadata: {
@@ -235,8 +223,21 @@ export class RssFetchService {
     }
   }
 
-  private getElementText(parent: Element, tagName: string): string {
-    const element = parent.querySelector(tagName);
-    return element?.textContent?.trim() || '';
+  private extractXmlTag(xml: string, tagName: string): string {
+    const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i');
+    const match = xml.match(regex);
+    if (match && match[1]) {
+      // Clean HTML entities and trim
+      return match[1]
+        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+    }
+    return '';
   }
 }

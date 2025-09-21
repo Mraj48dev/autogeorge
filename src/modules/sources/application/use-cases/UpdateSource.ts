@@ -35,8 +35,13 @@ export class UpdateSource implements UseCase<UpdateSourceRequest, UpdateSourceRe
 
       // Get existing source
       const sourceId = SourceId.fromString(request.sourceId);
-      const existingSource = await this.sourceRepository.findById(sourceId);
+      const sourceResult = await this.sourceRepository.findById(sourceId);
 
+      if (sourceResult.isFailure()) {
+        return Result.failure(sourceResult.error);
+      }
+
+      const existingSource = sourceResult.value;
       if (!existingSource) {
         return Result.failure(new Error(`Source with ID ${request.sourceId} not found`));
       }

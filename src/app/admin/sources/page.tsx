@@ -345,7 +345,7 @@ export default function SourcesPage() {
                           onClick={() => window.open(`/admin/sources/${source.id}/articles`, '_blank')}
                           className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
                         >
-                          Articoli
+                          Contenuti
                         </button>
                         <button
                           onClick={() => toggleSourceStatus(source.id, source.status)}

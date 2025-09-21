@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
           feedItems: {
             take: 5,
             orderBy: {
-              fetchedAt: 'desc'
+              publishedAt: 'desc'
             }
           }
         },
@@ -37,23 +37,29 @@ export async function GET(request: NextRequest) {
         where: { processed: false }
       });
 
-      // Prepara le informazioni dettagliate
-      const sourceDetails = sources.map(source => ({
-        id: source.id,
-        name: source.name,
-        url: source.url,
-        status: source.status,
-        lastFetchAt: source.lastFetchAt,
-        lastError: source.lastError,
-        lastErrorAt: source.lastErrorAt,
-        totalItems: source.feedItems.length,
-        recentItems: source.feedItems.map(item => ({
-          id: item.id,
-          title: item.title,
-          publishedAt: item.publishedAt,
-          fetchedAt: item.fetchedAt,
-          processed: item.processed
-        }))
+      // Ottieni il conteggio reale degli articoli per ogni source
+      const sourceDetails = await Promise.all(sources.map(async (source) => {
+        const totalItems = await prisma.feedItem.count({
+          where: { sourceId: source.id }
+        });
+
+        return {
+          id: source.id,
+          name: source.name,
+          url: source.url,
+          status: source.status,
+          lastFetchAt: source.lastFetchAt,
+          lastError: source.lastError,
+          lastErrorAt: source.lastErrorAt,
+          totalItems,
+          recentItems: source.feedItems.map(item => ({
+            id: item.id,
+            title: item.title,
+            publishedAt: item.publishedAt,
+            fetchedAt: item.fetchedAt,
+            processed: item.processed
+          }))
+        };
       }));
 
       return NextResponse.json({

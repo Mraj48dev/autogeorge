@@ -3,14 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-interface Article {
+interface Contenuto {
   id: string;
   title: string;
   content: string;
-  status: string;
+  url?: string;
   sourceId: string;
-  createdAt: string;
-  updatedAt: string;
+  publishedAt: string;
+  fetchedAt: string;
+  processed: boolean;
+  guid?: string;
+  articleId?: string;
 }
 
 interface Source {
@@ -21,13 +24,13 @@ interface Source {
   status: string;
 }
 
-export default function SourceArticlesPage() {
+export default function SourceContenutiPage() {
   const params = useParams();
   const router = useRouter();
   const sourceId = params.id as string;
 
   const [source, setSource] = useState<Source | null>(null);
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [contenuti, setContenuti] = useState<Contenuto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,19 +59,19 @@ export default function SourceArticlesPage() {
         }
       }
 
-      // Fetch articles for this source
-      const articlesResponse = await fetch(`/api/admin/sources/${sourceId}/articles`);
-      const articlesData = await articlesResponse.json();
+      // Fetch contenuti for this source
+      const contenutiResponse = await fetch(`/api/admin/sources/${sourceId}/articles`);
+      const contenutiData = await contenutiResponse.json();
 
-      if (articlesResponse.ok) {
-        // Ordina gli articoli dal più recente al più vecchio
-        const sortedArticles = (articlesData.articles || []).sort((a: Article, b: Article) => {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (contenutiResponse.ok) {
+        // Ordina i contenuti dal più recente al più vecchio
+        const sortedContenuti = (contenutiData.contenuti || []).sort((a: Contenuto, b: Contenuto) => {
+          return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
         });
-        setArticles(sortedArticles);
+        setContenuti(sortedContenuti);
       } else {
-        console.error('Error fetching articles:', articlesData.error);
-        setArticles([]);
+        console.error('Error fetching contenuti:', contenutiData.error);
+        setContenuti([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -91,8 +94,8 @@ export default function SourceArticlesPage() {
       const data = await response.json();
 
       if (response.ok) {
-        await fetchSourceAndArticles(); // Refresh the articles
-        alert(`Fetch completato! Recuperati ${data.fetchedItems || 0} articoli, di cui ${data.newItems || 0} nuovi.`);
+        await fetchSourceAndArticles(); // Refresh the contenuti
+        alert(`Fetch completato! Recuperati ${data.fetchedItems || 0} contenuti, di cui ${data.newItems || 0} nuovi.`);
       } else {
         alert('Errore durante il fetch: ' + data.error);
       }
@@ -106,27 +109,13 @@ export default function SourceArticlesPage() {
     return new Date(dateString).toLocaleString('it-IT');
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusColors = {
-      generated: 'bg-blue-100 text-blue-800',
-      published: 'bg-green-100 text-green-800',
-      draft: 'bg-yellow-100 text-yellow-800',
-      archived: 'bg-gray-100 text-gray-800',
-    };
-
-    return (
-      <span className={`inline-block px-2 py-1 text-xs rounded-full ${statusColors[status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}`}>
-        {status}
-      </span>
-    );
-  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Caricamento articoli...</p>
+          <p className="text-gray-600">Caricamento contenuti...</p>
         </div>
       </div>
     );
@@ -158,13 +147,13 @@ export default function SourceArticlesPage() {
           <div className="flex items-center justify-between">
             <div>
               <button
-                onClick={() => router.back()}
+                onClick={() => router.push('/admin/sources')}
                 className="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center"
               >
                 ← Torna alle Sources
               </button>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Articoli da {source?.name}
+                Contenuti da {source?.name}
               </h1>
               {source?.url && (
                 <p className="text-gray-600 mb-2">{source.url}</p>
@@ -180,7 +169,7 @@ export default function SourceArticlesPage() {
                   {source?.status}
                 </span>
                 <span className="text-gray-500">
-                  {articles.length} articoli totali
+                  {contenuti.length} contenuti totali
                 </span>
               </div>
             </div>
@@ -188,34 +177,58 @@ export default function SourceArticlesPage() {
               onClick={handleFetchNew}
               className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
             >
-              🔄 Fetch Nuovi Articoli
+              🔄 Fetch Nuovi Contenuti
             </button>
           </div>
         </div>
 
-        {/* Articles List */}
-        {articles.length > 0 ? (
+        {/* Contenuti List */}
+        {contenuti.length > 0 ? (
           <div className="grid gap-6">
-            {articles.map((article) => (
-              <div key={article.id} className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+            {contenuti.map((contenuto) => (
+              <div key={contenuto.id} className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {article.title}
+                      {contenuto.title}
                     </h3>
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span>Creato: {formatDate(article.createdAt)}</span>
-                      <span>Aggiornato: {formatDate(article.updatedAt)}</span>
-                      {getStatusBadge(article.status)}
+                      <span>Pubblicato: {formatDate(contenuto.publishedAt)}</span>
+                      <span>Recuperato: {formatDate(contenuto.fetchedAt)}</span>
+                      <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                        contenuto.processed
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {contenuto.processed ? 'Processato' : 'Da processare'}
+                      </span>
+                      {contenuto.articleId && (
+                        <span className="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                          Articolo generato
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
 
+                {contenuto.url && (
+                  <div className="mb-2">
+                    <a
+                      href={contenuto.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline text-sm"
+                    >
+                      🔗 Link originale
+                    </a>
+                  </div>
+                )}
+
                 <div className="prose max-w-none">
                   <div className="text-gray-700 line-clamp-3">
-                    {article.content.length > 300
-                      ? `${article.content.substring(0, 300)}...`
-                      : article.content
+                    {contenuto.content.length > 300
+                      ? `${contenuto.content.substring(0, 300)}...`
+                      : contenuto.content
                     }
                   </div>
                 </div>
@@ -223,22 +236,25 @@ export default function SourceArticlesPage() {
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex justify-between items-center">
                     <div className="text-sm text-gray-500">
-                      ID: {article.id}
+                      ID: {contenuto.id}
+                      {contenuto.guid && (
+                        <span className="ml-2">GUID: {contenuto.guid.substring(0, 8)}...</span>
+                      )}
                     </div>
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => navigator.clipboard.writeText(article.content)}
+                        onClick={() => navigator.clipboard.writeText(contenuto.content)}
                         className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                       >
                         Copia Contenuto
                       </button>
                       <button
                         onClick={() => {
-                          const blob = new Blob([article.content], { type: 'text/plain' });
+                          const blob = new Blob([contenuto.content], { type: 'text/plain' });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
                           a.href = url;
-                          a.download = `${article.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+                          a.download = `${contenuto.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
                           a.click();
                           URL.revokeObjectURL(url);
                         }}
@@ -246,6 +262,13 @@ export default function SourceArticlesPage() {
                       >
                         Download
                       </button>
+                      {!contenuto.processed && (
+                        <button
+                          className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                        >
+                          Genera Articolo
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -254,16 +277,16 @@ export default function SourceArticlesPage() {
           </div>
         ) : (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
-            <div className="text-gray-400 text-6xl mb-4">📰</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Nessun articolo trovato</h3>
+            <div className="text-gray-400 text-6xl mb-4">📄</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Nessun contenuto trovato</h3>
             <p className="text-gray-600 mb-6">
-              Non sono ancora stati recuperati articoli da questo source.
+              Non sono ancora stati recuperati contenuti da questo source.
             </p>
             <button
               onClick={handleFetchNew}
               className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
             >
-              🔄 Recupera Articoli
+              🔄 Recupera Contenuti
             </button>
           </div>
         )}

@@ -114,13 +114,15 @@ export class SourcesContainer {
 
   get sourceRepository(): SourceRepository {
     if (!this._sourceRepository) {
-      // For now, since we know database is failing, use in-memory directly
-      // This ensures the app works immediately while database issues are resolved
-      this.logger.info('Using in-memory repository for immediate availability');
-      this._sourceRepository = new InMemorySourceRepository();
-
-      // Log that this is a temporary measure
-      this.logger.warn('TEMPORARY: Using in-memory repository due to known database issues. This will be reverted once database is stable.');
+      try {
+        // Use Prisma repository now that database is working
+        this.logger.info('Using Prisma repository with PostgreSQL database');
+        this._sourceRepository = new PrismaSourceRepository(this.prisma);
+      } catch (error) {
+        // Fallback to in-memory if database fails
+        this.logger.warn('Database connection failed, falling back to in-memory repository', { error });
+        this._sourceRepository = new InMemorySourceRepository();
+      }
     }
     return this._sourceRepository;
   }

@@ -17,7 +17,7 @@
 
 Il problema con i pulsanti "aggiungi feed" e "configura primo feed" è stato **RISOLTO**:
 - ✅ Container DI inizializzato correttamente
-- ✅ Database SQLite configurato per development
+- ✅ Database PostgreSQL Supabase configurato
 - ✅ API `/api/admin/sources` funzionante
 - ✅ SourcesAdminFacade corretta
 
@@ -25,13 +25,15 @@ Il problema con i pulsanti "aggiungi feed" e "configura primo feed" è stato **R
 
 ⚠️ **REGOLA FONDAMENTALE**: Lo sviluppo deve avvenire **DIRETTAMENTE SU GITHUB**, non in locale!
 
-**NOTA**: Attualmente stiamo usando SQLite per test rapidi, ma il progetto è configurato per PostgreSQL cloud.
+**DATABASE**: PostgreSQL su Neon.tech - VIETATO SQLite locale!
+
+**CONNECTION STRING**: `postgresql://neondb_owner:npg_Vmi0eUX4dLSr@ep-solitary-sound-abznx4t0-pooler.eu-west-2.aws.neon.tech/autogeorge?sslmode=require`
 
 ### Ambiente di Sviluppo
 - Usare **GitHub Codespaces** o ambiente identico al deploy
 - Deploy su **Vercel** o piattaforma cloud equivalente
 - **Zero differenze** tra ambiente di sviluppo e produzione
-- Database cloud (es. Supabase, PlanetScale) - NO SQLite locale
+- Database Supabase PostgreSQL - VIETATO SQLite locale
 
 ### Architettura Obbligatoria
 - **Modular Monolith** con Clean/Hexagonal Architecture
@@ -78,12 +80,12 @@ src/modules/
 
 ### Configurazione Ambiente
 - File `.env.example` con tutte le variabili
-- **NO .env.local** - solo configurazione cloud
+- **Database**: SEMPRE Supabase PostgreSQL, mai SQLite
 - Secrets tramite Vercel Environment Variables
 - Feature flags per rollout graduali
 
 ### Database e Stato
-- **PostgreSQL** cloud (Supabase/PlanetScale)
+- **PostgreSQL** Supabase: `postgresql://postgres:87a6JKx1oOHGdvvr@db.weoidzvghhvtfeelctxi.supabase.co:5432/postgres`
 - Migrazioni Prisma automatiche
 - Seed data per sviluppo/testing
 - Backup automatici

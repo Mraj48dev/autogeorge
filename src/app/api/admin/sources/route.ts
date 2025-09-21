@@ -1,31 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SourcesContainer, createSourcesContainer } from '../../../../modules/sources/infrastructure/container/SourcesContainer';
+import { Config } from '../../../../modules/sources/shared/config/env';
 
 /**
  * GET /api/admin/sources
  * Lists all sources with pagination and filtering
- * TEMPORARY MOCK VERSION - Database issues workaround
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🚨 USING MOCK SOURCES API - Database bypass active');
+    // Initialize the sources container
+    const container = createSourcesContainer();
+    const sourcesAdminFacade = container.sourcesAdminFacade;
 
-    // Mock empty sources list for now
-    const mockResponse = {
-      sources: [],
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        totalPages: 0,
-        hasNext: false,
-        hasPrev: false,
-      }
-    };
+    // Parse query parameters
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const type = searchParams.get('type') || undefined;
+    const status = searchParams.get('status') || undefined;
 
-    return NextResponse.json(mockResponse);
+    // Execute use case
+    const result = await sourcesAdminFacade.getSources({
+      page,
+      limit,
+      type: type as any,
+      status: status as any,
+    });
+
+    if (result.isFailure()) {
+      console.error('Error getting sources:', result.error);
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(result.value);
 
   } catch (error) {
-    console.error('Error in mock sources endpoint:', error);
+    console.error('Error in sources endpoint:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -36,11 +49,12 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/admin/sources
  * Creates a new source
- * TEMPORARY MOCK VERSION - Database issues workaround
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚨 USING MOCK CREATE SOURCE API - Database bypass active');
+    // Initialize the sources container
+    const container = createSourcesContainer();
+    const sourcesAdminFacade = container.sourcesAdminFacade;
 
     const body = await request.json();
 
@@ -52,36 +66,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mock successful creation
-    const mockCreatedSource = {
-      id: `mock-${Date.now()}`,
+    // Execute use case
+    const result = await sourcesAdminFacade.createSource({
       name: body.name,
       type: body.type,
-      status: 'active',
       url: body.url,
       configuration: body.configuration || {},
-      metadata: {
-        totalFetches: 0,
-        totalItems: 0,
-        lastFetchResult: null
-      },
-      lastFetchAt: null,
-      lastErrorAt: null,
-      lastError: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      metadata: body.metadata || {},
+    });
 
-    console.log('✅ Mock source created:', mockCreatedSource);
+    if (result.isFailure()) {
+      console.error('Error creating source:', result.error);
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ Source created successfully:', result.value.source);
 
     return NextResponse.json({
       success: true,
-      message: `Source "${body.name}" created successfully (MOCK MODE)`,
-      source: mockCreatedSource
+      message: `Source "${body.name}" created successfully`,
+      source: result.value.source
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Error in mock create source:', error);
+    console.error('Error in create source endpoint:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

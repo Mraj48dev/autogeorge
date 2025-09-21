@@ -117,7 +117,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/admin/sources/[id]
- * Deletes a source
+ * Deletes a source - Direct Prisma implementation for reliability
  */
 export async function DELETE(
   request: NextRequest,
@@ -133,27 +133,66 @@ export async function DELETE(
       );
     }
 
-    const container = createSourcesContainer();
-    const result = await container.sourcesAdminFacade.deleteSource({
-      sourceId,
-    });
+    // Use direct Prisma for reliability in production
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
 
-    if (result.isFailure()) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 400 }
-      );
+    try {
+      // Verifica che la source esista
+      const existingSource = await prisma.source.findUnique({
+        where: { id: sourceId }
+      });
+
+      if (!existingSource) {
+        return NextResponse.json(
+          { error: 'Source not found' },
+          { status: 404 }
+        );
+      }
+
+      console.log(`🗑️ Deleting source: ${existingSource.name} (${sourceId})`);
+
+      // Prima elimina tutti i feedItems correlati
+      const deletedFeedItems = await prisma.feedItem.deleteMany({
+        where: { sourceId: sourceId }
+      });
+
+      console.log(`🗑️ Deleted ${deletedFeedItems.count} feed items`);
+
+      // Poi elimina tutti gli articles correlati
+      const deletedArticles = await prisma.article.deleteMany({
+        where: { sourceId: sourceId }
+      });
+
+      console.log(`🗑️ Deleted ${deletedArticles.count} articles`);
+
+      // Infine elimina la source
+      await prisma.source.delete({
+        where: { id: sourceId }
+      });
+
+      console.log(`✅ Source "${existingSource.name}" deleted successfully`);
+
+      return NextResponse.json({
+        success: true,
+        message: `Source "${existingSource.name}" deleted successfully`,
+        deletedItems: {
+          feedItems: deletedFeedItems.count,
+          articles: deletedArticles.count
+        }
+      });
+
+    } finally {
+      await prisma.$disconnect();
     }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Source deleted successfully'
-    });
 
   } catch (error) {
     console.error('Error deleting source:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

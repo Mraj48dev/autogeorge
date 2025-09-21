@@ -9,6 +9,12 @@
       "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/poll-feeds",
+      "schedule": "* * * * *"
+    }
+  ],
   "build": {
     "env": {
       "NODE_ENV": "production"

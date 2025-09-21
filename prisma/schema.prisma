@@ -39,6 +39,7 @@ model Source {
 
   // Relations
   articles       Article[]
+  feedItems      FeedItem[]
 
   @@unique([type, url]) // Prevent duplicate sources
   @@map("sources")
@@ -98,4 +99,31 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model FeedItem {
+  id          String   @id @default(cuid())
+  sourceId    String
+  source      Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  // Campi dall'RSS originale
+  guid        String?  // RSS GUID, usato per identificare duplicati
+  title       String
+  content     String   @db.Text
+  url         String?
+  publishedAt DateTime
+
+  // Metadati di fetch
+  fetchedAt   DateTime @default(now())
+  processed   Boolean  @default(false) // Se è stato trasformato in Article
+  articleId   String?  // Link all'articolo generato
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sourceId, guid]) // Evita duplicati per GUID
+  @@unique([sourceId, url])  // Fallback per URL
+  @@index([sourceId, publishedAt]) // Per query efficienti
+  @@index([processed]) // Per trovare item non processati
+  @@map("feed_items")
 }

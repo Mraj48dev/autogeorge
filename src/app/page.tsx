@@ -45,6 +45,12 @@ export default function HomePage() {
               Genera Articolo
             </Link>
             <Link
+              href="/monitor"
+              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
+            >
+              🔍 Monitor RSS
+            </Link>
+            <Link
               href="/admin/dashboard"
               className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-lg font-semibold border border-gray-200 transition-colors"
             >

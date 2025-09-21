@@ -2,6 +2,8 @@ import { Result } from '../shared/domain/types/Result';
 import { CreateSource, CreateSourceRequest, CreateSourceResponse } from '../application/use-cases/CreateSource';
 import { GetSources, GetSourcesRequest, GetSourcesResponse } from '../application/use-cases/GetSources';
 import { FetchFromSource, FetchFromSourceRequest, FetchFromSourceResponse } from '../application/use-cases/FetchFromSource';
+import { UpdateSource, UpdateSourceRequest, UpdateSourceResponse } from '../application/use-cases/UpdateSource';
+import { UpdateSourceStatus, UpdateSourceStatusRequest, UpdateSourceStatusResponse } from '../application/use-cases/UpdateSourceStatus';
 
 /**
  * Admin facade for Sources module
@@ -11,7 +13,9 @@ export class SourcesAdminFacade {
   constructor(
     private readonly createSourceUseCase: CreateSource,
     private readonly getSourcesUseCase: GetSources,
-    private readonly fetchFromSourceUseCase: FetchFromSource
+    private readonly fetchFromSourceUseCase: FetchFromSource,
+    private readonly updateSourceUseCase: UpdateSource,
+    private readonly updateSourceStatusUseCase: UpdateSourceStatus
   ) {}
 
   /**
@@ -33,6 +37,20 @@ export class SourcesAdminFacade {
    */
   async fetchFromSource(request: FetchFromSourceRequest): Promise<Result<FetchFromSourceResponse, Error>> {
     return await this.fetchFromSourceUseCase.execute(request);
+  }
+
+  /**
+   * Updates an existing source
+   */
+  async updateSource(request: UpdateSourceRequest): Promise<Result<UpdateSourceResponse, Error>> {
+    return await this.updateSourceUseCase.execute(request);
+  }
+
+  /**
+   * Updates the status of a source
+   */
+  async updateSourceStatus(request: UpdateSourceStatusRequest): Promise<Result<UpdateSourceStatusResponse, Error>> {
+    return await this.updateSourceStatusUseCase.execute(request);
   }
 
   /**

@@ -23,6 +23,8 @@ import { UniversalFetchService } from '../services/UniversalFetchService';
 import { CreateSource } from '../../application/use-cases/CreateSource';
 import { GetSources } from '../../application/use-cases/GetSources';
 import { FetchFromSource } from '../../application/use-cases/FetchFromSource';
+import { UpdateSource } from '../../application/use-cases/UpdateSource';
+import { UpdateSourceStatus } from '../../application/use-cases/UpdateSourceStatus';
 import { SourcesAdminFacade } from '../../admin/SourcesAdminFacade';
 
 // Module-specific infrastructure
@@ -44,6 +46,8 @@ export class SourcesContainer {
   private _createSource: CreateSource | null = null;
   private _getSources: GetSources | null = null;
   private _fetchFromSource: FetchFromSource | null = null;
+  private _updateSource: UpdateSource | null = null;
+  private _updateSourceStatus: UpdateSourceStatus | null = null;
   private _sourcesAdminFacade: SourcesAdminFacade | null = null;
 
   private constructor(config: Config) {
@@ -161,12 +165,34 @@ export class SourcesContainer {
     return this._fetchFromSource;
   }
 
+  get updateSource(): UpdateSource {
+    if (!this._updateSource) {
+      this._updateSource = new UpdateSource(
+        this.sourceRepository,
+        this.logger
+      );
+    }
+    return this._updateSource;
+  }
+
+  get updateSourceStatus(): UpdateSourceStatus {
+    if (!this._updateSourceStatus) {
+      this._updateSourceStatus = new UpdateSourceStatus(
+        this.sourceRepository,
+        this.logger
+      );
+    }
+    return this._updateSourceStatus;
+  }
+
   get sourcesAdminFacade(): SourcesAdminFacade {
     if (!this._sourcesAdminFacade) {
       this._sourcesAdminFacade = new SourcesAdminFacade(
         this.createSource,
         this.getSources,
-        this.fetchFromSource
+        this.fetchFromSource,
+        this.updateSource,
+        this.updateSourceStatus
       );
     }
     return this._sourcesAdminFacade;

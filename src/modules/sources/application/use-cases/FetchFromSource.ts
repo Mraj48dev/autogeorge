@@ -1,8 +1,9 @@
 import { Result } from '../../shared/domain/types/Result';
 import { BaseUseCase } from '../../shared/application/base/UseCase';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
-import { SourceFetchService, FetchResult } from '../../domain/ports/SourceFetchService';
+import { SourceFetchService, FetchResult, FetchedItem } from '../../domain/ports/SourceFetchService';
 import { SourceId } from '../../domain/value-objects/SourceId';
+import { prisma } from '../../../../shared/database/prisma';
 
 /**
  * Use case for fetching content from a specific source
@@ -64,10 +65,13 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         const duration = Date.now() - startTime;
         const result = fetchResult.value;
 
+        // Save articles to database
+        const savedArticles = await this.saveArticlesToDatabase(result.newItems, request.sourceId);
+
         // Record successful fetch
         source.recordSuccessfulFetch(
           result.fetchedItems.length,
-          result.newItems.length,
+          savedArticles.length,
           duration,
           result.metadata
         );
@@ -81,11 +85,11 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         return Result.success({
           sourceId: source.id.getValue(),
           fetchedItems: result.fetchedItems.length,
-          newItems: result.newItems.length,
+          newItems: savedArticles.length,
           duration,
-          items: result.newItems,
+          items: savedArticles,
           metadata: result.metadata,
-          message: `Successfully fetched ${result.newItems.length} new items from ${result.fetchedItems.length} total items`
+          message: `Successfully fetched ${savedArticles.length} new items from ${result.fetchedItems.length} total items`
         });
 
       } catch (error) {
@@ -121,6 +125,52 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     }
 
     return Result.success(undefined);
+  }
+
+  private async saveArticlesToDatabase(fetchedItems: FetchedItem[], sourceId: string): Promise<any[]> {
+    const savedArticles: any[] = [];
+
+    for (const item of fetchedItems) {
+      try {
+        // Check if article already exists to avoid duplicates
+        const existingArticle = await prisma.article.findFirst({
+          where: {
+            AND: [
+              { sourceId },
+              {
+                OR: [
+                  { title: item.title },
+                  { content: { contains: item.content.substring(0, 100) } }
+                ]
+              }
+            ]
+          }
+        });
+
+        if (!existingArticle) {
+          // Create new article
+          const savedArticle = await prisma.article.create({
+            data: {
+              title: item.title || 'Untitled',
+              content: item.content || '',
+              status: 'generated',
+              sourceId: sourceId,
+            }
+          });
+
+          savedArticles.push(savedArticle);
+          console.log(`✅ Saved article: ${savedArticle.title}`);
+        } else {
+          console.log(`⚠️ Duplicate article skipped: ${item.title}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error saving article "${item.title}":`, error);
+        // Continue with other articles even if one fails
+      }
+    }
+
+    console.log(`💾 Saved ${savedArticles.length} articles out of ${fetchedItems.length} fetched`);
+    return savedArticles;
   }
 }
 

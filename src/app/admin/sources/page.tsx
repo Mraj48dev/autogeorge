@@ -9,25 +9,48 @@ interface Source {
   url?: string;
   status: string;
   createdAt: string;
+  configuration?: {
+    maxItems?: number;
+    pollingInterval?: number;
+    enabled?: boolean;
+  };
+  metadata?: {
+    totalFetches?: number;
+    totalItems?: number;
+    lastFetch?: {
+      fetchedItems: number;
+      newItems: number;
+    };
+  };
 }
 
 interface CreateSourceRequest {
   name: string;
   type: string;
   url?: string;
-  configuration?: any;
+  configuration?: {
+    maxItems?: number;
+    pollingInterval?: number;
+    enabled?: boolean;
+  };
   testConnection?: boolean;
 }
 
 export default function SourcesPage() {
   const [activeTab, setActiveTab] = useState('rss');
   const [showModal, setShowModal] = useState(false);
+  const [editingSource, setEditingSource] = useState<Source | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<CreateSourceRequest>({
     name: '',
     type: 'rss',
     url: '',
+    configuration: {
+      maxItems: 10,
+      pollingInterval: 60,
+      enabled: true,
+    },
     testConnection: true,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -58,8 +81,11 @@ export default function SourcesPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/admin/sources', {
-        method: 'POST',
+      const url = editingSource ? `/api/admin/sources/${editingSource.id}` : '/api/admin/sources';
+      const method = editingSource ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -71,31 +97,107 @@ export default function SourcesPage() {
       if (response.ok) {
         await fetchSources();
         setShowModal(false);
+        setEditingSource(null);
         setFormData({
           name: '',
           type: activeTab,
           url: '',
+          configuration: {
+            maxItems: 10,
+            pollingInterval: 60,
+            enabled: true,
+          },
           testConnection: true,
         });
       } else {
         alert('Errore: ' + data.error);
       }
     } catch (error) {
-      console.error('Error creating source:', error);
-      alert('Errore durante la creazione della fonte');
+      console.error('Error saving source:', error);
+      alert(`Errore durante ${editingSource ? 'l\'aggiornamento' : 'la creazione'} della fonte`);
     } finally {
       setSubmitting(false);
     }
   };
 
   const openModal = (type: string) => {
+    setEditingSource(null);
     setFormData({
       name: '',
       type,
       url: '',
+      configuration: {
+        maxItems: 10,
+        pollingInterval: 60,
+        enabled: true,
+      },
       testConnection: true,
     });
     setShowModal(true);
+  };
+
+  const openEditModal = (source: Source) => {
+    setEditingSource(source);
+    setFormData({
+      name: source.name,
+      type: source.type,
+      url: source.url || '',
+      configuration: {
+        maxItems: source.configuration?.maxItems || 10,
+        pollingInterval: source.configuration?.pollingInterval || 60,
+        enabled: source.configuration?.enabled ?? true,
+      },
+      testConnection: false,
+    });
+    setShowModal(true);
+  };
+
+  const handleFetchFromSource = async (sourceId: string) => {
+    try {
+      const response = await fetch(`/api/admin/sources/${sourceId}/fetch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ force: true }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await fetchSources();
+        alert(`Fetch completato! Recuperati ${data.fetchedItems || 0} articoli, di cui ${data.newItems || 0} nuovi.`);
+      } else {
+        alert('Errore durante il fetch: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching from source:', error);
+      alert('Errore durante il fetch del feed');
+    }
+  };
+
+  const toggleSourceStatus = async (sourceId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+
+    try {
+      const response = await fetch(`/api/admin/sources/${sourceId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        await fetchSources();
+      } else {
+        const data = await response.json();
+        alert('Errore: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error updating source status:', error);
+      alert('Errore durante l\'aggiornamento dello stato');
+    }
   };
 
   return (
@@ -169,21 +271,67 @@ export default function SourcesPage() {
               {sources.filter(s => s.type === 'rss').map((source) => (
                 <div key={source.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{source.name}</h4>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-medium text-gray-900">{source.name}</h4>
+                        <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                          source.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : source.status === 'paused'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {source.status}
+                        </span>
+                      </div>
                       {source.url && (
-                        <p className="text-sm text-gray-600 mt-1">{source.url}</p>
+                        <p className="text-sm text-gray-600 mb-2">{source.url}</p>
                       )}
-                      <span className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
-                        source.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {source.status}
-                      </span>
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                        <span>Max articoli: {source.configuration?.maxItems || 10}</span>
+                        <span>Intervallo: {source.configuration?.pollingInterval || 60}min</span>
+                        {source.metadata?.totalFetches && (
+                          <span>Fetch totali: {source.metadata.totalFetches}</span>
+                        )}
+                        {source.metadata?.totalItems && (
+                          <span>Articoli recuperati: {source.metadata.totalItems}</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(source.createdAt).toLocaleDateString()}
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className="text-sm text-gray-500">
+                        {new Date(source.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => openEditModal(source)}
+                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        >
+                          Modifica
+                        </button>
+                        <button
+                          onClick={() => handleFetchFromSource(source.id)}
+                          className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                        >
+                          Fetch
+                        </button>
+                        <button
+                          onClick={() => window.open(`/admin/sources/${source.id}/articles`, '_blank')}
+                          className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                        >
+                          Articoli
+                        </button>
+                        <button
+                          onClick={() => toggleSourceStatus(source.id, source.status)}
+                          className={`px-3 py-1 text-sm rounded transition-colors ${
+                            source.status === 'active'
+                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                        >
+                          {source.status === 'active' ? 'Pausa' : 'Attiva'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -400,9 +548,15 @@ export default function SourcesPage() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {formData.type === 'rss' && 'Aggiungi Feed RSS'}
-                  {formData.type === 'telegram' && 'Aggiungi Canale Telegram'}
-                  {formData.type === 'calendar' && 'Programma Articolo'}
+                  {editingSource ? (
+                    `Modifica ${formData.type === 'rss' ? 'Feed RSS' : formData.type === 'telegram' ? 'Canale Telegram' : 'Calendario'}`
+                  ) : (
+                    <>
+                      {formData.type === 'rss' && 'Aggiungi Feed RSS'}
+                      {formData.type === 'telegram' && 'Aggiungi Canale Telegram'}
+                      {formData.type === 'calendar' && 'Programma Articolo'}
+                    </>
+                  )}
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
@@ -445,6 +599,59 @@ export default function SourcesPage() {
                   </div>
                 )}
 
+                {formData.type === 'rss' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Numero massimo di articoli da recuperare
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={formData.configuration?.maxItems || 10}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          configuration: {
+                            ...formData.configuration,
+                            maxItems: parseInt(e.target.value) || 10
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="10"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Massimo 100 articoli per fetch. Consigliato: 10-20 per feed nuovi.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Intervallo di polling (minuti)
+                      </label>
+                      <select
+                        value={formData.configuration?.pollingInterval || 60}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          configuration: {
+                            ...formData.configuration,
+                            pollingInterval: parseInt(e.target.value)
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value={15}>15 minuti</option>
+                        <option value={30}>30 minuti</option>
+                        <option value={60}>1 ora</option>
+                        <option value={120}>2 ore</option>
+                        <option value={360}>6 ore</option>
+                        <option value={720}>12 ore</option>
+                        <option value={1440}>24 ore</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
                 {formData.type !== 'calendar' && (
                   <div className="flex items-center">
                     <input
@@ -473,7 +680,7 @@ export default function SourcesPage() {
                     disabled={submitting}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {submitting ? 'Creazione...' : 'Crea'}
+                    {submitting ? (editingSource ? 'Aggiornamento...' : 'Creazione...') : (editingSource ? 'Aggiorna' : 'Crea')}
                   </button>
                 </div>
               </form>

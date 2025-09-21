@@ -10,17 +10,22 @@ import {
   ValidationResult
 } from '../../domain/ports/SourceFetchService';
 import { Source } from '../../domain/entities/Source';
+import { RssFetchService } from './RssFetchService';
 
 /**
  * Universal fetch service that handles all source types
  * This is a basic implementation that can be extended with specific fetchers
  */
 export class UniversalFetchService implements SourceFetchService {
+  private readonly rssService: RssFetchService;
+
   constructor(
-    private readonly rssService?: RssFetchService,
+    rssService?: RssFetchService,
     private readonly telegramService?: TelegramFetchService,
     private readonly calendarService?: CalendarFetchService
-  ) {}
+  ) {
+    this.rssService = rssService || new RssFetchService();
+  }
 
   async fetchContent(source: Source): Promise<Result<FetchResult, FetchError>> {
     try {
@@ -28,9 +33,6 @@ export class UniversalFetchService implements SourceFetchService {
 
       switch (source.type.getValue()) {
         case 'rss':
-          if (!this.rssService) {
-            return Result.failure(new FetchError('RSS service not available', 'server'));
-          }
           return await this.rssService.fetchRss(source);
 
         case 'telegram':
@@ -59,7 +61,7 @@ export class UniversalFetchService implements SourceFetchService {
     try {
       switch (source.type.getValue()) {
         case 'rss':
-          return await this.testRssSource(source);
+          return await this.rssService.testRss(source);
 
         case 'telegram':
           return await this.testTelegramSource(source);

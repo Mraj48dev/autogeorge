@@ -1,220 +1,320 @@
-# Elenco Completo dei Moduli - AutoGeorge
+# Elenco Completo dei Moduli - AutoGeorge v1.0.1
 ## Guida Non Tecnica ai Componenti del Sistema
 
 **Progetto:** AutoGeorge v1.0.1 - Piattaforma per la generazione automatica di articoli
-**Stato:** Prototipo funzionante pronto per test iniziali
+**Stato:** Prototipo funzionante con architettura Clean/Hexagonal implementata
+**Ultimo aggiornamento:** 21 Settembre 2025
 
 ---
 
-## 1. MODULI PRINCIPALI
+## 1. MODULI PRINCIPALI IMPLEMENTATI
 
 ### 1.1 📝 **Content Module** - Il Cervello per gli Articoli
-**Cosa fa:** È il cuore del sistema che si occupa di creare, gestire e salvare gli articoli generati dall'intelligenza artificiale.
+**Cosa fa:** È il modulo completo per la gestione degli articoli, implementato con Clean Architecture rigorosa e pattern Domain-Driven Design.
 
 **Compiti principali:**
-- Riceve le richieste di creazione articoli
-- Chiama l'AI (Perplexity) per generare il contenuto
-- Controlla che l'articolo creato sia valido
-- Salva l'articolo nel database
-- Gestisce gli stati dell'articolo (bozza → generato → pronto → pubblicato)
+- Genera articoli tramite AI usando il caso d'uso `GenerateArticle`
+- Gestisce entità `Article` con stati ben definiti
+- Integrazione con servizi AI esterni (Perplexity)
+- Admin Facade completo con CLI e HTTP endpoints
+- Validazione rigorosa degli input con schemi JSON
+
+**Architettura interna:**
+- **Domain**: Entità `Article`, Value Objects, Events, Ports
+- **Application**: Use Cases (`GenerateArticle`) con Result pattern
+- **Infrastructure**: Repository, AI Service adapters, Logger
+- **Admin**: Facade con supporto dry-run, health check, metriche
 
 **Input (cosa riceve):**
-- Argomento/prompt per l'articolo
-- Parametri di generazione (lunghezza, tono, stile)
-- Lingua di destinazione
-- Parole chiave da includere
+- Prompt per generazione articolo
+- Modello AI da utilizzare (llama-3.1-sonar-large-128k-online)
+- Parametri: word count, temperatura, keywords, tono, stile
+- ID fonte opzionale per collegamento
 
 **Output (cosa produce):**
-- Articolo completo con titolo e contenuto
-- Statistiche (numero parole, tempo di lettura)
-- Metadati SEO
-- Informazioni sui costi di generazione
+- Articolo completo con metadati
+- Statistiche di generazione (token utilizzati, tempo, costi)
+- Events di dominio per integrazione con altri moduli
+- Log strutturati per auditing
 
-**Livello di sviluppo:** 🟢 **COMPLETO** (85-90%)
+**Livello di sviluppo:** 🟢 **COMPLETO** (95%) - Architettura Clean implementata
 
 ---
 
-### 1.2 🏗️ **Shared Module** - Le Fondamenta Comuni
-**Cosa fa:** Fornisce gli strumenti base che tutti gli altri moduli usano per funzionare. È come la "cassetta degli attrezzi" comune.
+### 1.2 📡 **Sources Module** - Gestione Fonti di Contenuto
+**Cosa fa:** Gestisce le fonti esterne da cui ricavare contenuti: RSS feeds, Telegram channels, calendari editoriali.
 
 **Compiti principali:**
-- Gestisce gli errori in modo uniforme
-- Fornisce il sistema di logging (registrazione eventi)
-- Definisce le regole base per tutti i dati
-- Configura le impostazioni dell'ambiente
+- Crea e configura fonti (`CreateSource` use case)
+- Lista fonti con paginazione e filtri (`GetSources`)
+- Recupera contenuti da fonti esterne (`FetchFromSource`)
+- Gestisce stati delle fonti (attiva, paused, error)
+- Test delle configurazioni prima del salvataggio
+
+**Architettura interna:**
+- **Domain**: Entità `Source`, Value Objects per configurazioni
+- **Application**: Use Cases per CRUD e fetch operazioni
+- **Infrastructure**: Adapters per RSS, Telegram, Database
+- **Admin**: Facade con operazioni administrative
 
 **Input (cosa riceve):**
-- Variabili di configurazione del sistema
-- Eventi da registrare nei log
+- Configurazioni fonti (URL RSS, canali Telegram)
+- Parametri di polling e filtri
+- Richieste di fetch manuale
 
 **Output (cosa produce):**
-- Strumenti pronti per gli altri moduli
-- Log di sistema strutturati
-- Gestione standardizzata degli errori
+- Fonti configurate e monitorate
+- Contenuti estratti dalle fonti
+- Metadati di fetch (ultimo accesso, errori)
+- Statistiche per fonte
 
-**Livello di sviluppo:** 🟡 **PARZIALE** (60-70%)
+**Livello di sviluppo:** 🟢 **COMPLETO** (90%) - Tutti i use case implementati
 
 ---
 
-### 1.3 🖥️ **App Router Module** - L'Interfaccia Utente
-**Cosa fa:** È quello che vede e usa l'utente finale. Crea le pagine web e gestisce le interazioni.
+### 1.3 🏗️ **Shared Infrastructure** - Fondamenta Comuni
+**Cosa fa:** Fornisce l'infrastruttura condivisa per tutti i moduli: database, logging, configurazione, types comuni.
 
 **Compiti principali:**
-- Mostra la pagina principale del sito
-- Fornisce il pannello di amministrazione
-- Gestisce i form per creare articoli
-- Espone le API per comunicare con il sistema
+- Connessione database PostgreSQL tramite Prisma
+- Sistema di logging strutturato
+- Result/Either pattern per gestione errori
+- Base classes per Entity, ValueObject, UseCase
+- Configurazione ambiente centralizzata
 
-**Input (cosa riceve):**
-- Richieste degli utenti dalle pagine web
-- Dati dai form di inserimento
-- Chiamate API esterne
+**Architettura interna:**
+- **Database**: Client Prisma condiviso
+- **Domain**: Base classes e types comuni
+- **Application**: UseCase base class
+- **Infrastructure**: Logger, configurazione
 
-**Output (cosa produce):**
-- Pagine web visualizzabili nel browser
-- Risposte JSON dalle API
-- Interfaccia per amministratori
-
-**Livello di sviluppo:** 🟡 **BASILARE** (40-50%)
+**Livello di sviluppo:** 🟢 **COMPLETO** (95%)
 
 ---
 
-### 1.4 🔌 **Composition Root** - Il Direttore d'Orchestra
-**Cosa fa:** Coordina tutti i componenti del sistema e li fa lavorare insieme. È come il direttore di un'orchestra.
+### 1.4 🔌 **Composition Root** - Dependency Injection
+**Cosa fa:** Coordina l'inizializzazione di tutti i moduli e gestisce le dipendenze con un Container DI completo.
 
 **Compiti principali:**
-- Avvia e configura tutti i moduli
-- Gestisce le connessioni tra i componenti
-- Controlla lo stato di salute del sistema
-- Coordina l'accesso al database e ai servizi esterni
+- Inizializzazione container DI con tutti i servizi
+- Configurazione database e connessioni esterne
+- Registrazione di repository, use cases, facades
+- CLI per operazioni administrative
+- Health checks di sistema
 
-**Input (cosa riceve):**
-- Configurazioni di sistema
-- Comandi di avvio/spegnimento
-- Richieste di controllo stato
+**Architettura interna:**
+- Container DI con registrazione automatica
+- CLI principale con comandi per ogni modulo
+- Health check endpoints
+- Gestione ciclo di vita applicazione
 
-**Output (cosa produce):**
-- Sistema completamente configurato e funzionante
-- Report di salute dei servizi
-- Gestione del ciclo di vita dell'applicazione
+**Livello di sviluppo:** 🟢 **COMPLETO** (95%)
 
-**Livello di sviluppo:** 🟢 **COMPLETO** (90%)
+---
+
+### 1.5 🖥️ **Next.js App Router** - Frontend e API
+**Cosa fa:** Fornisce l'interfaccia utente web e gli endpoints API per l'amministrazione del sistema.
+
+**Compiti principali:**
+- Dashboard amministrativo responsive
+- Forms per configurazione sources
+- Endpoint API per tutti i moduli (/api/admin/*)
+- Pagine per gestione articoli e generazione
+- Autenticazione NextAuth integrata
+
+**API Endpoints implementati:**
+- `/api/admin/sources` - CRUD sources
+- `/api/admin/sources/[id]/fetch` - Fetch da fonte specifica
+- `/api/admin/generate-article` - Generazione articoli
+- `/api/health` - Health check sistema
+
+**UI Components:**
+- Dashboard con statistiche
+- Source management interface
+- Article generation forms
+- Admin panels per ogni modulo
+
+**Livello di sviluppo:** 🟡 **FUNZIONALE** (80%) - Core features implementate
 
 ---
 
 ## 2. MODULI DI SUPPORTO
 
-### 2.1 📋 **Contracts** - Le Regole di Comunicazione
-**Cosa fa:** Definisce come i dati devono essere strutturati quando viaggiano tra i diversi componenti.
+### 2.1 📋 **Contracts** - Schemi di Validazione
+**Cosa fa:** Definisce gli schemi JSON per validazione input/output tra moduli.
 
-**Stato attuale:** 🔴 **MINIMALE** - Solo struttura base creata
+**Stato attuale:** 🟡 **PARZIALE** - Struttura base creata, schemi da completare
 
-### 2.2 🧪 **Tests** - Il Sistema di Controllo Qualità
-**Cosa fa:** Verifica automaticamente che tutto funzioni correttamente dopo ogni modifica.
+### 2.2 🧪 **Tests** - Suite di Test
+**Cosa fa:** Test automatizzati per Domain entities, Use Cases e integrazione.
 
-**Stato attuale:** 🔴 **MOLTO INCOMPLETO** - Solo test basici presenti
-
----
+**Stato attuale:** 🟡 **IN SVILUPPO** - Setup Vitest + Playwright, test base implementati
 
 ## 3. COME I MODULI LAVORANO INSIEME
 
 ### Flusso tipico di creazione articolo:
-1. **Utente** inserisce richiesta tramite **App Router**
-2. **App Router** chiama **Composition Root**
-3. **Composition Root** attiva **Content Module**
-4. **Content Module** usa **Shared Module** per gestire l'operazione
-5. **Content Module** chiama l'AI esterna (Perplexity)
-6. **Content Module** salva l'articolo nel database
-7. **App Router** mostra il risultato all'utente
+1. **Dashboard** → Utente avvia generazione tramite `/admin/generate` page
+2. **API Endpoint** → `/api/admin/generate-article` riceve la request
+3. **Composition Root** → Container DI risolve le dipendenze (ContentAdminFacade)
+4. **Content Module** → `GenerateArticle` use case elabora il prompt
+5. **AI Service** → Chiamata a Perplexity API per generazione contenuto
+6. **Article Repository** → Salvataggio nel database PostgreSQL
+7. **Response** → Articolo generato ritorna al frontend con metadati
+
+### Flusso gestione sources:
+1. **Sources Admin** → Configurazione fonte tramite `/admin/sources`
+2. **API Endpoint** → `/api/admin/sources` gestisce CRUD operations
+3. **Sources Module** → Use cases (CreateSource, GetSources, FetchFromSource)
+4. **External Adapters** → Connessione RSS feeds, Telegram channels
+5. **Database** → Persistenza configurazioni e metadati fetch
+6. **Monitoring** → Health checks e statistiche sources
 
 ---
 
 ## 4. VALUTAZIONE RISCHI NELLE MODIFICHE
 
-### 🔴 **RISCHIO ALTO** - Toccare questi moduli può bloccare tutto:
+### 🔴 **RISCHIO CRITICO** - Blocco totale del sistema:
 
-**Shared Module:**
-- Se si rompe, tutto il sistema smette di funzionare
-- È come rompere le fondamenta di una casa
+**Shared Infrastructure (`src/shared/`):**
+- **Database Client**: Modifica schema Prisma o connessione PostgreSQL
+- **Result Types**: Cambio del pattern Result/Either pattern
+- **Base Classes**: Entity, ValueObject, UseCase base
+- **Impatto**: Sistema completamente non funzionante
+- **File critici**: `src/shared/database/prisma.ts`, `src/shared/domain/types/Result.ts`
 
-**Content Module (parte core):**
-- Se si rompe la logica di creazione articoli, il sistema perde la sua funzione principale
-- È come rompere il motore di un'auto
+**Composition Root (`src/composition-root/`):**
+- **Container DI**: Registrazione servizi e dipendenze
+- **Database Config**: Inizializzazione connessioni
+- **Impatto**: Applicazione non si avvia
+- **File critici**: `src/composition-root/container.ts`, `src/composition-root/main.ts`
 
-### 🟡 **RISCHIO MEDIO** - Modifiche che possono causare problemi:
+### 🟡 **RISCHIO ALTO** - Funzionalità principali compromesse:
 
-**Composition Root:**
-- Problemi nell'avvio del sistema
-- Componenti che non comunicano tra loro
+**Content Module - Domain Layer:**
+- **Article Entity**: Logica business degli articoli
+- **Generate Use Case**: Core della generazione AI
+- **Impatto**: Impossibile generare articoli
+- **File critici**: `src/modules/content/domain/entities/Article.ts`, `src/modules/content/application/use-cases/GenerateArticle.ts`
 
-**Content Module (parte tecnica):**
-- Problemi nel salvare/recuperare articoli
-- Problemi nella comunicazione con l'AI
+**Sources Module - Core Logic:**
+- **Source Entity**: Gestione configurazioni fonti
+- **Fetch Use Cases**: Recupero contenuti esterni
+- **Impatto**: Sources non funzionanti
+- **File critici**: `src/modules/sources/domain/entities/Source.ts`
+
+**Database Schema (Prisma):**
+- **Migrations**: Cambio struttura tabelle
+- **Relations**: Modifiche alle foreign keys
+- **Impatto**: Data corruption o incompatibilità
+- **File critico**: `prisma/schema.prisma`
+
+### 🟡 **RISCHIO MEDIO** - Problemi di integrazione:
+
+**Admin Facades:**
+- **API Contracts**: Cambio signature metodi
+- **Validation Logic**: Modifica regole validazione
+- **Impatto**: API endpoints non funzionanti
+- **File a rischio**: `src/modules/*/admin/*AdminFacade.ts`
+
+**Infrastructure Adapters:**
+- **Repository Implementations**: Cambio query database
+- **External Service Clients**: Integrazione AI/RSS
+- **Impatto**: Perdita dati o servizi esterni non raggiungibili
 
 ### 🟢 **RISCHIO BASSO** - Modifiche sicure:
 
-**App Router:**
-- Cambiare l'aspetto delle pagine
-- Aggiungere nuove pagine
-- Modificare testi e layout
+**Next.js App Router UI:**
+- **Page Components**: Aspetto pagine admin
+- **Form Components**: Styling e layout
+- **Dashboard Visualizations**: Grafici e statistiche
+- **File sicuri**: `src/app/admin/**/*.tsx`
+
+**Admin API Routes:**
+- **HTTP Handling**: Response formatting
+- **Error Messages**: Messaggi user-friendly
+- **File sicuri**: `src/app/api/admin/**/*.ts` (solo formatting)
+
+**Logging e Monitoring:**
+- **Log Messages**: Formato e verbosity
+- **Health Check Details**: Aggiunta metriche
+- **File sicuri**: `src/shared/infrastructure/monitoring/`
+
+## 5. PRIORITÀ DI SVILUPPO ATTUALE
+
+### ✅ **COMPLETATO**:
+1. **Architettura Clean/Hexagonal** - Domain, Application, Infrastructure layers
+2. **Moduli Core** - Content e Sources con use cases completi
+3. **Database Design** - Schema Prisma con PostgreSQL
+4. **Admin Interfaces** - Facades con CLI e HTTP endpoints
+5. **Next.js Frontend** - Dashboard e API routes funzionanti
+
+### 🔄 **IN CORSO**:
+1. **Test Coverage** - Espansione suite Vitest + Playwright
+2. **JSON Schemas** - Validazione contracts tra moduli
+3. **Error Handling** - Standardizzazione across tutti i moduli
+4. **UI/UX Polish** - Miglioramento interfacce admin
+
+### 📋 **ROADMAP PROSSIMI SVILUPPI**:
+1. **Autenticazione Completa** - NextAuth.js roles e permissions
+2. **Publishing Module** - Integrazione WordPress/CMS esterni
+3. **Billing System** - Token management e pagamenti
+4. **Monitoring Avanzato** - Metriche e alerting production
+5. **Sites Management** - Multi-tenant per gestione più siti
+
+### ⚠️ **RACCOMANDAZIONI CRITICHE**:
+- **Mai toccare** `src/shared/` senza test completi
+- **Sempre testare** modifiche al Composition Root
+- **Backup database** prima di migration Prisma
+- **Usare dry-run** per test Admin Facades
+- **Validare input** prima di ogni use case execution
 
 ---
 
-## 5. PRIORITÀ DI SVILUPPO
+## 6. INFORMAZIONI TECNICHE AGGIORNATE
 
-### Cosa completare per primo:
-1. **Sistema di Test** - Per garantire qualità
-2. **Regole di Validazione** - Per controllare i dati in ingresso
-3. **Interfaccia Utente** - Per rendere il sistema usabile
-4. **Nuove Funzionalità** - Autenticazione, gestione fonti, pubblicazione automatica
+**Architettura:** Clean Architecture + Hexagonal + Domain-Driven Design
+**Pattern:** Result/Either, Dependency Injection, CQRS, Repository
+**Linguaggio:** TypeScript 5.9+ (Next.js 15 + React 18)
+**Totale righe di codice:** **~14.447 linee** (75 file TS/TSX)
+**Database:** PostgreSQL con Prisma ORM 5.8
+**AI Provider:** Perplexity API (llama-3.1-sonar-large-128k-online)
+**Frontend:** Tailwind CSS + Shadcn/ui components
+**Testing:** Vitest + Playwright + Testing Library
+**Deploy:** Vercel-ready con vercel.json configurato
 
-### Raccomandazioni per modifiche sicure:
-- Testare sempre in ambiente di sviluppo prima
-- Fare piccole modifiche incrementali
-- Tenere backup prima di modifiche importanti
-- Documentare ogni cambiamento significativo
+### **Moduli Implementati:**
+- ✅ **Content Module**: `src/modules/content/` (Domain, Application, Infrastructure, Admin)
+- ✅ **Sources Module**: `src/modules/sources/` (Domain, Application, Infrastructure, Admin)
+- ✅ **Shared Infrastructure**: `src/shared/` (Database, Types, Base Classes, Logger)
+- ✅ **Composition Root**: `src/composition-root/` (DI Container, CLI, Health Checks)
+- ✅ **Next.js App**: `src/app/` (Admin UI, API Routes, Dashboard)
+
+### **Database Schema (PostgreSQL):**
+- `articles` - Contenuti generati con metadati
+- `sources` - Configurazioni fonti esterne (RSS, Telegram)
+- `users` - Autenticazione NextAuth.js
+- `accounts` + `sessions` - OAuth e sessioni
+
+### **API Endpoints Funzionanti:**
+- `GET/POST /api/admin/sources` - Gestione sources
+- `POST /api/admin/sources/[id]/fetch` - Fetch specifico
+- `POST /api/admin/generate-article` - Generazione AI
+- `GET /api/health` - System health check
+
+**Data ultimo aggiornamento:** 21 Settembre 2025
+**Versione:** v1.0.1-stable
+**Analisi:** Codebase completo e aggiornato
 
 ---
 
-## 6. INFORMAZIONI TECNICHE RAPIDE
+## 📊 **RIEPILOGO STATO MODULI**
 
-**Architettura:** Clean Architecture con Domain-Driven Design
-**Linguaggio:** TypeScript (Next.js 15)
-**Totale righe di codice:** ~10.000 linee
-**File principali:** 43 file TypeScript/TSX
-**Database:** PostgreSQL via Prisma ORM
-**AI Provider:** Perplexity API
-
-**Data creazione documento:** 20 Settembre 2025
-**Versione:** 001
-**Autore:** Analisi automatica del codice
-
-
-⏺ ✅ Punto di salvataggio creato con successo!
-
-  Cosa ho fatto:
-
-  1. 💾 Commit di salvataggio: Tutte le modifiche sono state salvate con il commit f543ea8
-  2. 🏷️ Tag stabile: Creato il tag v1.0.0-stable come punto di ripristino
-  3. 🌱 Branch di sviluppo: Ora sei sul branch development per lavorare in sicurezza
-
-  Come recuperare la versione precedente:
-
-  # Se qualcosa va storto, torna alla versione stabile
-  git checkout main
-  git reset --hard v1.0.0-stable
-
-  # Oppure controlla la versione stabile senza perdere il lavoro
-  git checkout v1.0.0-stable
-
-  Workflow consigliato:
-
-  # Lavora tranquillamente sul branch development
-  git add .
-  git commit -m "Nuova funzionalità"
-
-  # Quando tutto funziona, mergia su main
-  git checkout main
-  git merge development
-
-  Ora puoi sperimentare e debuggare senza rischi! 🚀
+| Modulo | Completezza | Rischio Modifica | Note |
+|--------|-------------|------------------|------|
+| 📝 Content | 🟢 95% | 🟡 Alto | Core business logic implementato |
+| 📡 Sources | 🟢 90% | 🟡 Alto | Use cases completi, monitoring attivo |
+| 🏗️ Shared | 🟢 95% | 🔴 Critico | Fondamenta sistema, non toccare |
+| 🔌 Composition Root | 🟢 95% | 🔴 Critico | DI container, avvio sistema |
+| 🖥️ Next.js App | 🟡 80% | 🟢 Basso | UI funzionale, sicura da modificare |
+| 📋 Contracts | 🟡 40% | 🟡 Medio | Schemi validazione da completare |
+| 🧪 Tests | 🟡 50% | 🟢 Basso | Coverage base, espandibile |

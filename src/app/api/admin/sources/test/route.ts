@@ -1,57 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
+import { NextResponse } from 'next/server';
 
 /**
- * POST /api/admin/sources/test
- * Tests a source configuration without saving it
+ * GET /api/admin/sources/test
+ * Test endpoint that returns mock data without using the database
  */
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const body = await request.json();
-
-    // Validate required fields
-    if (!body.name || !body.type) {
-      return NextResponse.json(
-        { error: 'Name and type are required for testing' },
-        { status: 400 }
-      );
-    }
-
-    const container = getSourcesContainer();
-    const result = await container.sourcesAdminFacade.testSource({
-      name: body.name,
-      type: body.type,
-      url: body.url,
-      configuration: body.configuration,
-      testConnection: true,
-    });
-
-    if (result.isFailure()) {
-      return NextResponse.json(
+    // Return mock data to test that the API infrastructure works
+    const mockResponse = {
+      sources: [
         {
-          success: false,
-          error: result.error.message,
-          testResult: 'failed'
-        },
-        { status: 400 }
-      );
-    }
+          id: 'test-1',
+          name: 'Test RSS Feed',
+          type: 'rss',
+          status: 'active',
+          url: 'https://example.com/rss',
+          lastFetchAt: new Date().toISOString(),
+          needsAttention: false,
+          totalFetches: 10,
+          totalItems: 25,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      }
+    };
 
-    return NextResponse.json({
-      success: true,
-      message: 'Source test completed successfully',
-      testResult: 'passed',
-      data: result.value
-    });
+    return NextResponse.json(mockResponse);
 
   } catch (error) {
-    console.error('Error testing source:', error);
+    console.error('Error in test endpoint:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error',
-        testResult: 'failed'
-      },
+      { error: 'Test endpoint failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

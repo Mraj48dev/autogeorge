@@ -412,6 +412,13 @@ export class Source extends AggregateRoot<SourceId> {
   }
 
   /**
+   * Checks if the source should auto-generate articles from new content
+   */
+  shouldAutoGenerate(): boolean {
+    return this._configuration?.autoGenerate ?? false;
+  }
+
+  /**
    * Checks if the source needs attention (has errors or hasn't been fetched recently)
    */
   needsAttention(): boolean {
@@ -522,6 +529,7 @@ export class Source extends AggregateRoot<SourceId> {
 export interface SourceConfiguration {
   pollingInterval?: number; // in minutes
   enabled?: boolean;
+  autoGenerate?: boolean; // if true, automatically generate articles from new content
 }
 
 export interface RssConfiguration extends SourceConfiguration {

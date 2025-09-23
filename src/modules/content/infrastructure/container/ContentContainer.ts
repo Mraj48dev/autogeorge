@@ -15,9 +15,16 @@ import { PrismaClient } from '@prisma/client';
 // Content Module Dependencies
 import { ArticleRepository } from '../../domain/ports/ArticleRepository';
 import { AiService } from '../../domain/ports/AiService';
+import { GenerationSettingsRepository } from '../../domain/ports/GenerationSettingsRepository';
 import { PrismaArticleRepository } from '../repositories/PrismaArticleRepository';
+import { PrismaGenerationSettingsRepository } from '../repositories/PrismaGenerationSettingsRepository';
 import { PerplexityService } from '../services/PerplexityService';
 import { GenerateArticle } from '../../application/use-cases/GenerateArticle';
+import { AutoGenerateArticles } from '../../application/use-cases/AutoGenerateArticles';
+import { GenerateArticleManually } from '../../application/use-cases/GenerateArticleManually';
+import { GetArticlesBySource } from '../../application/use-cases/GetArticlesBySource';
+import { GetGenerationSettings } from '../../application/use-cases/GetGenerationSettings';
+import { UpdateGenerationSettings } from '../../application/use-cases/UpdateGenerationSettings';
 import { ContentAdminFacade } from '../../admin/ContentAdminFacade';
 
 // Module-specific infrastructure
@@ -35,8 +42,14 @@ export class ContentContainer {
 
   // Content module dependencies
   private _articleRepository: ArticleRepository | null = null;
+  private _generationSettingsRepository: GenerationSettingsRepository | null = null;
   private _aiService: AiService | null = null;
   private _generateArticle: GenerateArticle | null = null;
+  private _autoGenerateArticles: AutoGenerateArticles | null = null;
+  private _generateArticleManually: GenerateArticleManually | null = null;
+  private _getArticlesBySource: GetArticlesBySource | null = null;
+  private _getGenerationSettings: GetGenerationSettings | null = null;
+  private _updateGenerationSettings: UpdateGenerationSettings | null = null;
   private _contentAdminFacade: ContentAdminFacade | null = null;
 
   private constructor(config: Config) {
@@ -115,6 +128,13 @@ export class ContentContainer {
     return this._articleRepository;
   }
 
+  get generationSettingsRepository(): GenerationSettingsRepository {
+    if (!this._generationSettingsRepository) {
+      this._generationSettingsRepository = new PrismaGenerationSettingsRepository(this.prisma);
+    }
+    return this._generationSettingsRepository;
+  }
+
   get aiService(): AiService {
     if (!this._aiService) {
       this._aiService = new PerplexityService(this._config.ai.perplexityApiKey);
@@ -130,6 +150,58 @@ export class ContentContainer {
       );
     }
     return this._generateArticle;
+  }
+
+  get autoGenerateArticles(): AutoGenerateArticles {
+    if (!this._autoGenerateArticles) {
+      this._autoGenerateArticles = new AutoGenerateArticles(
+        this.articleRepository,
+        this.aiService,
+        this.logger
+      );
+    }
+    return this._autoGenerateArticles;
+  }
+
+  get generateArticleManually(): GenerateArticleManually {
+    if (!this._generateArticleManually) {
+      this._generateArticleManually = new GenerateArticleManually(
+        this.articleRepository,
+        this.aiService,
+        this.logger
+      );
+    }
+    return this._generateArticleManually;
+  }
+
+  get getArticlesBySource(): GetArticlesBySource {
+    if (!this._getArticlesBySource) {
+      this._getArticlesBySource = new GetArticlesBySource(
+        this.articleRepository,
+        this.logger
+      );
+    }
+    return this._getArticlesBySource;
+  }
+
+  get getGenerationSettings(): GetGenerationSettings {
+    if (!this._getGenerationSettings) {
+      this._getGenerationSettings = new GetGenerationSettings(
+        this.generationSettingsRepository,
+        this.logger
+      );
+    }
+    return this._getGenerationSettings;
+  }
+
+  get updateGenerationSettings(): UpdateGenerationSettings {
+    if (!this._updateGenerationSettings) {
+      this._updateGenerationSettings = new UpdateGenerationSettings(
+        this.generationSettingsRepository,
+        this.logger
+      );
+    }
+    return this._updateGenerationSettings;
   }
 
   get contentAdminFacade(): ContentAdminFacade {

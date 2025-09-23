@@ -114,3 +114,22 @@ model FeedItem {
   @@index([processed])
   @@map("feed_items")
 }
+
+model GenerationSettings {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  titlePrompt             String
+  contentPrompt           String
+  seoPrompt               String
+  defaultModel            String   @default("gpt-4")
+  defaultTemperature      Float    @default(0.7)
+  defaultMaxTokens        Int      @default(2000)
+  defaultLanguage         String   @default("it")
+  defaultTone             String   @default("professionale")
+  defaultStyle            String   @default("giornalistico")
+  defaultTargetAudience   String   @default("generale")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("generation_settings")
+}

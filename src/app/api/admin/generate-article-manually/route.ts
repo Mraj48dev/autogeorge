@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { ThreeStepArticleGenerationService } from '@/modules/content/infrastructure/services/ThreeStepArticleGenerationService';
 
 /**
  * POST /api/admin/generate-article-manually
- * Generates an article manually from a specific feed item with custom prompts
+ * Generates an article manually from a specific feed item using 3-step AI workflow:
+ * 1. Perplexity research from original URL
+ * 2. ChatGPT content generation with user prompts
+ * 3. ChatGPT optimization (title, SEO, metadata)
  */
 export async function POST(request: NextRequest) {
-
   try {
+    console.log('🚀 Starting 3-step article generation...');
     const body = await request.json();
 
     // Validate required fields
@@ -41,6 +45,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate that feed item has URL for Perplexity research
+    if (!feedItem.url) {
+      return NextResponse.json(
+        { error: 'Feed item must have URL for article generation' },
+        { status: 400 }
+      );
+    }
+
     // Get user generation settings
     const userId = request.headers.get('x-user-id') || 'demo-user';
     let settings = await prisma.generationSettings.findUnique({
@@ -64,47 +76,65 @@ export async function POST(request: NextRequest) {
     const contentPrompt = body.customPrompts?.contentPrompt || settings.contentPrompt;
     const seoPrompt = body.customPrompts?.seoPrompt || settings.seoPrompt;
 
-    // Generate the article title
-    const generatedTitle = `[AI Generated] ${feedItem.title}`;
+    // Get API keys from environment variables
+    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+    const openaiApiKey = process.env.OPENAI_API_KEY;
 
-    // Generate the article content
-    const generatedContent = `# ${generatedTitle}
+    if (!perplexityApiKey || !openaiApiKey) {
+      console.error('Missing API keys:', { perplexity: !!perplexityApiKey, openai: !!openaiApiKey });
+      return NextResponse.json(
+        { error: 'AI services not configured. Missing API keys.' },
+        { status: 500 }
+      );
+    }
 
-## Contenuto Originale
-${feedItem.content}
+    // Initialize the 3-step generation service
+    const generationService = new ThreeStepArticleGenerationService(
+      perplexityApiKey,
+      openaiApiKey
+    );
 
-## Articolo Generato
+    console.log('🔧 Starting 3-step generation for URL:', feedItem.url);
 
-**Fonte:** ${feedItem.source?.name || 'Fonte sconosciuta'}
-**Data di pubblicazione:** ${feedItem.publishedAt.toLocaleDateString('it-IT')}
-**URL originale:** ${feedItem.url || 'N/A'}
+    // Execute the 3-step workflow
+    const generationResult = await generationService.generateArticle({
+      articleUrl: feedItem.url,
+      customPrompts: {
+        titlePrompt,
+        contentPrompt,
+        seoPrompt
+      },
+      settings: {
+        model: body.settings?.model || settings.defaultModel,
+        temperature: body.settings?.temperature || settings.defaultTemperature,
+        maxTokens: body.settings?.maxTokens || settings.defaultMaxTokens,
+        language: body.settings?.language || settings.defaultLanguage,
+        tone: body.settings?.tone || settings.defaultTone,
+        style: body.settings?.style || settings.defaultStyle,
+        targetAudience: body.settings?.targetAudience || settings.defaultTargetAudience
+      }
+    });
 
-### Prompt utilizzati:
-- **Title Prompt:** ${titlePrompt}
-- **Content Prompt:** ${contentPrompt}
-- **SEO Prompt:** ${seoPrompt}
+    if (generationResult.isFailure()) {
+      console.error('❌ 3-step generation failed:', generationResult.error);
+      return NextResponse.json(
+        {
+          error: `Article generation failed at step ${generationResult.error.step}`,
+          details: generationResult.error.error,
+          step: generationResult.error.step
+        },
+        { status: 500 }
+      );
+    }
 
-### Contenuto elaborato:
-${feedItem.content}
+    const result = generationResult.value;
+    console.log('✅ 3-step generation completed successfully!');
 
-### Configurazione generazione:
-- **Modello:** ${body.settings?.model || settings.defaultModel}
-- **Temperatura:** ${body.settings?.temperature || settings.defaultTemperature}
-- **Max Tokens:** ${body.settings?.maxTokens || settings.defaultMaxTokens}
-- **Lingua:** ${body.settings?.language || settings.defaultLanguage}
-- **Tono:** ${body.settings?.tone || settings.defaultTone}
-- **Stile:** ${body.settings?.style || settings.defaultStyle}
-- **Target Audience:** ${body.settings?.targetAudience || settings.defaultTargetAudience}
-
----
-
-*Articolo generato automaticamente da AutoGeorge*`;
-
-    // Create the article
+    // Create the article with generated content
     const article = await prisma.article.create({
       data: {
-        title: generatedTitle,
-        content: generatedContent,
+        title: result.step3.optimizedTitle,
+        content: result.step2.finalArticle,
         status: 'generated',
         sourceId: feedItem.sourceId
       }
@@ -118,6 +148,8 @@ ${feedItem.content}
         articleId: article.id
       }
     });
+
+    console.log('💾 Article saved to database:', article.id);
 
     return NextResponse.json({
       success: true,
@@ -134,14 +166,29 @@ ${feedItem.content}
           id: feedItem.id,
           processed: true,
           articleId: article.id
+        },
+        generationMetadata: {
+          totalCost: result.totalCost,
+          totalTime: result.totalTime,
+          steps: {
+            step1: 'Perplexity research completed',
+            step2: 'ChatGPT content generation completed',
+            step3: 'ChatGPT optimization completed'
+          },
+          sources: result.step1.sources,
+          metaDescription: result.step3.metaDescription,
+          seoTags: result.step3.seoTags
         }
       }
     });
 
   } catch (error) {
-    console.error('Manual article generation API error:', error);
+    console.error('💥 Manual article generation API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

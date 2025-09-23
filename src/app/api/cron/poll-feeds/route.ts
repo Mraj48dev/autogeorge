@@ -114,12 +114,18 @@ export async function GET(request: NextRequest) {
               // Salva gli items nel database
               for (const item of feedData.items) {
                 try {
-                  // Controlla se esiste già
+                  // Controlla se esiste già usando tutti i constraint unici
                   const existing = await prisma.feedItem.findFirst({
                     where: {
                       OR: [
-                        { title: item.title, sourceId: sourceData.id },
-                        { guid: item.guid }
+                        {
+                          sourceId: sourceData.id,
+                          url: item.link
+                        },
+                        {
+                          sourceId: sourceData.id,
+                          guid: item.guid
+                        }
                       ]
                     }
                   });
@@ -144,7 +150,13 @@ export async function GET(request: NextRequest) {
                     newItems++;
                   }
                 } catch (dbError) {
-                  console.error(`❌ Database error for ${item.title}:`, dbError);
+                  // Se è un errore di constraint violation, è un duplicato
+                  if (dbError instanceof Error && dbError.message.includes('Unique constraint failed')) {
+                    console.log(`🔄 Skipped duplicate (constraint): ${item.title.substring(0, 50)}...`);
+                    duplicatesSkipped++;
+                  } else {
+                    console.error(`❌ Database error for ${item.title}:`, dbError);
+                  }
                 }
               }
 

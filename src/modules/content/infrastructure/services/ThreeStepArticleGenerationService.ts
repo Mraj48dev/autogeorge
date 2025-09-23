@@ -176,7 +176,7 @@ Format your response as a structured research report with clear sections and bul
 
     const result = await this.perplexityService.generateArticle({
       prompt: researchPrompt,
-      model: 'sonar pro',
+      model: 'sonar',
       parameters: {
         maxTokens: 4000,
         temperature: 0.3, // Lower temperature for factual research

@@ -132,9 +132,95 @@ src/modules/
 2. Configurazione variabili ambiente production
 3. Test end-to-end sulla piattaforma live
 
+## 🚨 DEPLOYMENT E TROUBLESHOOTING
+
+### ⚠️ PROBLEMI DI DEPLOYMENT RISOLTI
+**LEZIONI CRUCIALI per evitare errori nelle future chat:**
+
+#### 1. **PRISMA CONNECTION PATTERN OBBLIGATORIO**
+✅ **SEMPRE usare**: `import { prisma } from '@/shared/database/prisma';`
+❌ **MAI usare**: `new PrismaClient()` negli endpoint API
+
+```typescript
+// ✅ CORRETTO
+import { prisma } from '@/shared/database/prisma';
+
+export async function GET() {
+  const data = await prisma.article.findMany();
+  // NO $disconnect() needed
+}
+
+// ❌ SBAGLIATO
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient(); // Causa 500 errors in Vercel
+```
+
+#### 2. **DEPLOYMENT STRATEGY**
+- **SEMPRE** usare `git add . && git commit -m "message" && git push`
+- **MAI** tentare `vercel deploy` manualmente
+- **Attendere 30-60 secondi** per deployment automatico GitHub→Vercel
+- **Se nuovi endpoint danno 404**: problema di build/cache Vercel
+
+#### 3. **API ENDPOINTS WORKING PATTERN**
+Tutti gli endpoint che funzionano seguono questo pattern:
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/shared/database/prisma';
+
+export async function GET(request: NextRequest) {
+  try {
+    // Query diretta con prisma shared instance
+    const data = await prisma.model.findMany();
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+#### 4. **TROUBLESHOOTING CHECKLIST**
+Se API endpoint dà 500 error:
+1. ✅ Verifica import Prisma: `import { prisma } from '@/shared/database/prisma';`
+2. ✅ Rimuovi `await prisma.$disconnect()`
+3. ✅ Usa pattern TypeScript corretto per `hasOwnProperty` → `key in object`
+4. ✅ Testa endpoint con `curl https://autogeorge.vercel.app/api/endpoint`
+5. ✅ Se 404 su nuovi endpoint: sovrascrivere file esistente invece di crearne nuovi
+
+#### 5. **WORKING ENDPOINTS REFERENCE**
+Questi endpoint funzionano perfettamente come riferimento:
+- `/api/admin/sources` - Container pattern funzionante
+- `/api/admin/sources/[id]/contents` - Prisma shared instance
+- `/api/health` - Health check base
+
+## 🎯 FUNZIONALITÀ COMPLETAMENTE IMPLEMENTATE E TESTATE
+
+### ✅ **Sistema Generazione Articoli** (COMPLETATO)
+- **Bottone "Genera Articolo"**: `/admin/sources/[id]/contents`
+- **Modal prompt personalizzati**: Funzionante con 3 campi (title, content, SEO)
+- **API generation**: `/api/admin/generate-article-manually` ✅
+- **Loading states e error handling**: Implementato
+- **Auto-refresh dopo generazione**: Funziona
+
+### ✅ **Admin Dashboard Articles** (RIPARATO)
+- **URL**: `https://autogeorge.vercel.app/admin/articles` ✅
+- **Endpoint**: `/api/admin/articles-by-source` ✅
+- **Raggruppamento per fonte**: Funzionante
+- **Filtri e paginazione**: Implementati
+
+### ✅ **API Endpoints Status**
+- `/api/admin/articles-by-source` ✅ (RIPARATO con Prisma shared)
+- `/api/admin/generation-settings` ✅ (RIPARATO con Prisma shared)
+- `/api/admin/generate-article` ✅ (RIPARATO con Prisma shared)
+- `/api/admin/generate-article-manually` ✅ (RIPARATO con Prisma shared)
+
 ## RICORDA SEMPRE
 1. **PROGETTO GIÀ COMPLETO** - non reinventare funzionalità esistenti!
-2. **Sources API FUNZIONA** - problema risolto definitivamente
-3. **Architettura Clean** - tutto già implementato correttamente
-4. **Vercel-ready** - deploy immediato possibile
-5. **Database cloud** - quando necessario per production
+2. **BOTTONE "GENERA ARTICOLO" FUNZIONA** - è in `/admin/sources/[id]/contents`
+3. **USA SEMPRE PRISMA SHARED INSTANCE** - mai `new PrismaClient()`
+4. **DEPLOYMENT VIA GIT PUSH** - mai comandi Vercel diretti
+5. **Database cloud Neon.tech** - configurazione stabile

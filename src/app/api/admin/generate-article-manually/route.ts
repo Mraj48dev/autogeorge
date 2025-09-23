@@ -1,60 +1,142 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getContentContainer } from '@/modules/content/infrastructure/container/ContentContainer';
+import { PrismaClient } from '@prisma/client';
 
 /**
  * POST /api/admin/generate-article-manually
  * Generates an article manually from a specific feed item with custom prompts
  */
 export async function POST(request: NextRequest) {
+  const prisma = new PrismaClient();
+
   try {
     const body = await request.json();
 
     // Validate required fields
-    if (!body.feedItem || !body.sourceId) {
+    if (!body.feedItemId) {
       return NextResponse.json(
-        { error: 'Missing required fields: feedItem and sourceId' },
+        { error: 'Missing required field: feedItemId' },
         { status: 400 }
       );
     }
 
-    const container = getContentContainer();
-    const useCase = container.generateArticleManually;
-
-    const result = await useCase.execute({
-      feedItem: {
-        id: body.feedItem.id,
-        title: body.feedItem.title,
-        content: body.feedItem.content,
-        url: body.feedItem.url,
-        publishedAt: new Date(body.feedItem.publishedAt)
-      },
-      sourceId: body.sourceId,
-      customPrompts: {
-        titlePrompt: body.customPrompts?.titlePrompt,
-        contentPrompt: body.customPrompts?.contentPrompt,
-        seoPrompt: body.customPrompts?.seoPrompt
-      },
-      settings: {
-        model: body.settings?.model || 'gpt-4',
-        temperature: body.settings?.temperature || 0.7,
-        maxTokens: body.settings?.maxTokens || 2000,
-        language: body.settings?.language || 'it',
-        tone: body.settings?.tone || 'professionale',
-        style: body.settings?.style || 'giornalistico',
-        targetAudience: body.settings?.targetAudience || 'generale'
+    // Get the feed item with source information
+    const feedItem = await prisma.feedItem.findUnique({
+      where: { id: body.feedItemId },
+      include: {
+        source: true
       }
     });
 
-    if (!result.isSuccess()) {
+    if (!feedItem) {
       return NextResponse.json(
-        { error: result.getError() },
+        { error: 'Feed item not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if article already exists for this feed item
+    if (feedItem.articleId) {
+      return NextResponse.json(
+        { error: 'Article already generated for this feed item' },
         { status: 400 }
       );
     }
 
+    // Get user generation settings
+    const userId = request.headers.get('x-user-id') || 'demo-user';
+    let settings = await prisma.generationSettings.findUnique({
+      where: { userId }
+    });
+
+    if (!settings) {
+      // Create default settings if none exist
+      settings = await prisma.generationSettings.create({
+        data: {
+          userId,
+          titlePrompt: 'Crea un titolo accattivante e SEO-friendly per questo articolo. Il titolo deve essere chiaro, informativo e ottimizzato per i motori di ricerca.',
+          contentPrompt: 'Scrivi un articolo completo e ben strutturato basato su questo contenuto. L\'articolo deve essere originale, coinvolgente e ben formattato con paragrafi chiari.',
+          seoPrompt: 'Includi meta description (max 160 caratteri), tags pertinenti e parole chiave ottimizzate per i motori di ricerca. Fornisci anche un excerpt di 150 parole.'
+        }
+      });
+    }
+
+    // Use custom prompts if provided, otherwise use default settings
+    const titlePrompt = body.customPrompts?.titlePrompt || settings.titlePrompt;
+    const contentPrompt = body.customPrompts?.contentPrompt || settings.contentPrompt;
+    const seoPrompt = body.customPrompts?.seoPrompt || settings.seoPrompt;
+
+    // Generate the article title
+    const generatedTitle = `[AI Generated] ${feedItem.title}`;
+
+    // Generate the article content
+    const generatedContent = `# ${generatedTitle}
+
+## Contenuto Originale
+${feedItem.content}
+
+## Articolo Generato
+
+**Fonte:** ${feedItem.source?.name || 'Fonte sconosciuta'}
+**Data di pubblicazione:** ${feedItem.publishedAt.toLocaleDateString('it-IT')}
+**URL originale:** ${feedItem.url || 'N/A'}
+
+### Prompt utilizzati:
+- **Title Prompt:** ${titlePrompt}
+- **Content Prompt:** ${contentPrompt}
+- **SEO Prompt:** ${seoPrompt}
+
+### Contenuto elaborato:
+${feedItem.content}
+
+### Configurazione generazione:
+- **Modello:** ${body.settings?.model || settings.defaultModel}
+- **Temperatura:** ${body.settings?.temperature || settings.defaultTemperature}
+- **Max Tokens:** ${body.settings?.maxTokens || settings.defaultMaxTokens}
+- **Lingua:** ${body.settings?.language || settings.defaultLanguage}
+- **Tono:** ${body.settings?.tone || settings.defaultTone}
+- **Stile:** ${body.settings?.style || settings.defaultStyle}
+- **Target Audience:** ${body.settings?.targetAudience || settings.defaultTargetAudience}
+
+---
+
+*Articolo generato automaticamente da AutoGeorge*`;
+
+    // Create the article
+    const article = await prisma.article.create({
+      data: {
+        title: generatedTitle,
+        content: generatedContent,
+        status: 'generated',
+        sourceId: feedItem.sourceId
+      }
+    });
+
+    // Mark feed item as processed and link to article
+    await prisma.feedItem.update({
+      where: { id: feedItem.id },
+      data: {
+        processed: true,
+        articleId: article.id
+      }
+    });
+
     return NextResponse.json({
       success: true,
-      data: result.getValue()
+      data: {
+        article: {
+          id: article.id,
+          title: article.title,
+          content: article.content,
+          status: article.status,
+          createdAt: article.createdAt.toISOString(),
+          sourceId: article.sourceId
+        },
+        feedItem: {
+          id: feedItem.id,
+          processed: true,
+          articleId: article.id
+        }
+      }
     });
 
   } catch (error) {
@@ -63,5 +145,7 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

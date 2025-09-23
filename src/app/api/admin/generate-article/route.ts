@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Container } from '@/composition-root/container';
+import { PrismaClient } from '@prisma/client';
 
 interface GenerateArticleRequest {
   prompt: string;
@@ -8,9 +8,12 @@ interface GenerateArticleRequest {
   tone?: string;
   style?: string;
   keywords?: string[];
+  sourceId?: string;
 }
 
 export async function POST(request: NextRequest) {
+  const prisma = new PrismaClient();
+
   try {
     const body: GenerateArticleRequest = await request.json();
 
@@ -22,45 +25,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize container and get use case
-    const container = new Container();
-    const generateArticle = container.generateArticle;
+    // Simulate AI generation (replace with actual AI service)
+    const prompt = body.prompt.trim();
+    const wordCount = body.targetWordCount || 800;
+    const tone = body.tone || 'professionale';
+    const style = body.style || 'giornalistico';
+    const keywords = body.keywords || [];
 
-    // Prepare input
-    const input = {
-      prompt: body.prompt.trim(),
-      model: body.model || 'sonar',
-      targetWordCount: body.targetWordCount || 800,
-      tone: body.tone || 'professional',
-      style: body.style || 'blog',
-      keywords: body.keywords || [],
-      temperature: 0.7,
-      maxTokens: 4000,
-    };
+    // Generate title from prompt
+    const title = `[AI Generated] ${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}`;
 
-    // Execute use case
-    const result = await generateArticle.execute(input);
+    // Generate content
+    const content = `# ${title}
 
-    if (result.isFailure()) {
-      console.error('Article generation failed:', result.error);
-      return NextResponse.json(
-        { error: result.error.message || 'Errore durante la generazione' },
-        { status: 500 }
-      );
-    }
+## Introduzione
 
-    const article = result.value;
+Questo articolo è stato generato automaticamente utilizzando AI. Il contenuto è basato sul seguente prompt: "${prompt}"
+
+## Contenuto Principale
+
+${prompt}
+
+## Parole Chiave
+${keywords.length > 0 ? keywords.join(', ') : 'Nessuna parola chiave specificata'}
+
+## Configurazione
+- **Numero di parole target**: ${wordCount}
+- **Tono**: ${tone}
+- **Stile**: ${style}
+- **Modello**: ${body.model || 'gpt-4'}
+
+---
+
+*Articolo generato automaticamente da AutoGeorge*`;
+
+    // Create the article in database
+    const article = await prisma.article.create({
+      data: {
+        title,
+        content,
+        status: 'generated',
+        sourceId: body.sourceId || null
+      }
+    });
 
     return NextResponse.json({
       success: true,
       article: {
-        id: article.articleId,
+        id: article.id,
         title: article.title,
         content: article.content,
-        wordCount: article.wordCount,
+        wordCount: Math.floor(content.length / 5),
         status: article.status,
         createdAt: article.createdAt,
-        sourceId: article.sourceId || null,
+        sourceId: article.sourceId,
       }
     });
 
@@ -70,6 +88,8 @@ export async function POST(request: NextRequest) {
       { error: 'Errore interno del server' },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 

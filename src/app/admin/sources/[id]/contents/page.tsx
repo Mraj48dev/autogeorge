@@ -33,6 +33,14 @@ export default function SourceContenutiPage() {
   const [contenuti, setContenuti] = useState<Contenuto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatingArticles, setGeneratingArticles] = useState<Set<string>>(new Set());
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<Contenuto | null>(null);
+  const [customPrompts, setCustomPrompts] = useState({
+    titlePrompt: '',
+    contentPrompt: '',
+    seoPrompt: ''
+  });
 
   useEffect(() => {
     if (sourceId) {
@@ -107,6 +115,54 @@ export default function SourceContenutiPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('it-IT');
+  };
+
+  const handleGenerateArticle = async (contenuto: Contenuto, useCustomPrompts = false) => {
+    try {
+      setGeneratingArticles(prev => new Set(prev).add(contenuto.id));
+
+      const payload = {
+        feedItemId: contenuto.id,
+        customPrompts: useCustomPrompts ? customPrompts : undefined
+      };
+
+      const response = await fetch('/api/admin/generate-article-manually', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`Articolo generato con successo! Titolo: "${data.data.article.title}"`);
+        // Refresh the contenuti to show updated processed status
+        await fetchSourceAndArticles();
+
+        // Close modal if open
+        setShowPromptModal(false);
+        setSelectedContent(null);
+        setCustomPrompts({ titlePrompt: '', contentPrompt: '', seoPrompt: '' });
+      } else {
+        alert('Errore durante la generazione: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error generating article:', error);
+      alert('Errore durante la generazione dell\'articolo');
+    } finally {
+      setGeneratingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(contenuto.id);
+        return newSet;
+      });
+    }
+  };
+
+  const openPromptModal = (contenuto: Contenuto) => {
+    setSelectedContent(contenuto);
+    setShowPromptModal(true);
   };
 
 
@@ -262,12 +318,23 @@ export default function SourceContenutiPage() {
                       >
                         Download
                       </button>
-                      {!contenuto.processed && (
-                        <button
-                          className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                        >
-                          Genera Articolo
-                        </button>
+                      {!contenuto.processed && !contenuto.articleId && (
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => handleGenerateArticle(contenuto, false)}
+                            disabled={generatingArticles.has(contenuto.id)}
+                            className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {generatingArticles.has(contenuto.id) ? 'Generando...' : 'Genera Articolo'}
+                          </button>
+                          <button
+                            onClick={() => openPromptModal(contenuto)}
+                            disabled={generatingArticles.has(contenuto.id)}
+                            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Custom
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -288,6 +355,94 @@ export default function SourceContenutiPage() {
             >
               🔄 Recupera Contenuti
             </button>
+          </div>
+        )}
+
+        {/* Custom Prompts Modal */}
+        {showPromptModal && selectedContent && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onClick={() => setShowPromptModal(false)}>
+            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-lg bg-white" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center border-b pb-4 mb-6">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Genera Articolo con Prompt Personalizzati
+                </h2>
+                <button
+                  onClick={() => setShowPromptModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Contenuto da processare:</h3>
+                <p className="text-gray-700 font-medium">{selectedContent.title}</p>
+                <div className="bg-gray-50 p-3 rounded mt-2 max-h-32 overflow-y-auto">
+                  <p className="text-sm text-gray-600">
+                    {selectedContent.content.substring(0, 300)}...
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prompt per il Titolo (opzionale)
+                  </label>
+                  <textarea
+                    value={customPrompts.titlePrompt}
+                    onChange={(e) => setCustomPrompts(prev => ({ ...prev, titlePrompt: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    rows={2}
+                    placeholder="Crea un titolo accattivante e SEO-friendly per questo articolo..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prompt per il Contenuto (opzionale)
+                  </label>
+                  <textarea
+                    value={customPrompts.contentPrompt}
+                    onChange={(e) => setCustomPrompts(prev => ({ ...prev, contentPrompt: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    rows={3}
+                    placeholder="Scrivi un articolo completo e ben strutturato basato su questo contenuto..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prompt per SEO (opzionale)
+                  </label>
+                  <textarea
+                    value={customPrompts.seoPrompt}
+                    onChange={(e) => setCustomPrompts(prev => ({ ...prev, seoPrompt: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    rows={2}
+                    placeholder="Includi meta description, tags pertinenti e parole chiave..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                <button
+                  onClick={() => setShowPromptModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={() => handleGenerateArticle(selectedContent, true)}
+                  disabled={generatingArticles.has(selectedContent.id)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingArticles.has(selectedContent.id) ? 'Generando...' : 'Genera Articolo'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -88,8 +88,8 @@ export async function GET(request: NextRequest) {
 
       // Update status counts
       const statusCounts = groupedBySource[sourceId].statusCounts;
-      if (statusCounts.hasOwnProperty(article.status)) {
-        statusCounts[article.status]++;
+      if (article.status in statusCounts) {
+        statusCounts[article.status as keyof typeof statusCounts]++;
       }
     });
 

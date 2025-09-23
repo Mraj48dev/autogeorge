@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/shared/database/prisma';
 
 interface GenerateArticleRequest {
   prompt: string;
@@ -12,7 +12,6 @@ interface GenerateArticleRequest {
 }
 
 export async function POST(request: NextRequest) {
-  const prisma = new PrismaClient();
 
   try {
     const body: GenerateArticleRequest = await request.json();
@@ -88,8 +87,6 @@ ${keywords.length > 0 ? keywords.join(', ') : 'Nessuna parola chiave specificata
       { error: 'Errore interno del server' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

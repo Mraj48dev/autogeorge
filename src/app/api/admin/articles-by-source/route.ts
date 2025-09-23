@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * GET /api/admin/articles-by-source
  * Retrieves articles grouped by source with optional filtering
  */
 export async function GET(request: NextRequest) {
-  const prisma = new PrismaClient();
 
   try {
     const { searchParams } = new URL(request.url);
@@ -141,7 +140,11 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Articles by source API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

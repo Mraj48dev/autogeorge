@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * POST /api/admin/generate-article-manually
  * Generates an article manually from a specific feed item with custom prompts
  */
 export async function POST(request: NextRequest) {
-  const prisma = new PrismaClient();
 
   try {
     const body = await request.json();
@@ -145,7 +144,5 @@ ${feedItem.content}
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

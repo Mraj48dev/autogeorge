@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * GET /api/admin/generation-settings
  * Retrieves user's generation settings
  */
 export async function GET(request: NextRequest) {
-  const prisma = new PrismaClient();
 
   try {
     // Get user ID from session/auth (simplified for demo)
@@ -63,8 +62,6 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -73,7 +70,6 @@ export async function GET(request: NextRequest) {
  * Updates user's generation settings
  */
 export async function PUT(request: NextRequest) {
-  const prisma = new PrismaClient();
 
   try {
     // Get user ID from session/auth (simplified for demo)
@@ -141,7 +137,5 @@ export async function PUT(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { OpenAIService } from '@/modules/content/infrastructure/services/OpenAIService';
 
 interface GenerateArticleRequest {
   prompt: string;
@@ -24,39 +25,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Simulate AI generation (replace with actual AI service)
+    // Get API keys from environment variables
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+
+    if (!openaiApiKey) {
+      console.error('Missing OpenAI API key');
+      return NextResponse.json(
+        { error: 'AI services not configured. Missing API keys.' },
+        { status: 500 }
+      );
+    }
+
+    // Initialize OpenAI service
+    const openaiService = new OpenAIService(openaiApiKey);
+
     const prompt = body.prompt.trim();
     const wordCount = body.targetWordCount || 800;
     const tone = body.tone || 'professionale';
     const style = body.style || 'giornalistico';
     const keywords = body.keywords || [];
 
-    // Generate title from prompt
-    const title = `[AI Generated] ${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}`;
+    console.log('🚀 Starting AI article generation with OpenAI...');
 
-    // Generate content
-    const content = `# ${title}
+    // Generate article using OpenAI
+    const generationResult = await openaiService.generateArticle({
+      prompt: `Scrivi un articolo completo e ben strutturato su: ${prompt}
 
-## Introduzione
+Requisiti:
+- Lunghezza target: circa ${wordCount} parole
+- Tono: ${tone}
+- Stile: ${style}
+- Parole chiave da includere: ${keywords.join(', ')}
+- Lingua: italiano
+- Formato: markdown ben strutturato con titoli e paragrafi chiari
 
-Questo articolo è stato generato automaticamente utilizzando AI. Il contenuto è basato sul seguente prompt: "${prompt}"
+L'articolo deve essere originale, coinvolgente e ben formattato.`,
+      targetWordCount: wordCount,
+      tone,
+      style,
+      keywords,
+      model: body.model === 'sonar' ? 'gpt-4o-mini' : 'gpt-4o-mini', // Map to valid OpenAI models
+      metadata: {
+        requestId: `generate-article-${Date.now()}`
+      }
+    });
 
-## Contenuto Principale
+    if (generationResult.isFailure()) {
+      console.error('❌ Article generation failed:', generationResult.error);
+      return NextResponse.json(
+        {
+          error: 'Errore durante la generazione dell\'articolo',
+          details: generationResult.error.message
+        },
+        { status: 500 }
+      );
+    }
 
-${prompt}
+    const result = generationResult.value;
+    console.log('✅ Article generation completed successfully!');
 
-## Parole Chiave
-${keywords.length > 0 ? keywords.join(', ') : 'Nessuna parola chiave specificata'}
-
-## Configurazione
-- **Numero di parole target**: ${wordCount}
-- **Tono**: ${tone}
-- **Stile**: ${style}
-- **Modello**: ${body.model || 'gpt-4'}
-
----
-
-*Articolo generato automaticamente da AutoGeorge*`;
+    const title = result.title;
+    const content = result.content;
 
     // Create the article in database
     const article = await prisma.article.create({
@@ -74,10 +103,16 @@ ${keywords.length > 0 ? keywords.join(', ') : 'Nessuna parola chiave specificata
         id: article.id,
         title: article.title,
         content: article.content,
-        wordCount: Math.floor(content.length / 5),
+        wordCount: result.statistics.wordCount,
         status: article.status,
         createdAt: article.createdAt,
         sourceId: article.sourceId,
+      },
+      metadata: {
+        cost: result.metadata.cost,
+        generationTime: result.metadata.generationTime,
+        model: result.modelUsed,
+        tokensUsed: result.metadata.tokensUsed
       }
     });
 

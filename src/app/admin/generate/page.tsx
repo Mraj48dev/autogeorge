@@ -16,7 +16,7 @@ export default function GenerateArticle() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     prompt: '',
-    model: 'sonar',
+    model: 'gpt-4o-mini',
     targetWordCount: 800,
     tone: 'professional',
     style: 'blog',
@@ -120,11 +120,9 @@ export default function GenerateArticle() {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="sonar">Sonar (Veloce)</option>
-                <option value="sonar pro">Sonar Pro (Qualità)</option>
-                <option value="sonar reasoning">Sonar Reasoning (Analisi)</option>
-                <option value="sonar reasoning pro">Sonar Reasoning Pro (Avanzato)</option>
-                <option value="sonar deep research">Sonar Deep Research (Ricerca)</option>
+                <option value="gpt-4o-mini">GPT-4o Mini (Veloce ed Economico)</option>
+                <option value="gpt-4o">GPT-4o (Qualità Superiore)</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo (Avanzato)</option>
               </select>
             </div>
 

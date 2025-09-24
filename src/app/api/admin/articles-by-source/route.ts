@@ -19,7 +19,17 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {};
-    if (status) where.status = status;
+
+    // Only show processed articles (not draft content from feeds)
+    if (status) {
+      where.status = status;
+    } else {
+      // Default: only show articles that have been processed by AI
+      where.status = {
+        in: ['generated', 'ready_to_publish', 'published', 'failed']
+      };
+    }
+
     if (sourceId) where.sourceId = sourceId;
     if (dateFrom || dateTo) {
       where.createdAt = {};

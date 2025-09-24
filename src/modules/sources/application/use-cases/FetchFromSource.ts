@@ -148,12 +148,12 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         });
 
         if (!existingArticle) {
-          // Create new article
+          // Create new article as draft (raw content, not yet processed)
           const savedArticle = await prisma.article.create({
             data: {
               title: item.title || 'Untitled',
               content: item.content || '',
-              status: 'generated',
+              status: 'draft', // Raw content from feed, not yet processed by AI
               sourceId: sourceId,
             }
           });

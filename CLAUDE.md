@@ -21,7 +21,31 @@ Il problema con i pulsanti "aggiungi feed" e "configura primo feed" è stato **R
 - ✅ API `/api/admin/sources` funzionante
 - ✅ SourcesAdminFacade corretta
 
-## IMPORTANTE: NO SVILUPPO LOCALE
+## ⛔ REGOLE FONDAMENTALI - LEGGERE PRIMA DI QUALSIASI MODIFICA
+
+### 🚨 **REGOLA #1: MAI CANCELLARE DATI DAL DATABASE**
+
+**⛔ È ASSOLUTAMENTE VIETATO:**
+- Modificare il database schema senza backup ESPLICITO
+- Usare `prisma db push` senza aver fatto backup prima
+- Aggiungere/modificare/rimuovere modelli Prisma senza autorizzazione
+- Eseguire operazioni che possano causare perdita di dati
+- Resettare o truncare tabelle
+- Modificare constraint o indici esistenti
+
+**✅ PRIMA di QUALSIASI modifica al database:**
+1. **SEMPRE** eseguire `./scripts/backup-database.sh`
+2. **ASPETTARE** conferma esplicita dell'utente
+3. **TESTARE** su environment separato se possibile
+4. **VERIFICARE** che il backup sia stato creato correttamente
+
+**📋 Se devi modificare il database:**
+- Chiedi ESPLICITA autorizzazione
+- Spiega ESATTAMENTE cosa verrà modificato
+- Proponi un piano di rollback
+- Attendi conferma prima di procedere
+
+### 🚨 **REGOLA #2: NO SVILUPPO LOCALE**
 
 ⚠️ **REGOLA FONDAMENTALE**: Lo sviluppo deve avvenire **DIRETTAMENTE SU GITHUB**, non in locale!
 
@@ -212,15 +236,26 @@ Questi endpoint funzionano perfettamente come riferimento:
 - **Raggruppamento per fonte**: Funzionante
 - **Filtri e paginazione**: Implementati
 
+### ✅ **Sistema di Backup Database** (IMPLEMENTATO)
+- **Script backup**: `./scripts/backup-database.sh` ✅
+- **Script restore**: `./scripts/restore-database.sh` ✅
+- **API backup**: `/api/admin/backup` ✅
+- **Documentazione**: `BACKUP_GUIDE.md` ✅
+- **Retention policy**: Ultimi 10 backup ✅
+- **Compressione automatica**: gzip ✅
+
 ### ✅ **API Endpoints Status**
 - `/api/admin/articles-by-source` ✅ (RIPARATO con Prisma shared)
 - `/api/admin/generation-settings` ✅ (RIPARATO con Prisma shared)
 - `/api/admin/generate-article` ✅ (RIPARATO con Prisma shared)
 - `/api/admin/generate-article-manually` ✅ (RIPARATO con Prisma shared)
+- `/api/admin/backup` ✅ (NUOVO - Sistema backup completo)
 
 ## RICORDA SEMPRE
-1. **PROGETTO GIÀ COMPLETO** - non reinventare funzionalità esistenti!
-2. **BOTTONE "GENERA ARTICOLO" FUNZIONA** - è in `/admin/sources/[id]/contents`
-3. **USA SEMPRE PRISMA SHARED INSTANCE** - mai `new PrismaClient()`
-4. **DEPLOYMENT VIA GIT PUSH** - mai comandi Vercel diretti
-5. **Database cloud Neon.tech** - configurazione stabile
+1. **🚨 MAI MODIFICARE DATABASE SENZA BACKUP** - REGOLA #1 ASSOLUTA
+2. **PROGETTO GIÀ COMPLETO** - non reinventare funzionalità esistenti!
+3. **BOTTONE "GENERA ARTICOLO" FUNZIONA** - è in `/admin/sources/[id]/contents`
+4. **USA SEMPRE PRISMA SHARED INSTANCE** - mai `new PrismaClient()`
+5. **DEPLOYMENT VIA GIT PUSH** - mai comandi Vercel diretti
+6. **Database cloud Neon.tech** - configurazione stabile
+7. **🛡️ BACKUP SYSTEM DISPONIBILE** - usa `./scripts/backup-database.sh`

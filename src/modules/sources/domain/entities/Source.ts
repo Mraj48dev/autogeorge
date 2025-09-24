@@ -33,6 +33,7 @@ export class Source extends AggregateRoot<SourceId> {
   private _type: SourceType;
   private _status: SourceStatus;
   private _url?: SourceUrl;
+  private _defaultCategory?: string;
   private _configuration?: SourceConfiguration;
   private _metadata?: SourceMetadata;
   private _lastFetchAt?: Date;
@@ -45,6 +46,7 @@ export class Source extends AggregateRoot<SourceId> {
     type: SourceType,
     status: SourceStatus = SourceStatus.active(),
     url?: SourceUrl,
+    defaultCategory?: string,
     configuration?: SourceConfiguration,
     metadata?: SourceMetadata,
     lastFetchAt?: Date,
@@ -58,6 +60,7 @@ export class Source extends AggregateRoot<SourceId> {
     this._type = type;
     this._status = status;
     this._url = url;
+    this._defaultCategory = defaultCategory;
     this._configuration = configuration;
     this._metadata = metadata;
     this._lastFetchAt = lastFetchAt;
@@ -73,7 +76,8 @@ export class Source extends AggregateRoot<SourceId> {
   static createRssSource(
     name: SourceName,
     url: SourceUrl,
-    configuration?: RssConfiguration
+    configuration?: RssConfiguration,
+    defaultCategory?: string
   ): Source {
     const id = SourceId.generate();
     const type = SourceType.rss();
@@ -84,6 +88,7 @@ export class Source extends AggregateRoot<SourceId> {
       type,
       SourceStatus.active(),
       url,
+      defaultCategory,
       configuration
     );
 
@@ -105,7 +110,8 @@ export class Source extends AggregateRoot<SourceId> {
   static createTelegramSource(
     name: SourceName,
     url: SourceUrl,
-    configuration?: TelegramConfiguration
+    configuration?: TelegramConfiguration,
+    defaultCategory?: string
   ): Source {
     const id = SourceId.generate();
     const type = SourceType.telegram();
@@ -116,6 +122,7 @@ export class Source extends AggregateRoot<SourceId> {
       type,
       SourceStatus.active(),
       url,
+      defaultCategory,
       configuration
     );
 
@@ -136,7 +143,8 @@ export class Source extends AggregateRoot<SourceId> {
    */
   static createCalendarSource(
     name: SourceName,
-    configuration?: CalendarConfiguration
+    configuration?: CalendarConfiguration,
+    defaultCategory?: string
   ): Source {
     const id = SourceId.generate();
     const type = SourceType.calendar();
@@ -147,6 +155,7 @@ export class Source extends AggregateRoot<SourceId> {
       type,
       SourceStatus.active(),
       undefined,
+      defaultCategory,
       configuration
     );
 
@@ -176,6 +185,10 @@ export class Source extends AggregateRoot<SourceId> {
 
   get url(): SourceUrl | undefined {
     return this._url;
+  }
+
+  get defaultCategory(): string | undefined {
+    return this._defaultCategory;
   }
 
   get configuration(): SourceConfiguration | undefined {
@@ -236,6 +249,23 @@ export class Source extends AggregateRoot<SourceId> {
     );
 
     this.validateInvariants();
+  }
+
+  /**
+   * Updates the source default category
+   */
+  updateDefaultCategory(defaultCategory?: string): void {
+    const previousCategory = this._defaultCategory;
+    this._defaultCategory = defaultCategory;
+    this.markAsUpdated();
+
+    this.addDomainEvent(
+      new SourceUpdated(
+        this.id.getValue(),
+        'general',
+        { defaultCategory: { from: previousCategory, to: defaultCategory } }
+      )
+    );
   }
 
   /**
@@ -516,6 +546,7 @@ export class Source extends AggregateRoot<SourceId> {
       type: this._type.getValue(),
       status: this._status.getValue(),
       url: this._url?.getValue(),
+      defaultCategory: this._defaultCategory,
       configuration: this._configuration,
       metadata: this._metadata,
       lastFetchAt: this._lastFetchAt,

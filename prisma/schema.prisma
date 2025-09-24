@@ -21,20 +21,21 @@ model Article {
 }
 
 model Source {
-  id            String     @id @default(cuid())
-  name          String
-  type          String
-  status        String     @default("active")
-  url           String?
-  configuration Json?
-  metadata      Json?
-  lastFetchAt   DateTime?
-  lastErrorAt   DateTime?
-  lastError     String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  articles      Article[]
-  feedItems     FeedItem[]
+  id              String     @id @default(cuid())
+  name            String
+  type            String
+  status          String     @default("active")
+  url             String?
+  defaultCategory String?
+  configuration   Json?
+  metadata        Json?
+  lastFetchAt     DateTime?
+  lastErrorAt     DateTime?
+  lastError       String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  articles        Article[]
+  feedItems       FeedItem[]
 
   @@unique([type, url])
   @@map("sources")

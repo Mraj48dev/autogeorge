@@ -8,6 +8,7 @@ interface Source {
   type: string;
   url?: string;
   status: string;
+  defaultCategory?: string;
   createdAt: string;
   configuration?: {
     maxItems?: number;
@@ -29,6 +30,7 @@ interface CreateSourceRequest {
   name: string;
   type: string;
   url?: string;
+  defaultCategory?: string;
   configuration?: {
     maxItems?: number;
     pollingInterval?: number;
@@ -48,6 +50,7 @@ export default function SourcesPage() {
     name: '',
     type: 'rss',
     url: '',
+    defaultCategory: '',
     configuration: {
       maxItems: 10,
       pollingInterval: 60,
@@ -105,6 +108,7 @@ export default function SourcesPage() {
           name: '',
           type: activeTab,
           url: '',
+          defaultCategory: '',
           configuration: {
             maxItems: 10,
             pollingInterval: 60,
@@ -130,6 +134,7 @@ export default function SourcesPage() {
       name: '',
       type,
       url: '',
+      defaultCategory: '',
       configuration: {
         maxItems: 10,
         pollingInterval: 60,
@@ -147,6 +152,7 @@ export default function SourcesPage() {
       name: source.name,
       type: source.type,
       url: source.url || '',
+      defaultCategory: source.defaultCategory || '',
       configuration: {
         maxItems: source.configuration?.maxItems || 10,
         pollingInterval: source.configuration?.pollingInterval || 60,
@@ -321,6 +327,11 @@ export default function SourcesPage() {
                       )}
                       <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                         <span>Max articoli: {source.configuration?.maxItems || 10}</span>
+                        {source.defaultCategory && (
+                          <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                            Categoria: {source.defaultCategory}
+                          </span>
+                        )}
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           source.configuration?.autoGenerate
                             ? 'bg-green-100 text-green-800'
@@ -641,6 +652,22 @@ export default function SourcesPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder={`Nome del ${formData.type === 'rss' ? 'feed' : formData.type === 'telegram' ? 'canale' : 'progetto'}`}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Categoria di pubblicazione (opzionale)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.defaultCategory || ''}
+                    onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="es. Tecnologia, Sport, Attualità..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Specifica la categoria predefinita in cui verranno pubblicati gli articoli generati da questa fonte
+                  </p>
                 </div>
 
                 {(formData.type === 'rss' || formData.type === 'telegram') && (

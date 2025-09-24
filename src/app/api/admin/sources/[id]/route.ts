@@ -34,6 +34,7 @@ export async function PUT(
       sourceId,
       name: body.name,
       url: body.url,
+      defaultCategory: body.defaultCategory,
       configuration: body.configuration || {},
       metadata: body.metadata || {},
     });

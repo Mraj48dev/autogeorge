@@ -11,6 +11,7 @@ export interface UpdateSourceRequest {
   sourceId: string;
   name?: string;
   url?: string;
+  defaultCategory?: string;
   configuration?: SourceConfiguration;
   metadata?: Record<string, any>;
 }
@@ -67,6 +68,10 @@ export class UpdateSource implements UseCase<UpdateSourceRequest, UpdateSourceRe
 
       if (request.configuration) {
         existingSource.updateConfiguration(request.configuration);
+      }
+
+      if ('defaultCategory' in request) {
+        existingSource.updateDefaultCategory(request.defaultCategory);
       }
 
       // Save updated source

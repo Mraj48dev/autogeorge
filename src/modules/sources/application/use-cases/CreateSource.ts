@@ -53,11 +53,11 @@ export class CreateSource extends BaseUseCase<CreateSourceRequest, CreateSourceR
       let source: Source;
       try {
         if (type.isRss() && url) {
-          source = Source.createRssSource(name, url, request.configuration);
+          source = Source.createRssSource(name, url, request.configuration, request.defaultCategory);
         } else if (type.isTelegram() && url) {
-          source = Source.createTelegramSource(name, url, request.configuration);
+          source = Source.createTelegramSource(name, url, request.configuration, request.defaultCategory);
         } else if (type.isCalendar()) {
-          source = Source.createCalendarSource(name, request.configuration);
+          source = Source.createCalendarSource(name, request.configuration, request.defaultCategory);
         } else {
           return Result.failure(new Error('Invalid source type or missing required URL'));
         }
@@ -125,6 +125,7 @@ export interface CreateSourceRequest {
   name: string;
   type: string;
   url?: string;
+  defaultCategory?: string;
   configuration?: SourceConfiguration;
   testConnection?: boolean;
 }

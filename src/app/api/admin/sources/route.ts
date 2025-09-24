@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       name: body.name,
       type: body.type,
       url: body.url,
+      defaultCategory: body.defaultCategory,
       configuration: body.configuration || {},
       metadata: body.metadata || {},
     });

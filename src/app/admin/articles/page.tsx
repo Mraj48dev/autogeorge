@@ -209,7 +209,10 @@ export default function ArticlesBySourcePage() {
 
       // First get WordPress settings
       const wpResponse = await fetch('/api/admin/wordpress-settings', {
-        headers: { 'x-user-id': 'user-1' }
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': 'user-1'
+        }
       });
 
       if (!wpResponse.ok) {

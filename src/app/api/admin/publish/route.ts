@@ -59,13 +59,87 @@ export async function POST(request: NextRequest) {
           configuration: target.configuration
         };
 
-        console.log('API - About to create PublicationTarget with:', JSON.stringify(targetValue));
-        console.log('API - target.platform:', target.platform);
-        console.log('API - target.siteId:', target.siteId);
-        console.log('API - target.siteUrl:', target.siteUrl);
-        console.log('API - target.configuration:', JSON.stringify(target.configuration));
+        // SIMPLIFIED APPROACH: Call WordPress API directly to bypass PublicationTarget issues
+        console.log('API - Attempting direct WordPress publishing');
 
-        publicationTarget = PublicationTarget.fromValue(targetValue);
+        // Create WordPress post data
+        const postData = {
+          title: content.title,
+          content: content.content,
+          status: target.configuration.status || 'draft',
+          excerpt: content.excerpt
+        };
+
+        if (metadata.categories) {
+          postData.categories = metadata.categories;
+        }
+        if (metadata.tags) {
+          postData.tags = metadata.tags;
+        }
+
+        console.log('API - Post data prepared:', JSON.stringify(postData));
+
+        // Make WordPress REST API request
+        const wpUrl = `${target.siteUrl.replace(/\/$/, '')}/wp-json/wp/v2/posts`;
+        const authHeader = `Basic ${Buffer.from(`${target.configuration.username}:${target.configuration.password}`).toString('base64')}`;
+
+        console.log('API - WordPress URL:', wpUrl);
+        console.log('API - Auth header created');
+
+        const wpResponse = await fetch(wpUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+          },
+          body: JSON.stringify(postData)
+        });
+
+        console.log('API - WordPress response status:', wpResponse.status);
+
+        if (!wpResponse.ok) {
+          const errorData = await wpResponse.json().catch(() => ({ message: `HTTP ${wpResponse.status}` }));
+          console.log('API - WordPress error:', JSON.stringify(errorData));
+
+          return NextResponse.json({
+            error: `WordPress publishing failed: ${errorData.message || wpResponse.statusText}`,
+            details: { httpStatus: wpResponse.status, errorData }
+          }, { status: 400 });
+        }
+
+        const wpResult = await wpResponse.json();
+        console.log('API - WordPress success:', JSON.stringify(wpResult));
+
+        // Create publication record in database
+        const publication = await prisma.publication.create({
+          data: {
+            articleId,
+            externalId: wpResult.id.toString(),
+            externalUrl: wpResult.link,
+            status: 'completed',
+            platform: 'wordpress',
+            target: targetValue,
+            content,
+            metadata,
+            publishedAt: new Date(),
+            retryCount: 0
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            publicationId: publication.id,
+            externalId: wpResult.id.toString(),
+            externalUrl: wpResult.link,
+            status: 'completed',
+            publishedAt: wpResult.date,
+            message: 'Article published successfully to WordPress!'
+          }
+        });
+
+        // OLD CODE (commented out):
+        // publicationTarget = PublicationTarget.fromValue(targetValue);
       } else {
         return NextResponse.json(
           { error: `Unsupported platform: ${target.platform}` },
@@ -73,13 +147,14 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (error) {
-      console.error('Error creating PublicationTarget:', error);
+      console.error('Error in WordPress publishing:', error);
       return NextResponse.json(
-        { error: `Invalid target configuration: ${error instanceof Error ? error.message : 'Unknown error'}` },
-        { status: 400 }
+        { error: `WordPress publishing failed: ${error instanceof Error ? error.message : 'Unknown error'}` },
+        { status: 500 }
       );
     }
 
+    /* OLD CODE - using service pattern (commented out for direct implementation)
     // Initialize services
     const publicationRepository = new PrismaPublicationRepository();
     const publishingService = new WordPressPublishingService();
@@ -97,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     if (result.isFailure()) {
       return NextResponse.json(
-        { 
+        {
           error: result.error.message,
           code: result.error.code,
           details: result.error.details
@@ -110,6 +185,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: result.value
     });
+    */
 
   } catch (error) {
     console.error('Error publishing article:', error);

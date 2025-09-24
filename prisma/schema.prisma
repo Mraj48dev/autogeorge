@@ -134,3 +134,27 @@ model GenerationSettings {
 
   @@map("generation_settings")
 }
+
+model WordPressSite {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  name             String
+  url              String
+  username         String
+  password         String
+  defaultCategory  String?
+  defaultStatus    String   @default("draft")
+  defaultAuthor    String?
+  enableAutoPublish Boolean @default(false)
+  enableFeaturedImage Boolean @default(true)
+  enableTags       Boolean @default(true)
+  enableCategories Boolean @default(true)
+  customFields     Json?
+  isActive         Boolean  @default(true)
+  lastPublishAt    DateTime?
+  lastError        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("wordpress_sites")
+}

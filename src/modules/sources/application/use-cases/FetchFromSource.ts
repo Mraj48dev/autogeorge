@@ -153,7 +153,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
             data: {
               title: item.title || 'Untitled',
               content: item.content || '',
-              status: 'draft', // Raw content from feed, not yet processed by AI
+              status: 'draft', // 🚨 CRITICAL: Raw content from RSS feed, NOT processed by AI yet!
               sourceId: sourceId,
             }
           });

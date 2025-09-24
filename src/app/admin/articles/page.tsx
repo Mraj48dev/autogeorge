@@ -105,6 +105,8 @@ export default function ArticlesBySourcePage() {
   const [selectedArticle, setSelectedArticle] = useState<ArticleSummary | null>(null);
   const [articleDetail, setArticleDetail] = useState<ArticleDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: '',
     sourceId: '',
@@ -196,7 +198,88 @@ export default function ArticlesBySourcePage() {
 
   const handleViewArticle = async (article: ArticleSummary) => {
     setSelectedArticle(article);
+    setPublishError(null);
     await loadArticleDetail(article.id);
+  };
+
+  const handlePublishToWordPress = async (article: ArticleSummary, articleDetail: ArticleDetail | null) => {
+    try {
+      setPublishing(true);
+      setPublishError(null);
+
+      // First get WordPress settings
+      const wpResponse = await fetch('/api/admin/wordpress-settings', {
+        headers: { 'x-user-id': 'user-1' }
+      });
+
+      if (!wpResponse.ok) {
+        throw new Error('Impossibile caricare le impostazioni WordPress');
+      }
+
+      const wpData = await wpResponse.json();
+      if (!wpData.success || !wpData.data.site) {
+        throw new Error('Nessun sito WordPress configurato. Configura prima le impostazioni WordPress.');
+      }
+
+      const site = wpData.data.site;
+
+      // Prepare publication data
+      const publicationData = {
+        articleId: article.id,
+        target: {
+          platform: 'wordpress',
+          siteId: site.id,
+          siteUrl: site.url,
+          configuration: {
+            username: site.username,
+            password: site.password,
+            status: site.defaultStatus || 'publish'
+          }
+        },
+        content: {
+          title: articleDetail?.article.title || article.title,
+          content: articleDetail?.article.content || article.excerpt,
+          excerpt: article.excerpt
+        },
+        metadata: {
+          categories: site.defaultCategory ? [site.defaultCategory] : [],
+          tags: articleDetail?.seo.tags || [],
+          author: site.defaultAuthor,
+          seoKeywords: articleDetail?.seo.keywords || []
+        }
+      };
+
+      // Publish to WordPress
+      const publishResponse = await fetch('/api/admin/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(publicationData)
+      });
+
+      if (!publishResponse.ok) {
+        const errorData = await publishResponse.json().catch(() => ({ error: 'Errore di rete' }));
+        throw new Error(errorData.error || 'Errore durante la pubblicazione');
+      }
+
+      const result = await publishResponse.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Pubblicazione fallita');
+      }
+
+      // Success! Close modal and refresh data
+      setSelectedArticle(null);
+      setArticleDetail(null);
+      await loadArticlesBySource();
+
+      alert('Articolo pubblicato con successo su WordPress!');
+
+    } catch (error) {
+      console.error('Error publishing to WordPress:', error);
+      setPublishError(error instanceof Error ? error.message : 'Errore sconosciuto durante la pubblicazione');
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -764,6 +847,21 @@ export default function ArticlesBySourcePage() {
               </div>
             </div>
 
+            {/* Publish Error */}
+            {publishError && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Errore di Pubblicazione</p>
+                    <p className="text-sm text-red-700">{publishError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex justify-between items-center mt-6 pt-4 border-t">
               <div className="text-sm text-gray-500">
@@ -775,13 +873,27 @@ export default function ArticlesBySourcePage() {
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => { setSelectedArticle(null); setArticleDetail(null); }}
+                  onClick={() => { setSelectedArticle(null); setArticleDetail(null); setPublishError(null); }}
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Chiudi
                 </button>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  📤 Pubblica su WordPress
+                <button
+                  onClick={() => handlePublishToWordPress(selectedArticle!, articleDetail)}
+                  disabled={publishing}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center"
+                >
+                  {publishing ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Pubblicando...
+                    </>
+                  ) : (
+                    <>📤 Pubblica su WordPress</>
+                  )}
                 </button>
               </div>
             </div>

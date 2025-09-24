@@ -1,4 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
+import { Result } from '../../../../shared/domain/types/Result';
 import { Publication, PublicationMetadata, PublicationError } from '../../domain/entities/Publication';
 import { PublicationId } from '../../domain/value-objects/PublicationId';
 import { PublicationStatus } from '../../domain/value-objects/PublicationStatus';

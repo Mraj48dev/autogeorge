@@ -1,4 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
+import { Result } from '../../../../shared/domain/types/Result';
 import { PublishArticle, PublishArticleInput, PublishArticleOutput, PublishArticleError } from '../application/use-cases/PublishArticle';
 import { GetPublications, GetPublicationsInput, GetPublicationsOutput, GetPublicationsError } from '../application/use-cases/GetPublications';
 

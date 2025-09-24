@@ -1,4 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
+import { Result } from '../../../../shared/domain/types/Result';
 import { PublicationTarget } from '../value-objects/PublicationTarget';
 import { PublicationMetadata } from '../entities/Publication';
 

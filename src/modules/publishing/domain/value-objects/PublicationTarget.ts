@@ -1,4 +1,4 @@
-import { ValueObject } from '../../../shared/domain/base/ValueObject';
+import { ValueObject } from '../../../../shared/domain/base/ValueObject';
 
 /**
  * Value Object representing a publication target platform.

@@ -1,4 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
+import { Result } from '../../../../shared/domain/types/Result';
 import { PublicationTarget, WordPressConfig } from '../../domain/value-objects/PublicationTarget';
 import { PublicationMetadata } from '../../domain/entities/Publication';
 import {

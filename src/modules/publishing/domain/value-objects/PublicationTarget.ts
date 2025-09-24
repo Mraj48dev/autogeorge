@@ -141,6 +141,11 @@ export class PublicationTarget extends ValueObject<PublicationTargetValue> {
    * Validates the publication target
    */
   protected validate(value: PublicationTargetValue): void {
+    console.log('PublicationTarget.validate - received value:', JSON.stringify(value));
+    console.log('PublicationTarget.validate - typeof value:', typeof value);
+    console.log('PublicationTarget.validate - value is null:', value === null);
+    console.log('PublicationTarget.validate - value is undefined:', value === undefined);
+
     if (!value || typeof value !== 'object') {
       throw new Error('PublicationTarget must be an object');
     }

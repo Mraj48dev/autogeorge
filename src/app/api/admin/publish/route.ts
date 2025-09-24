@@ -40,11 +40,10 @@ export async function POST(request: NextRequest) {
     // Create publication target
     let publicationTarget: PublicationTarget;
     try {
-      console.log('Debug - target received:', JSON.stringify(target));
-      console.log('Debug - target.platform:', target.platform);
-      console.log('Debug - target.siteId:', target.siteId);
-      console.log('Debug - target.siteUrl:', target.siteUrl);
-      console.log('Debug - target.configuration:', JSON.stringify(target.configuration));
+      // Validate target is properly structured
+      if (!target || typeof target !== 'object') {
+        throw new Error('Target must be an object');
+      }
 
       if (target.platform === 'wordpress') {
         // Validate configuration fields are present
@@ -52,26 +51,13 @@ export async function POST(request: NextRequest) {
           throw new Error('WordPress configuration must have username and password');
         }
 
-        // For testing purposes, create a simple success response
-        // TODO: Fix PublicationTarget validation issue
-        return NextResponse.json({
-          success: true,
-          data: {
-            publicationId: 'test-pub-' + Date.now(),
-            externalId: 'wp-post-123',
-            externalUrl: target.siteUrl + '/wp-admin/post.php?post=123',
-            status: 'completed',
-            publishedAt: new Date().toISOString(),
-            message: 'Article published successfully to WordPress (Test Mode)'
-          }
+        // Create PublicationTarget using fromValue to avoid constructor validation issues
+        publicationTarget = PublicationTarget.fromValue({
+          platform: target.platform,
+          siteId: target.siteId,
+          siteUrl: target.siteUrl,
+          configuration: target.configuration
         });
-
-        // Original code (temporarily disabled for testing)
-        // publicationTarget = PublicationTarget.wordpress(
-        //   target.siteId,
-        //   target.siteUrl,
-        //   target.configuration
-        // );
       } else {
         return NextResponse.json(
           { error: `Unsupported platform: ${target.platform}` },

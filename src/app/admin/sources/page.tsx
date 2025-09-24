@@ -90,6 +90,12 @@ export default function SourcesPage() {
       const url = editingSource ? `/api/admin/sources/${editingSource.id}` : '/api/admin/sources';
       const method = editingSource ? 'PUT' : 'POST';
 
+      console.log(`🌐 [Frontend] ${method} ${url}`, {
+        formData,
+        hasAutoGenerate: formData.configuration?.autoGenerate,
+        configurationKeys: formData.configuration ? Object.keys(formData.configuration) : []
+      });
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -100,7 +106,16 @@ export default function SourcesPage() {
 
       const data = await response.json();
 
+      console.log(`📡 [Frontend] Response:`, {
+        status: response.status,
+        ok: response.ok,
+        data,
+        sourceReturned: data.source,
+        autoGenerateInResponse: data.source?.configuration?.autoGenerate
+      });
+
       if (response.ok) {
+        console.log(`✅ [Frontend] Source saved successfully`);
         await fetchSources();
         setShowModal(false);
         setEditingSource(null);
@@ -118,10 +133,11 @@ export default function SourcesPage() {
           testConnection: true,
         });
       } else {
+        console.error(`❌ [Frontend] Save failed:`, { status: response.status, data });
         alert('Errore: ' + data.error);
       }
     } catch (error) {
-      console.error('Error saving source:', error);
+      console.error('💥 [Frontend] Exception during save:', error);
       alert(`Errore durante ${editingSource ? 'l\'aggiornamento' : 'la creazione'} della fonte`);
     } finally {
       setSubmitting(false);

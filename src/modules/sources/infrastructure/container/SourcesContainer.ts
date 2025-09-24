@@ -16,10 +16,12 @@ import { prisma as globalPrisma } from '../../../../shared/database/prisma';
 // Sources Module Dependencies
 import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { SourceFetchService } from '../../domain/ports/SourceFetchService';
+import { ArticleAutoGenerator } from '../../domain/ports/ArticleAutoGenerator';
 import { PrismaSourceRepository } from '../repositories/PrismaSourceRepository';
 import { InMemorySourceRepository } from '../repositories/InMemorySourceRepository';
 import { FallbackSourceRepository } from '../repositories/FallbackSourceRepository';
 import { UniversalFetchService } from '../services/UniversalFetchService';
+import { ContentModuleArticleAutoGenerator } from '../adapters/ContentModuleArticleAutoGenerator';
 import { CreateSource } from '../../application/use-cases/CreateSource';
 import { GetSources } from '../../application/use-cases/GetSources';
 import { FetchFromSource } from '../../application/use-cases/FetchFromSource';
@@ -43,6 +45,7 @@ export class SourcesContainer {
   // Sources module dependencies
   private _sourceRepository: SourceRepository | null = null;
   private _sourceFetchService: SourceFetchService | null = null;
+  private _articleAutoGenerator: ArticleAutoGenerator | null = null;
   private _createSource: CreateSource | null = null;
   private _getSources: GetSources | null = null;
   private _fetchFromSource: FetchFromSource | null = null;
@@ -138,6 +141,13 @@ export class SourcesContainer {
     return this._sourceFetchService;
   }
 
+  get articleAutoGenerator(): ArticleAutoGenerator {
+    if (!this._articleAutoGenerator) {
+      this._articleAutoGenerator = new ContentModuleArticleAutoGenerator();
+    }
+    return this._articleAutoGenerator;
+  }
+
   get createSource(): CreateSource {
     if (!this._createSource) {
       this._createSource = new CreateSource(
@@ -159,7 +169,8 @@ export class SourcesContainer {
     if (!this._fetchFromSource) {
       this._fetchFromSource = new FetchFromSource(
         this.sourceRepository,
-        this.sourceFetchService
+        this.sourceFetchService,
+        this.articleAutoGenerator
       );
     }
     return this._fetchFromSource;

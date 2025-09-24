@@ -2,6 +2,7 @@ import { Result } from '../../shared/domain/types/Result';
 import { BaseUseCase } from '../../shared/application/base/UseCase';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { SourceFetchService, FetchResult, FetchedItem } from '../../domain/ports/SourceFetchService';
+import { ArticleAutoGenerator, FeedItemForGeneration } from '../../domain/ports/ArticleAutoGenerator';
 import { SourceId } from '../../domain/value-objects/SourceId';
 import { prisma } from '../../../../shared/database/prisma';
 
@@ -12,7 +13,8 @@ import { prisma } from '../../../../shared/database/prisma';
 export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFromSourceResponse> {
   constructor(
     private readonly sourceRepository: SourceRepository,
-    private readonly sourceFetchService: SourceFetchService
+    private readonly sourceFetchService: SourceFetchService,
+    private readonly articleAutoGenerator?: ArticleAutoGenerator
   ) {
     super();
   }
@@ -82,14 +84,60 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           return Result.failure(saveResult.error);
         }
 
+        // Trigger auto-generation if enabled and there are new items
+        let generatedArticles = 0;
+        if (savedArticles.length > 0 && source.shouldAutoGenerate() && this.articleAutoGenerator) {
+          console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${savedArticles.length} new items...`);
+
+          try {
+            const feedItemsForGeneration: FeedItemForGeneration[] = savedArticles.map(item => ({
+              id: item.id,
+              guid: item.guid,
+              title: item.title,
+              content: item.content,
+              url: item.url,
+              publishedAt: item.publishedAt
+            }));
+
+            const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
+              sourceId: request.sourceId,
+              feedItems: feedItemsForGeneration
+            });
+
+            if (autoGenResult.isSuccess()) {
+              const genResult = autoGenResult.value;
+              generatedArticles = genResult.summary.successful;
+              console.log(`✅ Auto-generation completed for source ${source.name.getValue()}: ${generatedArticles}/${genResult.summary.total} articles generated`);
+
+              // Mark successfully generated feed items as processed
+              for (const result of genResult.generatedArticles) {
+                if (result.success && result.articleId) {
+                  await prisma.feedItem.update({
+                    where: { id: result.feedItemId },
+                    data: {
+                      processed: true,
+                      articleId: result.articleId
+                    }
+                  });
+                }
+              }
+            } else {
+              console.error(`❌ Auto-generation failed for source ${source.name.getValue()}:`, autoGenResult.error.message);
+            }
+          } catch (error) {
+            console.error(`💥 Auto-generation error for source ${source.name.getValue()}:`, error);
+          }
+        }
+
         return Result.success({
           sourceId: source.id.getValue(),
           fetchedItems: result.fetchedItems.length,
           newItems: savedArticles.length,
+          generatedArticles,
           duration,
           items: savedArticles,
           metadata: result.metadata,
-          message: `Successfully fetched ${savedArticles.length} new items from ${result.fetchedItems.length} total items`
+          message: `Successfully fetched ${savedArticles.length} new items from ${result.fetchedItems.length} total items${generatedArticles > 0 ? `, generated ${generatedArticles} articles` : ''}`
         });
 
       } catch (error) {
@@ -185,6 +233,7 @@ export interface FetchFromSourceResponse {
   sourceId: string;
   fetchedItems: number;
   newItems: number;
+  generatedArticles?: number;
   duration: number;
   items: any[]; // FetchedItem[]
   metadata: any; // FetchMetadata

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { Result } from '../../shared/domain/types/Result';
 import { RssFetchService } from './RssFetchService';
 import { Source } from '../../domain/entities/Source';
+import { ArticleAutoGenerator, FeedItemForGeneration } from '../../domain/ports/ArticleAutoGenerator';
 
 interface FeedItem {
   id: string;
@@ -29,7 +30,8 @@ interface PollingResult {
 export class FeedPollingService {
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly rssFetchService: RssFetchService
+    private readonly rssFetchService: RssFetchService,
+    private readonly articleAutoGenerator?: ArticleAutoGenerator
   ) {}
 
   /**
@@ -81,13 +83,50 @@ export class FeedPollingService {
       console.log(`📥 Fetched ${fetchedItems.length} items from ${sourceName}`);
 
       // Salva i nuovi item e conta duplicati
-      const { newItems, duplicatesSkipped } = await this.saveFeedItems(
+      const { newItems, duplicatesSkipped, savedItems } = await this.saveFeedItems(
         sourceId,
         fetchedItems
       );
 
       // Aggiorna il source con successo
       await this.updateSourceSuccess(sourceId);
+
+      // Trigger auto-generation if enabled and there are new items
+      if (newItems > 0 && source.shouldAutoGenerate() && this.articleAutoGenerator) {
+        console.log(`🤖 Auto-generation enabled for ${sourceName}, triggering for ${newItems} new items...`);
+
+        try {
+          const feedItemsForGeneration: FeedItemForGeneration[] = savedItems.map(item => ({
+            id: item.id,
+            guid: item.guid,
+            title: item.title,
+            content: item.content,
+            url: item.url,
+            publishedAt: item.publishedAt
+          }));
+
+          const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
+            sourceId,
+            feedItems: feedItemsForGeneration
+          });
+
+          if (autoGenResult.isSuccess()) {
+            const genResult = autoGenResult.value;
+            console.log(`✅ Auto-generation completed for ${sourceName}: ${genResult.summary.successful}/${genResult.summary.total} articles generated`);
+
+            // Mark successfully generated feed items as processed
+            for (const result of genResult.generatedArticles) {
+              if (result.success && result.articleId) {
+                await this.markItemAsProcessed(result.feedItemId, result.articleId);
+              }
+            }
+          } else {
+            console.error(`❌ Auto-generation failed for ${sourceName}:`, autoGenResult.error.message);
+          }
+        } catch (error) {
+          console.error(`💥 Auto-generation error for ${sourceName}:`, error);
+        }
+      }
 
       const duration = Date.now() - startTime;
 
@@ -119,16 +158,17 @@ export class FeedPollingService {
   private async saveFeedItems(
     sourceId: string,
     fetchedItems: any[]
-  ): Promise<{ newItems: number; duplicatesSkipped: number }> {
+  ): Promise<{ newItems: number; duplicatesSkipped: number; savedItems: FeedItem[] }> {
     let newItems = 0;
     let duplicatesSkipped = 0;
+    const savedItems: FeedItem[] = [];
 
     for (const item of fetchedItems) {
       try {
         // Usa il GUID se disponibile, altrimenti l'URL, altrimenti un hash del contenuto
         const guid = item.id || item.guid || item.url || this.generateItemHash(item);
 
-        await this.prisma.feedItem.create({
+        const savedFeedItem = await this.prisma.feedItem.create({
           data: {
             sourceId,
             guid,
@@ -139,6 +179,16 @@ export class FeedPollingService {
             fetchedAt: new Date(),
             processed: false
           }
+        });
+
+        // Add to savedItems array for auto-generation
+        savedItems.push({
+          id: savedFeedItem.id,
+          guid: savedFeedItem.guid || undefined,
+          title: savedFeedItem.title,
+          content: savedFeedItem.content,
+          url: savedFeedItem.url || undefined,
+          publishedAt: savedFeedItem.publishedAt
         });
 
         newItems++;
@@ -156,7 +206,7 @@ export class FeedPollingService {
       }
     }
 
-    return { newItems, duplicatesSkipped };
+    return { newItems, duplicatesSkipped, savedItems };
   }
 
   /**

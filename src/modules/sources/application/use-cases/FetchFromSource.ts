@@ -159,7 +159,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           });
 
           savedArticles.push(savedArticle);
-          console.log(`✅ Saved article: ${savedArticle.title}`);
+          console.log(`✅ Saved article as DRAFT: ${savedArticle.title}`);
         } else {
           console.log(`⚠️ Duplicate article skipped: ${item.title}`);
         }

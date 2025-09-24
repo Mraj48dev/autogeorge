@@ -1,4 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
+import { Result } from '../../shared/domain/types/Result';
 import { ArticleAutoGenerator, AutoGenerateFromFeedItemsRequest, AutoGenerateFromFeedItemsResponse } from '../../domain/ports/ArticleAutoGenerator';
 import { createContentContainer } from '../../../content/infrastructure/container/ContentContainer';
 

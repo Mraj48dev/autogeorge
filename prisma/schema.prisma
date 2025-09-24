@@ -158,3 +158,27 @@ model WordPressSite {
 
   @@map("wordpress_sites")
 }
+
+model Publication {
+  id            String   @id @default(cuid())
+  articleId     String
+  target        Json     // Publication target configuration
+  status        String   @default("pending")
+  externalId    String?  // ID on external platform
+  externalUrl   String?  // URL on external platform
+  metadata      Json     // Publication metadata
+  error         Json?    // Error information if failed
+  retryCount    Int      @default(0)
+  maxRetries    Int      @default(3)
+  scheduledAt   DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([articleId, target])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@map("publications")
+}

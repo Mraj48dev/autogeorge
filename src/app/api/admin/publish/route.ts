@@ -52,12 +52,20 @@ export async function POST(request: NextRequest) {
         }
 
         // Create PublicationTarget using fromValue to avoid constructor validation issues
-        publicationTarget = PublicationTarget.fromValue({
+        const targetValue = {
           platform: target.platform,
           siteId: target.siteId,
           siteUrl: target.siteUrl,
           configuration: target.configuration
-        });
+        };
+
+        console.log('API - About to create PublicationTarget with:', JSON.stringify(targetValue));
+        console.log('API - target.platform:', target.platform);
+        console.log('API - target.siteId:', target.siteId);
+        console.log('API - target.siteUrl:', target.siteUrl);
+        console.log('API - target.configuration:', JSON.stringify(target.configuration));
+
+        publicationTarget = PublicationTarget.fromValue(targetValue);
       } else {
         return NextResponse.json(
           { error: `Unsupported platform: ${target.platform}` },

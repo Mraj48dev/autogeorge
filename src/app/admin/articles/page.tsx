@@ -211,7 +211,7 @@ export default function ArticlesBySourcePage() {
       const wpResponse = await fetch('/api/admin/wordpress-settings', {
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'user-1'
+          'x-user-id': 'demo-user'
         }
       });
 

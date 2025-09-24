@@ -111,6 +111,15 @@ export async function POST(request: NextRequest) {
         console.log('API - WordPress success:', JSON.stringify(wpResult));
 
         // Create publication record in database
+        console.log('API - About to create publication record');
+        console.log('API - prisma object:', typeof prisma, !!prisma);
+        console.log('API - prisma.publication:', typeof prisma?.publication, !!prisma?.publication);
+
+        if (!prisma) {
+          console.error('API - Prisma is undefined!');
+          throw new Error('Database connection not available');
+        }
+
         const publication = await prisma.publication.create({
           data: {
             articleId,
@@ -125,6 +134,8 @@ export async function POST(request: NextRequest) {
             retryCount: 0
           }
         });
+
+        console.log('API - Publication record created:', publication.id);
 
         return NextResponse.json({
           success: true,

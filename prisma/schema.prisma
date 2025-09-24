@@ -159,3 +159,22 @@ model WordPressSite {
   @@map("wordpress_sites")
 }
 
+model Publication {
+  id            String   @id @default(cuid())
+  articleId     String
+  externalId    String
+  externalUrl   String
+  status        String
+  platform      String
+  target        Json
+  content       Json
+  metadata      Json
+  publishedAt   DateTime?
+  retryCount    Int      @default(0)
+  lastError     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("publications")
+}
+

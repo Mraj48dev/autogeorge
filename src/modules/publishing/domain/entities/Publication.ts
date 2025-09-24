@@ -1,4 +1,4 @@
-import { AggregateRoot } from '../../../shared/domain/base/Entity';
+import { AggregateRoot } from '../../../content/shared/domain/base/Entity';
 import { PublicationId } from '../value-objects/PublicationId';
 import { PublicationStatus } from '../value-objects/PublicationStatus';
 import { PublicationTarget } from '../value-objects/PublicationTarget';

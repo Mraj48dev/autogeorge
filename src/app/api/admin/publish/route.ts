@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
     // Create publication target
     let publicationTarget: PublicationTarget;
     try {
+      console.log('Debug - target received:', JSON.stringify(target));
+      console.log('Debug - target.platform:', target.platform);
+      console.log('Debug - target.siteId:', target.siteId);
+      console.log('Debug - target.siteUrl:', target.siteUrl);
+      console.log('Debug - target.configuration:', JSON.stringify(target.configuration));
+
       if (target.platform === 'wordpress') {
         publicationTarget = PublicationTarget.wordpress(
           target.siteId,
@@ -53,6 +59,7 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (error) {
+      console.error('Error creating PublicationTarget:', error);
       return NextResponse.json(
         { error: `Invalid target configuration: ${error instanceof Error ? error.message : 'Unknown error'}` },
         { status: 400 }

@@ -33,7 +33,9 @@ export class PrismaSourceRepository implements SourceRepository {
         metadata: source.metadata as any,
         lastFetchAt: source.lastFetchAt,
         lastErrorAt: source.lastErrorAt,
-        lastError: source.lastError,
+        lastError: source.lastError && typeof source.lastError === 'object'
+          ? source.lastError.toString()
+          : source.lastError,
         createdAt: source.createdAt,
         updatedAt: source.updatedAt,
       };

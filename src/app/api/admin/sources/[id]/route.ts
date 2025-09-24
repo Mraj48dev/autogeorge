@@ -21,6 +21,18 @@ export async function PUT(
 
     const body = await request.json();
 
+    console.log(`🌐 [API] PUT /api/admin/sources/${sourceId}`, {
+      sourceId,
+      bodyReceived: {
+        name: body.name,
+        type: body.type,
+        url: body.url,
+        configuration: body.configuration,
+        hasAutoGenerate: body.configuration?.autoGenerate,
+        configurationKeys: body.configuration ? Object.keys(body.configuration) : []
+      }
+    });
+
     // Validate required fields
     if (!body.name || !body.type) {
       return NextResponse.json(
@@ -29,22 +41,43 @@ export async function PUT(
       );
     }
 
-    const container = createSourcesContainer();
-    const result = await container.sourcesAdminFacade.updateSource({
+    const updateRequest = {
       sourceId,
       name: body.name,
       url: body.url,
       defaultCategory: body.defaultCategory,
       configuration: body.configuration || {},
       metadata: body.metadata || {},
+    };
+
+    console.log(`📤 [API] Sending updateSource request:`, {
+      updateRequest,
+      configurationAutoGenerate: updateRequest.configuration?.autoGenerate
     });
 
+    const container = createSourcesContainer();
+    const result = await container.sourcesAdminFacade.updateSource(updateRequest);
+
     if (result.isFailure()) {
+      console.log(`❌ [API] UpdateSource failed:`, {
+        sourceId,
+        error: result.error.message
+      });
       return NextResponse.json(
         { error: result.error.message },
         { status: 400 }
       );
     }
+
+    console.log(`✅ [API] Source updated successfully:`, {
+      sourceId,
+      updatedSource: {
+        id: result.value.source.id,
+        name: result.value.source.name,
+        configuration: result.value.source.configuration,
+        autoGenerate: result.value.source.configuration?.autoGenerate
+      }
+    });
 
     return NextResponse.json({
       success: true,

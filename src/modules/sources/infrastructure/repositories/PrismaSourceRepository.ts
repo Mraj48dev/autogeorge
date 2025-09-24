@@ -23,6 +23,14 @@ export class PrismaSourceRepository implements SourceRepository {
 
   async save(source: Source): Promise<Result<Source, Error>> {
     try {
+      console.log(`🔄 [PrismaSourceRepository] Saving source ${source.id.getValue()}`, {
+        sourceId: source.id.getValue(),
+        sourceName: source.name.getValue(),
+        configuration: source.configuration,
+        autoGenerate: source.configuration?.autoGenerate,
+        configurationKeys: source.configuration ? Object.keys(source.configuration) : []
+      });
+
       const data = {
         id: source.id.getValue(),
         name: source.name.getValue(),
@@ -40,6 +48,12 @@ export class PrismaSourceRepository implements SourceRepository {
         updatedAt: source.updatedAt,
       };
 
+      console.log(`📝 [PrismaSourceRepository] Data being saved to DB:`, {
+        sourceId: data.id,
+        configuration: data.configuration,
+        autoGenerate: data.configuration?.autoGenerate
+      });
+
       const savedSource = await this.prisma.source.upsert({
         where: { id: source.id.getValue() },
         create: data,
@@ -56,7 +70,20 @@ export class PrismaSourceRepository implements SourceRepository {
         },
       });
 
+      console.log(`✅ [PrismaSourceRepository] Source saved to DB:`, {
+        sourceId: savedSource.id,
+        configuration: savedSource.configuration,
+        autoGenerate: (savedSource.configuration as any)?.autoGenerate
+      });
+
       const domainSource = this.toDomainSource(savedSource);
+
+      console.log(`🔄 [PrismaSourceRepository] Domain source created:`, {
+        sourceId: domainSource.id.getValue(),
+        configuration: domainSource.configuration,
+        autoGenerate: domainSource.configuration?.autoGenerate
+      });
+
       return Result.success(domainSource);
 
     } catch (error) {

@@ -32,7 +32,16 @@ export class UpdateSource implements UseCase<UpdateSourceRequest, UpdateSourceRe
 
   async execute(request: UpdateSourceRequest): Promise<Result<UpdateSourceResponse, Error>> {
     try {
-      this.logger.info('Updating source', { sourceId: request.sourceId });
+      this.logger.info('Updating source', {
+        sourceId: request.sourceId,
+        requestData: {
+          name: request.name,
+          url: request.url,
+          configuration: request.configuration,
+          hasAutoGenerate: request.configuration?.autoGenerate,
+          configurationKeys: request.configuration ? Object.keys(request.configuration) : []
+        }
+      });
 
       // Get existing source
       const sourceId = SourceId.fromString(request.sourceId);
@@ -67,7 +76,19 @@ export class UpdateSource implements UseCase<UpdateSourceRequest, UpdateSourceRe
       }
 
       if (request.configuration) {
+        this.logger.info('Updating source configuration', {
+          sourceId: request.sourceId,
+          oldConfiguration: existingSource.configuration,
+          newConfiguration: request.configuration,
+          autoGenerateOld: existingSource.configuration?.autoGenerate,
+          autoGenerateNew: request.configuration?.autoGenerate
+        });
         existingSource.updateConfiguration(request.configuration);
+        this.logger.info('Source configuration updated', {
+          sourceId: request.sourceId,
+          updatedConfiguration: existingSource.configuration,
+          autoGenerateAfterUpdate: existingSource.configuration?.autoGenerate
+        });
       }
 
       if ('defaultCategory' in request) {

@@ -1,4 +1,4 @@
-import { DomainEvent } from '../../../shared/domain/base/DomainEvent';
+import { DomainEvent } from '../../../../shared/domain/base/DomainEvent';
 
 /**
  * Domain event fired when a publication process starts.

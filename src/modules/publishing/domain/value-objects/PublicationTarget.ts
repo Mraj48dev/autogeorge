@@ -140,12 +140,12 @@ export class PublicationTarget extends ValueObject<PublicationTargetValue> {
   /**
    * Validates the publication target
    */
-  private validate(): void {
-    if (!this.value || typeof this.value !== 'object') {
+  protected validate(value: PublicationTargetValue): void {
+    if (!value || typeof value !== 'object') {
       throw new Error('PublicationTarget must be an object');
     }
 
-    const { platform, siteId, siteUrl, configuration } = this.value;
+    const { platform, siteId, siteUrl, configuration } = value;
 
     if (!platform || typeof platform !== 'string') {
       throw new Error('Platform must be a non-empty string');
@@ -164,14 +164,14 @@ export class PublicationTarget extends ValueObject<PublicationTargetValue> {
     }
 
     // Platform-specific validation
-    this.validatePlatformSpecific();
+    this.validatePlatformSpecific(value);
   }
 
   /**
    * Validates platform-specific configuration
    */
-  private validatePlatformSpecific(): void {
-    const { platform, configuration } = this.value;
+  private validatePlatformSpecific(value: PublicationTargetValue): void {
+    const { platform, configuration } = value;
 
     switch (platform) {
       case 'wordpress':

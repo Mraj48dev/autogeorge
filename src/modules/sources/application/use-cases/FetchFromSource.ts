@@ -195,12 +195,8 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           }
         ];
 
-        const existingContent = await prisma.content.findFirst({
-          where: {
-            sourceId,
-            OR: whereConditions
-          }
-        });
+        // TEMPORARY DEBUG: Skip deduplication check to test saving
+        const existingContent = null; // Force creation
 
         if (!existingContent) {
           console.log(`✅ Creating new content: ${item.title} (guid: ${item.guid})`);

@@ -194,6 +194,10 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           ...(item.url && item.url !== itemGuid ? [{ url: item.url }] : [])
         ];
 
+        // TEMPORARY: Disable deduplication completely for first fetch
+        const existingContent = null;
+
+        /* DISABLED UNTIL FIRST FETCH WORKS:
         const existingContent = whereConditions.length > 0
           ? await prisma.content.findFirst({
               where: {
@@ -201,7 +205,8 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
                 OR: whereConditions
               }
             })
-          : null; // If no GUID or URL, consider it unique
+          : null;
+        */
 
         if (!existingContent) {
           console.log(`✅ Creating new content: ${item.title} (guid: ${itemGuid})`);

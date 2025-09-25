@@ -181,19 +181,24 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     for (const item of fetchedItems) {
       try {
         // Check if content already exists to avoid duplicates using Content table (feed_items)
+        const whereConditions = [
+          // Primary: match by GUID if it exists
+          ...(item.guid ? [{ guid: item.guid }] : []),
+          // Secondary: match by URL if it exists and is different from GUID
+          ...(item.url && item.url !== item.guid ? [{ url: item.url }] : []),
+          // Tertiary: match by title + published date as fallback
+          {
+            AND: [
+              { title: item.title },
+              { publishedAt: new Date(item.publishedAt) }
+            ]
+          }
+        ];
+
         const existingContent = await prisma.content.findFirst({
           where: {
             sourceId,
-            OR: [
-              { guid: item.guid },
-              { url: item.url },
-              {
-                AND: [
-                  { title: item.title },
-                  { publishedAt: new Date(item.publishedAt) }
-                ]
-              }
-            ]
+            OR: whereConditions
           }
         });
 

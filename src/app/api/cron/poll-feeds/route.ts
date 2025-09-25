@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
+import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
 
 /**
  * GET /api/cron/poll-feeds
@@ -37,24 +38,27 @@ export async function GET(request: NextRequest) {
 
     const startTime = Date.now();
 
-    // Inizializza solo Prisma
-    const prisma = new PrismaClient();
+    // Initialize sources container instead of direct Prisma
+    const sourcesContainer = createSourcesContainer();
+    const prisma = new PrismaClient(); // Still need for basic queries
 
     try {
-      // Ottieni tutti i feed RSS attivi dal database
-      const activeSources = await prisma.source.findMany({
-        where: {
-          status: 'active',
-          type: 'rss',
-          url: {
-            not: null
-          }
-        },
-        orderBy: {
-          lastFetchAt: 'asc' // Prima i feed che non sono stati aggiornati da più tempo
-        },
-        take: 100 // Max 100 feed per volta
+      // Get all active RSS sources from database using clean architecture
+      const getSourcesResult = await sourcesContainer.sourcesAdminFacade.getSources({
+        limit: 100,
+        type: 'rss',
+        status: 'active'
       });
+
+      if (getSourcesResult.isFailure()) {
+        console.error('❌ Failed to get sources:', getSourcesResult.error);
+        return NextResponse.json({
+          error: 'Failed to retrieve sources',
+          details: getSourcesResult.error.message
+        }, { status: 500 });
+      }
+
+      const activeSources = getSourcesResult.value.sources.filter(s => s.url); // Only sources with URLs
 
       console.log(`📊 Found ${activeSources.length} active RSS sources to poll`);
 
@@ -87,117 +91,59 @@ export async function GET(request: NextRequest) {
         successfulPolls: 0,
         failedPolls: 0,
         newItemsFound: 0,
-        duplicatesSkipped: 0,
+        generatedArticles: 0,
         errors: [] as string[],
         duration: 0
       };
 
-      // Polling di ogni feed in batch per evitare overload
-      const batchSize = 3; // Ridotto a 3 per essere più conservativi
+      // Poll each feed using FetchFromSource use case (includes auto-generation!)
+      const batchSize = 3; // Process in small batches to avoid overload
       for (let i = 0; i < activeSources.length; i += batchSize) {
         const batch = activeSources.slice(i, i + batchSize);
 
         const batchPromises = batch.map(async (sourceData) => {
           try {
-            console.log(`🔍 Polling feed: ${sourceData.name} (${sourceData.url})`);
+            console.log(`🔍 [CRON] Polling feed: ${sourceData.name} (${sourceData.url})`);
+            console.log(`🤖 Auto-generation: ${sourceData.configuration?.autoGenerate ? 'ENABLED' : 'DISABLED'}`);
 
-            // Fetch RSS direttamente
-            const fetchResult = await fetchRssFeed(sourceData.url);
+            // Use FetchFromSource use case instead of manual fetch
+            const fetchResult = await sourcesContainer.sourcesAdminFacade.fetchFromSource({
+              sourceId: sourceData.id,
+              force: true
+            });
 
             if (fetchResult.isSuccess()) {
-              const feedData = fetchResult.value;
-              console.log(`📥 Fetched ${feedData.items.length} items from ${sourceData.name}`);
+              const result = fetchResult.value;
+              const newItems = result.newItems;
+              const totalItems = result.fetchedItems;
+              const generatedArticles = result.generatedArticles || 0;
 
-              let newItems = 0;
-              let duplicatesSkipped = 0;
+              console.log(`📥 [CRON] ${sourceData.name}: ${totalItems} fetched, ${newItems} new items`);
 
-              // Salva gli items nel database
-              for (const item of feedData.items) {
-                try {
-                  // Controlla se esiste già usando tutti i constraint unici
-                  const existing = await prisma.feedItem.findFirst({
-                    where: {
-                      OR: [
-                        {
-                          sourceId: sourceData.id,
-                          url: item.link
-                        },
-                        {
-                          sourceId: sourceData.id,
-                          guid: item.guid
-                        }
-                      ]
-                    }
-                  });
-
-                  if (existing) {
-                    console.log(`🔄 Skipped duplicate: ${item.title.substring(0, 50)}...`);
-                    duplicatesSkipped++;
-                  } else {
-                    await prisma.feedItem.create({
-                      data: {
-                        title: item.title,
-                        content: item.content || item.description || '',
-                        url: item.link,
-                        guid: item.guid || item.link,
-                        publishedAt: item.publishedAt,
-                        fetchedAt: new Date(),
-                        sourceId: sourceData.id,
-                        processed: false
-                      }
-                    });
-                    console.log(`💾 Saved new item: ${item.title.substring(0, 50)}...`);
-                    newItems++;
-                  }
-                } catch (dbError) {
-                  // Se è un errore di constraint violation, è un duplicato
-                  if (dbError instanceof Error && dbError.message.includes('Unique constraint failed')) {
-                    console.log(`🔄 Skipped duplicate (constraint): ${item.title.substring(0, 50)}...`);
-                    duplicatesSkipped++;
-                  } else {
-                    console.error(`❌ Database error for ${item.title}:`, dbError);
-                  }
-                }
+              if (generatedArticles > 0) {
+                console.log(`🤖 [CRON] AUTO-GENERATED: ${generatedArticles} articles created automatically!`);
               }
-
-              // Aggiorna source
-              await prisma.source.update({
-                where: { id: sourceData.id },
-                data: {
-                  lastFetchAt: new Date(),
-                  lastError: null,
-                  lastErrorAt: null
-                }
-              });
 
               results.successfulPolls++;
               results.newItemsFound += newItems;
-              results.duplicatesSkipped += duplicatesSkipped;
+              results.generatedArticles += generatedArticles;
 
               if (newItems > 0) {
-                console.log(`✅ 🎉 NEW ARTICLES FOUND! ${newItems} new items from ${sourceData.name}`);
+                const autoGenStatus = sourceData.configuration?.autoGenerate ? 'with auto-generation' : 'without auto-generation';
+                console.log(`✅ 🎉 [CRON] SUCCESS: ${newItems} new items from ${sourceData.name} (${autoGenStatus})`);
 
-                // Se è il tuo sito, log extra speciale
-                if (sourceData.url?.includes('limegreen-termite-635510.hostingersite.com')) {
-                  console.log(`   🌟 SPECIAL: New articles detected on YOUR TEST SITE!`);
+                if (generatedArticles > 0) {
+                  console.log(`   🚀 Generated ${generatedArticles} articles automatically via Perplexity!`);
                 }
               } else {
-                console.log(`   ℹ️  No new items from ${sourceData.name} (${duplicatesSkipped} duplicates)`);
+                console.log(`   ℹ️  [CRON] No new items from ${sourceData.name}`);
               }
             } else {
-              // Errore di fetch
-              console.warn(`❌ Failed to fetch ${sourceData.name}: ${fetchResult.error}`);
-
-              await prisma.source.update({
-                where: { id: sourceData.id },
-                data: {
-                  lastError: fetchResult.error,
-                  lastErrorAt: new Date()
-                }
-              });
+              // FetchFromSource already handles error recording in the source
+              console.warn(`❌ [CRON] Failed to fetch ${sourceData.name}: ${fetchResult.error.message}`);
 
               results.failedPolls++;
-              results.errors.push(`${sourceData.name}: ${fetchResult.error}`);
+              results.errors.push(`${sourceData.name}: ${fetchResult.error.message}`);
             }
           } catch (error) {
             results.failedPolls++;
@@ -218,14 +164,14 @@ export async function GET(request: NextRequest) {
 
       results.duration = Date.now() - startTime;
 
-      console.log(`🏁 Automated polling completed:`, {
-      sources: results.totalSources,
-      successful: results.successfulPolls,
-      failed: results.failedPolls,
-      newItems: results.newItemsFound,
-      duplicates: results.duplicatesSkipped,
-      duration: `${results.duration}ms`
-    });
+      console.log(`🏁 [CRON] Automated polling completed:`, {
+        sources: results.totalSources,
+        successful: results.successfulPolls,
+        failed: results.failedPolls,
+        newItems: results.newItemsFound,
+        generatedArticles: results.generatedArticles,
+        duration: `${results.duration}ms`
+      });
 
     // Log degli errori se presenti
     if (results.errors.length > 0) {

@@ -180,36 +180,42 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
 
     for (const item of fetchedItems) {
       try {
-        // Check if article already exists to avoid duplicates
-        const existingArticle = await prisma.article.findFirst({
+        // Check if content already exists to avoid duplicates using Content table (feed_items)
+        const existingContent = await prisma.content.findFirst({
           where: {
-            AND: [
-              { sourceId },
+            sourceId,
+            OR: [
+              { guid: item.guid },
+              { url: item.url },
               {
-                OR: [
+                AND: [
                   { title: item.title },
-                  { content: { contains: item.content.substring(0, 100) } }
+                  { publishedAt: new Date(item.publishedAt) }
                 ]
               }
             ]
           }
         });
 
-        if (!existingArticle) {
-          // Create new article as draft (raw content, not yet processed)
-          const savedArticle = await prisma.article.create({
+        if (!existingContent) {
+          // Create new content (feed item) - NOT processed article yet!
+          const savedContent = await prisma.content.create({
             data: {
+              sourceId: sourceId,
+              guid: item.guid || item.url || `${sourceId}-${Date.now()}`,
               title: item.title || 'Untitled',
               content: item.content || '',
-              status: 'draft', // 🚨 CRITICAL: Raw content from RSS feed, NOT processed by AI yet!
-              sourceId: sourceId,
+              url: item.url,
+              publishedAt: new Date(item.publishedAt),
+              fetchedAt: new Date(),
+              processed: false, // NOT processed by AI yet
             }
           });
 
-          savedArticles.push(savedArticle);
-          console.log(`✅ Saved article as DRAFT: ${savedArticle.title}`);
+          savedArticles.push(savedContent);
+          console.log(`✅ Saved content (feed item): ${savedContent.title}`);
         } else {
-          console.log(`⚠️ Duplicate article skipped: ${item.title}`);
+          console.log(`⚠️ Duplicate content skipped: ${item.title}`);
         }
       } catch (error) {
         console.error(`❌ Error saving article "${item.title}":`, error);

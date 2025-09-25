@@ -206,6 +206,9 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         if (!existingContent) {
           console.log(`✅ Creating new content: ${item.title} (guid: ${itemGuid})`);
           // Create new content (feed item) - NOT processed article yet!
+          const publishedAt = item.publishedAt ? new Date(item.publishedAt) : new Date();
+          console.log(`📅 PublishedAt: original=${item.publishedAt} | parsed=${publishedAt}`);
+
           const savedContent = await prisma.content.create({
             data: {
               sourceId: sourceId,
@@ -213,7 +216,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
               title: item.title || 'Untitled',
               content: item.content || '',
               url: item.url,
-              publishedAt: new Date(item.publishedAt),
+              publishedAt,
               fetchedAt: new Date(),
               processed: false, // NOT processed by AI yet
             }
@@ -232,6 +235,13 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     }
 
     console.log(`💾 Saved ${savedArticles.length} articles out of ${fetchedItems.length} fetched`);
+
+    // TEMPORARY DEBUG: Return error details if no items were saved
+    if (savedArticles.length === 0 && fetchedItems.length > 0) {
+      console.error(`🚨 CRITICAL: 0 items saved from ${fetchedItems.length} fetched items!`);
+      // This suggests all items were either duplicates or failed to save
+    }
+
     return savedArticles;
   }
 }

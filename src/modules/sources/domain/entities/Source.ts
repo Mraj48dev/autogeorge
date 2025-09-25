@@ -642,6 +642,7 @@ export interface SourceSummary {
   type: string;
   status: string;
   url?: string;
+  configuration?: SourceConfiguration;
   lastFetchAt?: Date;
   lastErrorAt?: Date;
   lastError?: string;

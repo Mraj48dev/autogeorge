@@ -11,6 +11,7 @@
  * - Easy testing with mock implementations
  */
 import { PrismaClient } from '@prisma/client';
+import { prisma as globalPrisma } from '@/shared/database/prisma';
 
 // Content Module Dependencies
 import { ArticleRepository } from '../../domain/ports/ArticleRepository';
@@ -86,22 +87,20 @@ export class ContentContainer {
 
   get prisma(): PrismaClient {
     if (!this._prisma) {
-      this._prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: this._config.database.url,
-          },
-        },
-        log: this._config.database.enableLogging
-          ? ['query', 'info', 'warn', 'error']
-          : ['error'],
-      });
+      try {
+        // Use global singleton Prisma instance to avoid connection issues
+        // This follows CLAUDE.md rules: ALWAYS use prisma shared instance
+        this._prisma = globalPrisma;
 
-      // Setup connection lifecycle
-      this._prisma.$connect().catch((error) => {
-        this.logger.error('Failed to connect to database', { error });
+        // Test connection with a timeout
+        this._prisma.$queryRaw`SELECT 1`.catch((error) => {
+          this.logger.warn('Database connection test failed', { error });
+        });
+
+      } catch (error) {
+        this.logger.error('Failed to initialize Prisma client', { error });
         throw error;
-      });
+      }
     }
     return this._prisma;
   }

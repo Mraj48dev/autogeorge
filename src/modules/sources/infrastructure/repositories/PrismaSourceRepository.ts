@@ -198,10 +198,12 @@ export class PrismaSourceRepository implements SourceRepository {
 
       const where: any = {};
       if (options.type) {
-        where.type = options.type.getValue();
+        // Handle both string and value object types
+        where.type = typeof options.type === 'string' ? options.type : options.type.getValue();
       }
       if (options.status) {
-        where.status = options.status.getValue();
+        // Handle both string and value object statuses
+        where.status = typeof options.status === 'string' ? options.status : options.status.getValue();
       }
 
       const orderBy: any = {};
@@ -245,10 +247,12 @@ export class PrismaSourceRepository implements SourceRepository {
 
       const where: any = {};
       if (options.type) {
-        where.type = options.type.getValue();
+        // Handle both string and value object types
+        where.type = typeof options.type === 'string' ? options.type : options.type.getValue();
       }
       if (options.status) {
-        where.status = options.status.getValue();
+        // Handle both string and value object statuses
+        where.status = typeof options.status === 'string' ? options.status : options.status.getValue();
       }
 
       const orderBy: any = {};
@@ -324,10 +328,12 @@ export class PrismaSourceRepository implements SourceRepository {
       };
 
       if (options.type) {
-        where.type = options.type.getValue();
+        // Handle both string and value object types
+        where.type = typeof options.type === 'string' ? options.type : options.type.getValue();
       }
       if (options.status) {
-        where.status = options.status.getValue();
+        // Handle both string and value object statuses
+        where.status = typeof options.status === 'string' ? options.status : options.status.getValue();
       }
 
       const limit = options.limit || 50;

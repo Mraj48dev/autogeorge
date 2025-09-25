@@ -200,7 +200,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
 
         /* DISABLED UNTIL FIRST FETCH WORKS:
         const existingContent = whereConditions.length > 0
-          ? await prisma.content.findFirst({
+          ? await prisma.feedItem.findFirst({
               where: {
                 sourceId,
                 OR: whereConditions
@@ -215,7 +215,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           const publishedAt = item.publishedAt ? new Date(item.publishedAt) : new Date();
           console.log(`📅 PublishedAt: original=${item.publishedAt} | parsed=${publishedAt}`);
 
-          const savedContent = await prisma.content.create({
+          const savedContent = await prisma.feedItem.create({
             data: {
               sourceId: sourceId,
               guid: itemGuid || item.url || `${sourceId}-${Date.now()}`,

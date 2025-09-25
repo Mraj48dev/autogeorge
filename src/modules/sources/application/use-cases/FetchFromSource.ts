@@ -177,6 +177,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
 
   private async saveArticlesToDatabase(fetchedItems: FetchedItem[], sourceId: string): Promise<any[]> {
     const savedArticles: any[] = [];
+    const errors: any[] = []; // TEMP DEBUG: Collect all errors
 
     console.log(`🔍 Processing ${fetchedItems.length} fetched items for sourceId: ${sourceId}`);
 
@@ -235,6 +236,11 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
       } catch (error) {
         console.error(`❌ Error saving content "${item.title}":`, error);
         console.error('Full error details:', error);
+        errors.push({
+          title: item.title,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        });
         // Continue with other articles even if one fails
       }
     }
@@ -244,6 +250,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     // TEMPORARY DEBUG: Return error details if no items were saved
     if (savedArticles.length === 0 && fetchedItems.length > 0) {
       console.error(`🚨 CRITICAL: 0 items saved from ${fetchedItems.length} fetched items!`);
+      console.error('All errors:', errors);
       // This suggests all items were either duplicates or failed to save
     }
 

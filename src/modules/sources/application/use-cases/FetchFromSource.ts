@@ -195,15 +195,19 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           ...(item.url && item.url !== itemGuid ? [{ url: item.url }] : [])
         ];
 
-        // Re-enable deduplication but only check GUID in same source
-        const existingContent = itemGuid
-          ? await prisma.feedItem.findFirst({
-              where: {
-                sourceId,
-                guid: itemGuid
-              }
-            })
-          : null;
+        // TEMPORARY: Disable deduplication to test auto-generation
+        // TODO: Re-enable after testing auto-generation functionality
+        const existingContent = null; // Force all items as "new" for testing
+
+        // Original deduplication code (commented for testing):
+        // const existingContent = itemGuid
+        //   ? await prisma.feedItem.findFirst({
+        //       where: {
+        //         sourceId,
+        //         guid: itemGuid
+        //       }
+        //     })
+        //   : null;
 
         if (!existingContent) {
           console.log(`✅ Creating new content: ${item.title} (guid: ${itemGuid})`);

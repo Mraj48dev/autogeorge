@@ -203,6 +203,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         });
 
         if (!existingContent) {
+          console.log(`✅ Creating new content: ${item.title} (guid: ${item.guid})`);
           // Create new content (feed item) - NOT processed article yet!
           const savedContent = await prisma.content.create({
             data: {
@@ -220,7 +221,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           savedArticles.push(savedContent);
           console.log(`✅ Saved content (feed item): ${savedContent.title}`);
         } else {
-          console.log(`⚠️ Duplicate content skipped: ${item.title}`);
+          console.log(`⚠️ Duplicate content skipped: ${item.title} (found existing: ${existingContent?.title})`);
         }
       } catch (error) {
         console.error(`❌ Error saving article "${item.title}":`, error);

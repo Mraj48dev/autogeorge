@@ -184,22 +184,22 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
       try {
         console.log(`🔍 Processing item: ${item.title} | guid: ${item.guid} | url: ${item.url}`);
         // Check if content already exists to avoid duplicates using Content table (feed_items)
+        // Only use GUID and URL for deduplication - title+date was causing false positives
         const whereConditions = [
           // Primary: match by GUID if it exists
           ...(item.guid ? [{ guid: item.guid }] : []),
           // Secondary: match by URL if it exists and is different from GUID
-          ...(item.url && item.url !== item.guid ? [{ url: item.url }] : []),
-          // Tertiary: match by title + published date as fallback
-          {
-            AND: [
-              { title: item.title },
-              { publishedAt: new Date(item.publishedAt) }
-            ]
-          }
+          ...(item.url && item.url !== item.guid ? [{ url: item.url }] : [])
         ];
 
-        // TEMPORARY DEBUG: Skip deduplication check to test saving
-        const existingContent = null; // Force creation
+        const existingContent = whereConditions.length > 0
+          ? await prisma.content.findFirst({
+              where: {
+                sourceId,
+                OR: whereConditions
+              }
+            })
+          : null; // If no GUID or URL, consider it unique
 
         if (!existingContent) {
           console.log(`✅ Creating new content: ${item.title} (guid: ${item.guid})`);

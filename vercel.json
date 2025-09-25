@@ -31,11 +31,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/poll-feeds",
-      "schedule": "*/15 * * * *"
-    }
   ]
 }

@@ -178,8 +178,11 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
   private async saveArticlesToDatabase(fetchedItems: FetchedItem[], sourceId: string): Promise<any[]> {
     const savedArticles: any[] = [];
 
+    console.log(`🔍 Processing ${fetchedItems.length} fetched items for sourceId: ${sourceId}`);
+
     for (const item of fetchedItems) {
       try {
+        console.log(`🔍 Processing item: ${item.title} | guid: ${item.guid} | url: ${item.url}`);
         // Check if content already exists to avoid duplicates using Content table (feed_items)
         const whereConditions = [
           // Primary: match by GUID if it exists
@@ -220,7 +223,8 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           console.log(`⚠️ Duplicate content skipped: ${item.title} (found existing: ${existingContent?.title})`);
         }
       } catch (error) {
-        console.error(`❌ Error saving article "${item.title}":`, error);
+        console.error(`❌ Error saving content "${item.title}":`, error);
+        console.error('Full error details:', error);
         // Continue with other articles even if one fails
       }
     }

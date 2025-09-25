@@ -4,7 +4,7 @@ import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { SourceFetchService, FetchResult, FetchedItem } from '../../domain/ports/SourceFetchService';
 import { ArticleAutoGenerator, FeedItemForGeneration } from '../../domain/ports/ArticleAutoGenerator';
 import { SourceId } from '../../domain/value-objects/SourceId';
-import { prisma } from '../../../../shared/database/prisma';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * Use case for fetching content from a specific source

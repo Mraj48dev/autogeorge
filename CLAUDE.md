@@ -251,6 +251,129 @@ Questi endpoint funzionano perfettamente come riferimento:
 - `/api/admin/generate-article-manually` ✅ (RIPARATO con Prisma shared)
 - `/api/admin/backup` ✅ (NUOVO - Sistema backup completo)
 
+## 🔧 CONFIGURAZIONE PRODUZIONE - TUTTO QUELLO CHE SERVE SAPERE
+
+### 🌐 **VARIABILI AMBIENTE VERCEL** (Dashboard > Settings > Environment Variables)
+
+**DATABASE:**
+```bash
+DATABASE_URL=postgresql://neondb_owner:npg_Vmi0eUX4dLSr@ep-solitary-sound-abznx4t0-pooler.eu-west-2.aws.neon.tech/autogeorge?sslmode=require
+DIRECT_URL=postgresql://neondb_owner:npg_Vmi0eUX4dLSr@ep-solitary-sound-abznx4t0-pooler.eu-west-2.aws.neon.tech/autogeorge?sslmode=require
+```
+
+**AUTENTICAZIONE:**
+```bash
+NEXTAUTH_SECRET=R4oJ75FUyB+Eznf4i8eq2VHE9yvF9TGANx5vrMbgx7Y=
+NEXTAUTH_URL=https://autogeorge.vercel.app
+JWT_SECRET=fXuisv6OCSrmHB/ElKSonR72oKLZ0LjAN4Kf3V98ZV4=
+ENCRYPTION_KEY=Y183xO0S88W/c1hzJ3kByAoXd278olhnx/W8UuxIwTA=
+```
+
+**AMBIENTE:**
+```bash
+NODE_ENV=production
+```
+
+**AI API (da aggiungere se necessario):**
+```bash
+PERPLEXITY_API_KEY=la-tua-api-key-qui
+```
+
+### ⏰ **CRON-JOB.ORG CONFIGURAZIONE**
+
+**🚨 IMPORTANTE**: AutoGeorge usa **cron-job.org** per il polling RSS automatico, NON Vercel Cron Jobs!
+
+**Dashboard**: https://cron-job.org/
+**Login**: Usa il tuo account GitHub
+
+**Job Configurato:**
+```
+URL: https://autogeorge.vercel.app/api/cron/poll-feeds
+Method: GET
+Schedule: Ogni minuto (*/1 * * * *)
+Headers:
+  User-Agent: cron-job.org AutoGeorge RSS Polling
+  Accept: application/json
+Status: ACTIVE ✅
+```
+
+**Come funziona:**
+1. cron-job.org fa GET ogni minuto all'endpoint `/api/cron/poll-feeds`
+2. L'endpoint controlla tutte le sources RSS attive
+3. Fetcha nuovi contenuti da ogni feed
+4. Salva i nuovi articoli nella tabella `feed_items` (model `FeedItem`)
+5. Se l'auto-generazione è attiva, genera articoli AI automaticamente
+
+**Monitoring:**
+- Dashboard cron-job.org mostra execution history
+- Endpoint risponde con JSON: `{"success": true, "results": {...}}`
+- Test manuale: `curl https://autogeorge.vercel.app/api/cron/poll-feeds`
+
+### 🗄️ **DATABASE NEON.TECH**
+
+**Provider**: Neon.tech (PostgreSQL cloud)
+**Database**: `autogeorge`
+**Connection String**: `postgresql://neondb_owner:npg_Vmi0eUX4dLSr@ep-solitary-sound-abznx4t0-pooler.eu-west-2.aws.neon.tech/autogeorge?sslmode=require`
+
+**Tabelle principali:**
+- `sources` - Feed RSS configurati
+- `feed_items` - Contenuti fetchati dai feed (model `FeedItem`)
+- `articles` - Articoli generati dall'AI (model `Article`)
+
+**⚠️ CRITICAL BUGS RISOLTI:**
+
+#### 🐛 **BUG #1: Prisma Model Name**
+- **Problema**: Codice usava `prisma.content` ma lo schema definisce `model FeedItem`
+- **Fix**: Sempre usare `prisma.feedItem` per i contenuti RSS
+- **Symptoms**: `TypeError: Cannot read properties of undefined (reading 'findFirst')`
+
+#### 🐛 **BUG #2: GUID Field Mapping**
+- **Problema**: Codice cercava `item.guid` ma l'RSS parser mette il GUID in `item.id`
+- **Fix**: Usare `const itemGuid = item.id || item.metadata?.guid`
+- **Symptoms**: Deduplicazione sempre falliva, `newItems: 0`
+
+#### 🐛 **BUG #3: Prisma Import Path**
+- **Problema**: Path relativo `../../../../shared/database/prisma` falliva in Vercel
+- **Fix**: Usare path assoluto `@/shared/database/prisma`
+- **Symptoms**: `prisma is undefined` errors
+
+### 📱 **ENDPOINTS CRITICI**
+
+**RSS Polling (usato da cron):**
+```bash
+GET https://autogeorge.vercel.app/api/cron/poll-feeds
+```
+
+**Sources Management:**
+```bash
+GET https://autogeorge.vercel.app/api/admin/sources
+POST https://autogeorge.vercel.app/api/admin/sources/[id]/fetch
+GET https://autogeorge.vercel.app/api/admin/sources/[id]/contents
+```
+
+**Health Check:**
+```bash
+GET https://autogeorge.vercel.app/api/health
+```
+
+### 🔄 **FLUSSO COMPLETO RSS**
+
+1. **cron-job.org** → `GET /api/cron/poll-feeds` (ogni minuto)
+2. **Endpoint** → `createSourcesContainer().sourcesAdminFacade.fetchFromSource()`
+3. **FetchFromSource** → `RssFetchService.fetchRss()` (parsing XML)
+4. **RssFetchService** → ritorna `FetchedItem[]` con GUID in `item.id`
+5. **FetchFromSource** → `prisma.feedItem.create()` (salvataggio database)
+6. **Deduplicazione** → check `sourceId + guid` per evitare duplicati
+7. **Auto-generation** (se attiva) → crea `Article` dall'AI
+
+### 🚨 **REGOLE DA NON DIMENTICARE MAI**
+
+1. **Modello Database**: `FeedItem` per RSS, `Article` per contenuti AI
+2. **GUID Field**: `item.id` non `item.guid` negli `FetchedItem`
+3. **Prisma Import**: `@/shared/database/prisma` mai path relativi
+4. **Cron Esterno**: cron-job.org mai Vercel crons
+5. **Deploy**: `git push` mai `vercel deploy` diretto
+
 ## RICORDA SEMPRE
 1. **🚨 MAI MODIFICARE DATABASE SENZA BACKUP** - REGOLA #1 ASSOLUTA
 2. **PROGETTO GIÀ COMPLETO** - non reinventare funzionalità esistenti!
@@ -259,3 +382,5 @@ Questi endpoint funzionano perfettamente come riferimento:
 5. **DEPLOYMENT VIA GIT PUSH** - mai comandi Vercel diretti
 6. **Database cloud Neon.tech** - configurazione stabile
 7. **🛡️ BACKUP SYSTEM DISPONIBILE** - usa `./scripts/backup-database.sh`
+8. **⏰ CRON SU cron-job.org** - mai dimenticare che è esterno!
+9. **🔧 RSS BUGS RISOLTI** - FeedItem, item.id, path assoluti

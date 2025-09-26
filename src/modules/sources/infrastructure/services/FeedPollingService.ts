@@ -2,7 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { Result } from '../../shared/domain/types/Result';
 import { RssFetchService } from './RssFetchService';
 import { Source } from '../../domain/entities/Source';
-import { ArticleAutoGenerator, FeedItemForGeneration } from '../../domain/ports/ArticleAutoGenerator';
+import { EventBus } from '../../../automation/shared/domain/base/DomainEvent';
+import { NewFeedItemsDetectedEvent } from '../../domain/events/NewFeedItemsDetectedEvent';
 
 interface FeedItem {
   id: string;
@@ -31,7 +32,7 @@ export class FeedPollingService {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly rssFetchService: RssFetchService,
-    private readonly articleAutoGenerator?: ArticleAutoGenerator
+    private readonly eventBus: EventBus
   ) {}
 
   /**
@@ -91,40 +92,37 @@ export class FeedPollingService {
       // Aggiorna il source con successo
       await this.updateSourceSuccess(sourceId);
 
-      // Trigger auto-generation if enabled and there are new items
-      if (newItems > 0 && source.shouldAutoGenerate() && this.articleAutoGenerator) {
-        console.log(`🤖 Auto-generation enabled for ${sourceName}, triggering for ${newItems} new items...`);
+      // Publish event if there are new items (automation module will handle auto-generation)
+      if (newItems > 0) {
+        console.log(`📢 Publishing NewFeedItemsDetectedEvent for ${sourceName}: ${newItems} new items`);
 
         try {
-          const feedItemsForGeneration: FeedItemForGeneration[] = savedItems.map(item => ({
-            id: item.id,
-            guid: item.guid,
-            title: item.title,
-            content: item.content,
-            url: item.url,
-            publishedAt: item.publishedAt
-          }));
-
-          const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
+          const event = NewFeedItemsDetectedEvent.create(
             sourceId,
-            feedItems: feedItemsForGeneration
-          });
+            sourceName,
+            source.type.getValue(),
+            {
+              enabled: source.configuration?.enabled ?? true,
+              autoGenerate: source.configuration?.autoGenerate ?? false,
+              pollingInterval: source.configuration?.pollingInterval,
+              ...source.configuration
+            },
+            savedItems.map(item => ({
+              id: item.id,
+              guid: item.guid,
+              title: item.title,
+              content: item.content,
+              url: item.url,
+              publishedAt: item.publishedAt.toISOString(),
+              fetchedAt: new Date().toISOString()
+            }))
+          );
 
-          if (autoGenResult.isSuccess()) {
-            const genResult = autoGenResult.value;
-            console.log(`✅ Auto-generation completed for ${sourceName}: ${genResult.summary.successful}/${genResult.summary.total} articles generated`);
-
-            // Mark successfully generated feed items as processed
-            for (const result of genResult.generatedArticles) {
-              if (result.success && result.articleId) {
-                await this.markItemAsProcessed(result.feedItemId, result.articleId);
-              }
-            }
-          } else {
-            console.error(`❌ Auto-generation failed for ${sourceName}:`, autoGenResult.error.message);
-          }
+          await this.eventBus.publish(event);
+          console.log(`✅ Event published successfully for ${sourceName}`);
         } catch (error) {
-          console.error(`💥 Auto-generation error for ${sourceName}:`, error);
+          console.error(`💥 Failed to publish event for ${sourceName}:`, error);
+          // Don't fail the entire operation if event publishing fails
         }
       }
 

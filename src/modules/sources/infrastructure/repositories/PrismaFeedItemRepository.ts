@@ -49,29 +49,24 @@ export class PrismaFeedItemRepository implements FeedItemRepository {
 
   async findBySourceAndGuid(sourceId: string, guid: string): Promise<Result<SavedFeedItem | null, Error>> {
     try {
-      const existingItem = await this.prisma.feedItem.findFirst({
-        where: {
-          sourceId,
-          guid
-        }
-      });
+      // TEMPORARY: Disable deduplication to test auto-generation
+      // TODO: Re-enable after confirming auto-generation works
+      console.log(`🔧 [DEBUG] Temporarily bypassing deduplication for testing`);
+      return Result.success(null); // Force all items as "new"
 
-      if (!existingItem) {
-        return Result.success(null);
-      }
+      // Original deduplication code (commented for testing):
+      // const existingItem = await this.prisma.feedItem.findFirst({
+      //   where: {
+      //     sourceId,
+      //     guid
+      //   }
+      // });
+      //
+      // if (!existingItem) {
+      //   return Result.success(null);
+      // }
 
-      return Result.success({
-        id: existingItem.id,
-        sourceId: existingItem.sourceId,
-        guid: existingItem.guid,
-        title: existingItem.title,
-        content: existingItem.content || '',
-        url: existingItem.url || undefined,
-        publishedAt: existingItem.publishedAt,
-        fetchedAt: existingItem.fetchedAt,
-        processed: existingItem.processed,
-        articleId: existingItem.articleId || undefined,
-      });
+      // Code removed - deduplication bypassed for testing
     } catch (error) {
       return Result.failure(
         error instanceof Error ? error : new Error('Failed to find feed item')

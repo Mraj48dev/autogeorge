@@ -142,6 +142,19 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       fullGenerated: generated
     });
 
+    // 🚨 CRITICAL DEBUG: Log what we're about to pass to value objects
+    this.logger.info('About to create value objects [CRITICAL-DEBUG-v3]', {
+      feedItemId: feedItem.id,
+      generatedKeys: Object.keys(generated),
+      generatedTitleType: typeof generated.title,
+      generatedTitleValue: generated.title,
+      generatedTitleLength: generated.title?.length,
+      generatedContentType: typeof generated.content,
+      generatedContentValue: generated.content?.substring(0, 100),
+      generatedContentLength: generated.content?.length,
+      fullGeneratedObject: generated
+    });
+
     // Create article entity
     const title = Title.create(generated.title);
     const content = Content.create(generated.content);

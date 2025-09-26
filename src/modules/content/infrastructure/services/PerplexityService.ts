@@ -438,11 +438,12 @@ export class PerplexityService implements AiService {
    * Parses the article response from Perplexity
    */
   private parseArticleResponse(content: string): { title: string; content: string } {
-    // 🚨 DEBUG: Log raw content from Perplexity
-    console.log('🤖 [PerplexityService] Raw content from API:', {
+    // 🚨 DEBUG: Log raw content from Perplexity - DEPLOYMENT VERIFICATION
+    console.log('🤖 [PerplexityService] Raw content from API [DEPLOY-TEST-v2]:', {
       contentLength: content?.length || 0,
       contentPreview: content?.substring(0, 200) || 'EMPTY',
-      hasContent: !!content
+      hasContent: !!content,
+      deployTimestamp: '2025-09-26T08:02:00Z'
     });
 
     try {

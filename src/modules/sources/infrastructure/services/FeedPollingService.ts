@@ -86,7 +86,8 @@ export class FeedPollingService {
       // Salva i nuovi item e conta duplicati
       const { newItems, duplicatesSkipped, savedItems } = await this.saveFeedItems(
         sourceId,
-        fetchedItems
+        fetchedItems,
+        source
       );
 
       // Aggiorna il source con successo
@@ -155,7 +156,8 @@ export class FeedPollingService {
    */
   private async saveFeedItems(
     sourceId: string,
-    fetchedItems: any[]
+    fetchedItems: any[],
+    source?: Source
   ): Promise<{ newItems: number; duplicatesSkipped: number; savedItems: FeedItem[] }> {
     let newItems = 0;
     let duplicatesSkipped = 0;
@@ -178,6 +180,34 @@ export class FeedPollingService {
             processed: false
           }
         });
+
+        // Crea MonitorGeneration se auto-generation è attiva
+        const shouldAutoGenerate = source?.shouldAutoGenerate() ?? false;
+        if (shouldAutoGenerate) {
+          try {
+            await this.prisma.monitorGeneration.create({
+              data: {
+                feedItemId: savedFeedItem.id,
+                sourceId,
+                sourceName: source?.name?.getValue() || 'Unknown Source',
+                title: savedFeedItem.title,
+                content: savedFeedItem.content,
+                url: savedFeedItem.url,
+                publishedAt: savedFeedItem.publishedAt,
+                status: 'pending',
+                priority: 'normal',
+                metadata: {
+                  originalGuid: savedFeedItem.guid,
+                  fetchedAt: savedFeedItem.fetchedAt.toISOString()
+                }
+              }
+            });
+            console.log(`📋 Created monitor generation record for: ${item.title?.substring(0, 50)}...`);
+          } catch (monitorError) {
+            console.error('Error creating monitor generation record:', monitorError);
+            // Non fermare il processo se fallisce la creazione del monitor
+          }
+        }
 
         // Add to savedItems array for auto-generation
         savedItems.push({

@@ -21,10 +21,10 @@ model Article {
 }
 
 model Source {
-  id              String     @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
   type            String
-  status          String     @default("active")
+  status          String             @default("active")
   url             String?
   defaultCategory String?
   configuration   Json?
@@ -32,10 +32,11 @@ model Source {
   lastFetchAt     DateTime?
   lastErrorAt     DateTime?
   lastError       String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   articles        Article[]
   feedItems       FeedItem[]
+  monitorGeneration MonitorGeneration[]
 
   @@unique([type, url])
   @@map("sources")
@@ -95,19 +96,20 @@ model VerificationToken {
 }
 
 model FeedItem {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   sourceId    String
   guid        String?
   title       String
   content     String
   url         String?
   publishedAt DateTime
-  fetchedAt   DateTime @default(now())
-  processed   Boolean  @default(false)
+  fetchedAt   DateTime           @default(now())
+  processed   Boolean            @default(false)
   articleId   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  source      Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  source      Source             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  monitorGeneration MonitorGeneration?
 
   @@index([sourceId, publishedAt])
   @@index([processed])
@@ -174,5 +176,32 @@ model Publication {
   updatedAt     DateTime @updatedAt
 
   @@map("publications")
+}
+
+model MonitorGeneration {
+  id          String   @id @default(cuid())
+  feedItemId  String   @unique
+  sourceId    String
+  sourceName  String
+  status      String   @default("pending")
+  title       String
+  content     String
+  url         String?
+  publishedAt DateTime
+  priority    String   @default("normal")
+  metadata    Json?
+  articleId   String?
+  generatedAt DateTime?
+  error       String?
+  retryCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  feedItem    FeedItem @relation(fields: [feedItemId], references: [id], onDelete: Cascade)
+  source      Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([sourceId, status])
+  @@index([priority, status])
+  @@map("monitor_generation")
 }
 

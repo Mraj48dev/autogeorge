@@ -17,12 +17,13 @@ import { prisma as globalPrisma } from '../../../../shared/database/prisma';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { SourceFetchService } from '../../domain/ports/SourceFetchService';
 import { FeedItemRepository } from '../../domain/ports/FeedItemRepository';
-import { EventBus } from '../../../automation/shared/domain/base/DomainEvent';
+import { ArticleAutoGenerator } from '../../domain/ports/ArticleAutoGenerator';
 import { PrismaSourceRepository } from '../repositories/PrismaSourceRepository';
 import { InMemorySourceRepository } from '../repositories/InMemorySourceRepository';
 import { FallbackSourceRepository } from '../repositories/FallbackSourceRepository';
 import { PrismaFeedItemRepository } from '../repositories/PrismaFeedItemRepository';
 import { UniversalFetchService } from '../services/UniversalFetchService';
+import { ContentModuleArticleAutoGenerator } from '../adapters/ContentModuleArticleAutoGenerator';
 import { CreateSource } from '../../application/use-cases/CreateSource';
 import { GetSources } from '../../application/use-cases/GetSources';
 import { FetchFromSource } from '../../application/use-cases/FetchFromSource';
@@ -47,7 +48,7 @@ export class SourcesContainer {
   private _sourceRepository: SourceRepository | null = null;
   private _feedItemRepository: FeedItemRepository | null = null;
   private _sourceFetchService: SourceFetchService | null = null;
-  private _eventBus: EventBus | null = null;
+  private _articleAutoGenerator: ArticleAutoGenerator | null = null;
   private _createSource: CreateSource | null = null;
   private _getSources: GetSources | null = null;
   private _fetchFromSource: FetchFromSource | null = null;
@@ -150,20 +151,11 @@ export class SourcesContainer {
     return this._sourceFetchService;
   }
 
-  get eventBus(): EventBus {
-    if (!this._eventBus) {
-      // For now, use a simple implementation that delegates to the main container's event bus
-      // In a fully decoupled system, this would be injected from outside
-      throw new Error('EventBus must be injected from the main container to maintain module boundaries');
+  get articleAutoGenerator(): ArticleAutoGenerator {
+    if (!this._articleAutoGenerator) {
+      this._articleAutoGenerator = new ContentModuleArticleAutoGenerator();
     }
-    return this._eventBus;
-  }
-
-  /**
-   * Sets the event bus (should be called by the main container)
-   */
-  setEventBus(eventBus: EventBus): void {
-    this._eventBus = eventBus;
+    return this._articleAutoGenerator;
   }
 
   get createSource(): CreateSource {
@@ -189,7 +181,7 @@ export class SourcesContainer {
         this.sourceRepository,
         this.feedItemRepository,
         this.sourceFetchService,
-        this.eventBus
+        this.articleAutoGenerator
       );
     }
     return this._fetchFromSource;

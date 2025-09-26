@@ -130,6 +130,18 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
 
     const generated = generateResult.value;
 
+    // 🚨 DEBUG: Log what AI service returned
+    this.logger.info('AI service returned data', {
+      feedItemId: feedItem.id,
+      hasTitle: !!generated.title,
+      titleLength: generated.title?.length || 0,
+      titlePreview: generated.title?.substring(0, 50) || 'EMPTY',
+      hasContent: !!generated.content,
+      contentLength: generated.content?.length || 0,
+      contentPreview: generated.content?.substring(0, 100) || 'EMPTY',
+      fullGenerated: generated
+    });
+
     // Create article entity
     const title = Title.create(generated.title);
     const content = Content.create(generated.content);

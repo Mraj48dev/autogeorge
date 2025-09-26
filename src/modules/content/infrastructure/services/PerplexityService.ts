@@ -438,23 +438,50 @@ export class PerplexityService implements AiService {
    * Parses the article response from Perplexity
    */
   private parseArticleResponse(content: string): { title: string; content: string } {
+    // 🚨 DEBUG: Log raw content from Perplexity
+    console.log('🤖 [PerplexityService] Raw content from API:', {
+      contentLength: content?.length || 0,
+      contentPreview: content?.substring(0, 200) || 'EMPTY',
+      hasContent: !!content
+    });
+
     try {
       // Try to parse as JSON first
       const parsed = JSON.parse(content);
-      return {
+      const result = {
         title: parsed.title || 'Generated Article',
         content: parsed.content || content,
       };
+
+      console.log('🤖 [PerplexityService] JSON parsed result:', {
+        titleLength: result.title?.length || 0,
+        contentLength: result.content?.length || 0,
+        titlePreview: result.title?.substring(0, 50) || 'EMPTY',
+        contentPreview: result.content?.substring(0, 100) || 'EMPTY'
+      });
+
+      return result;
     } catch {
       // Fallback: extract title from first line and use rest as content
       const lines = content.split('\n');
       const title = lines[0].replace(/^#\s*/, '') || 'Generated Article';
       const articleContent = lines.slice(1).join('\n').trim();
 
-      return {
+      const result = {
         title,
         content: articleContent || content,
       };
+
+      console.log('🤖 [PerplexityService] Fallback parsed result:', {
+        linesCount: lines.length,
+        firstLine: lines[0] || 'EMPTY',
+        titleLength: result.title?.length || 0,
+        contentLength: result.content?.length || 0,
+        titlePreview: result.title?.substring(0, 50) || 'EMPTY',
+        contentPreview: result.content?.substring(0, 100) || 'EMPTY'
+      });
+
+      return result;
     }
   }
 

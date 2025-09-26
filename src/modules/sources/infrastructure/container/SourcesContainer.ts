@@ -17,9 +17,11 @@ import { prisma as globalPrisma } from '../../../../shared/database/prisma';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { SourceFetchService } from '../../domain/ports/SourceFetchService';
 import { ArticleAutoGenerator } from '../../domain/ports/ArticleAutoGenerator';
+import { FeedItemRepository } from '../../domain/ports/FeedItemRepository';
 import { PrismaSourceRepository } from '../repositories/PrismaSourceRepository';
 import { InMemorySourceRepository } from '../repositories/InMemorySourceRepository';
 import { FallbackSourceRepository } from '../repositories/FallbackSourceRepository';
+import { PrismaFeedItemRepository } from '../repositories/PrismaFeedItemRepository';
 import { UniversalFetchService } from '../services/UniversalFetchService';
 import { ContentModuleArticleAutoGenerator } from '../adapters/ContentModuleArticleAutoGenerator';
 import { CreateSource } from '../../application/use-cases/CreateSource';
@@ -44,6 +46,7 @@ export class SourcesContainer {
 
   // Sources module dependencies
   private _sourceRepository: SourceRepository | null = null;
+  private _feedItemRepository: FeedItemRepository | null = null;
   private _sourceFetchService: SourceFetchService | null = null;
   private _articleAutoGenerator: ArticleAutoGenerator | null = null;
   private _createSource: CreateSource | null = null;
@@ -134,6 +137,13 @@ export class SourcesContainer {
     return this._sourceRepository;
   }
 
+  get feedItemRepository(): FeedItemRepository {
+    if (!this._feedItemRepository) {
+      this._feedItemRepository = new PrismaFeedItemRepository(this.prisma);
+    }
+    return this._feedItemRepository;
+  }
+
   get sourceFetchService(): SourceFetchService {
     if (!this._sourceFetchService) {
       this._sourceFetchService = new UniversalFetchService();
@@ -169,6 +179,7 @@ export class SourcesContainer {
     if (!this._fetchFromSource) {
       this._fetchFromSource = new FetchFromSource(
         this.sourceRepository,
+        this.feedItemRepository,
         this.sourceFetchService,
         this.articleAutoGenerator
       );

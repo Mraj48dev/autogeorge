@@ -1,10 +1,10 @@
 import { Result } from '../../shared/domain/types/Result';
 import { BaseUseCase } from '../../shared/application/base/UseCase';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
+import { FeedItemRepository, FeedItemForSave, SavedFeedItem } from '../../domain/ports/FeedItemRepository';
 import { SourceFetchService, FetchResult, FetchedItem } from '../../domain/ports/SourceFetchService';
 import { ArticleAutoGenerator, FeedItemForGeneration } from '../../domain/ports/ArticleAutoGenerator';
 import { SourceId } from '../../domain/value-objects/SourceId';
-import { prisma } from '@/shared/database/prisma';
 
 /**
  * Use case for fetching content from a specific source
@@ -13,6 +13,7 @@ import { prisma } from '@/shared/database/prisma';
 export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFromSourceResponse> {
   constructor(
     private readonly sourceRepository: SourceRepository,
+    private readonly feedItemRepository: FeedItemRepository,
     private readonly sourceFetchService: SourceFetchService,
     private readonly articleAutoGenerator?: ArticleAutoGenerator
   ) {
@@ -67,13 +68,13 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         const duration = Date.now() - startTime;
         const result = fetchResult.value;
 
-        // Save articles to database
-        const savedArticles = await this.saveArticlesToDatabase(result.newItems, request.sourceId);
+        // Save feed items to database using Repository pattern
+        const savedFeedItems = await this.saveFeedItemsUsingRepository(result.newItems, request.sourceId);
 
         // Record successful fetch
         source.recordSuccessfulFetch(
           result.fetchedItems.length,
-          savedArticles.length,
+          savedFeedItems.length,
           duration,
           result.metadata
         );
@@ -86,11 +87,11 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
 
         // Trigger auto-generation if enabled and there are new items
         let generatedArticles = 0;
-        if (savedArticles.length > 0 && source.shouldAutoGenerate() && this.articleAutoGenerator) {
-          console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${savedArticles.length} new items...`);
+        if (savedFeedItems.length > 0 && source.shouldAutoGenerate() && this.articleAutoGenerator) {
+          console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${savedFeedItems.length} new items...`);
 
           try {
-            const feedItemsForGeneration: FeedItemForGeneration[] = savedArticles.map(item => ({
+            const feedItemsForGeneration: FeedItemForGeneration[] = savedFeedItems.map(item => ({
               id: item.id,
               guid: item.guid,
               title: item.title,
@@ -109,16 +110,10 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
               generatedArticles = genResult.summary.successful;
               console.log(`✅ Auto-generation completed for source ${source.name.getValue()}: ${generatedArticles}/${genResult.summary.total} articles generated`);
 
-              // Mark successfully generated feed items as processed
+              // Mark successfully generated feed items as processed using Repository
               for (const result of genResult.generatedArticles) {
                 if (result.success && result.articleId) {
-                  await prisma.feedItem.update({
-                    where: { id: result.feedItemId },
-                    data: {
-                      processed: true,
-                      articleId: result.articleId
-                    }
-                  });
+                  await this.feedItemRepository.markAsProcessed(result.feedItemId, result.articleId);
                 }
               }
             } else {
@@ -132,12 +127,12 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         return Result.success({
           sourceId: source.id.getValue(),
           fetchedItems: result.fetchedItems.length,
-          newItems: savedArticles.length,
+          newItems: savedFeedItems.length,
           generatedArticles,
           duration,
-          items: savedArticles,
+          items: savedFeedItems,
           metadata: result.metadata,
-          message: `Successfully fetched ${savedArticles.length} new items from ${result.fetchedItems.length} total items${generatedArticles > 0 ? `, generated ${generatedArticles} articles` : ''}`
+          message: `Successfully fetched ${savedFeedItems.length} new items from ${result.fetchedItems.length} total items${generatedArticles > 0 ? `, generated ${generatedArticles} articles` : ''}`
         });
 
       } catch (error) {
@@ -175,109 +170,65 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     return Result.success(undefined);
   }
 
-  private async saveArticlesToDatabase(fetchedItems: FetchedItem[], sourceId: string): Promise<any[]> {
-    const savedArticles: any[] = [];
-    const errors: any[] = []; // TEMP DEBUG: Collect all errors
+  /**
+   * Saves fetched items using Clean Architecture Repository pattern
+   * Respects Domain Layer separation and Ports & Adapters
+   */
+  private async saveFeedItemsUsingRepository(fetchedItems: FetchedItem[], sourceId: string): Promise<SavedFeedItem[]> {
+    const savedFeedItems: SavedFeedItem[] = [];
 
-    console.log(`🔍 Processing ${fetchedItems.length} fetched items for sourceId: ${sourceId}`);
+    console.log(`🏗️ [Clean Architecture] Processing ${fetchedItems.length} fetched items for sourceId: ${sourceId}`);
 
     for (const item of fetchedItems) {
       try {
-        const itemGuid = item.id || item.metadata?.guid; // GUID is in item.id field
-        console.log(`🔍 Processing item: ${item.title} | id: ${item.id} | url: ${item.url} | guid: ${itemGuid}`);
+        const itemGuid = item.id || item.metadata?.guid || `${sourceId}-${Date.now()}`;
+        console.log(`🔍 Processing item: ${item.title} | guid: ${itemGuid}`);
 
-        // Check if content already exists to avoid duplicates using Content table (feed_items)
-        // Only use GUID and URL for deduplication - title+date was causing false positives
-        const whereConditions = [
-          // Primary: match by GUID/ID if it exists
-          ...(itemGuid ? [{ guid: itemGuid }] : []),
-          // Secondary: match by URL if it exists and is different from GUID
-          ...(item.url && item.url !== itemGuid ? [{ url: item.url }] : [])
-        ];
+        // Check for duplicates using Repository pattern
+        const existingResult = await this.feedItemRepository.findBySourceAndGuid(sourceId, itemGuid);
 
-        // TEMPORARY: Disable deduplication to test auto-generation
-        // TODO: Re-enable after testing auto-generation functionality
-        const existingContent = null; // Force all items as "new" for testing
+        if (existingResult.isFailure()) {
+          console.error(`❌ Error checking for existing item: ${existingResult.error.message}`);
+          continue;
+        }
 
-        // Original deduplication code (commented for testing):
-        // const existingContent = itemGuid
-        //   ? await prisma.feedItem.findFirst({
-        //       where: {
-        //         sourceId,
-        //         guid: itemGuid
-        //       }
-        //     })
-        //   : null;
+        const existingItem = existingResult.value;
 
-        if (!existingContent) {
-          console.log(`✅ Creating new content: ${item.title} (guid: ${itemGuid})`);
-          // Create new content (feed item) - NOT processed article yet!
-          const publishedAt = item.publishedAt ? new Date(item.publishedAt) : new Date();
-          console.log(`📅 PublishedAt: original=${item.publishedAt} | parsed=${publishedAt}`);
+        if (!existingItem) {
+          // Create new FeedItem using Domain entities
+          const feedItemForSave: FeedItemForSave = {
+            sourceId,
+            guid: itemGuid,
+            title: item.title || 'Untitled',
+            content: item.content || '',
+            url: item.url,
+            publishedAt: item.publishedAt ? new Date(item.publishedAt) : new Date(),
+            fetchedAt: new Date(),
+          };
 
-          const savedContent = await prisma.feedItem.create({
-            data: {
-              sourceId: sourceId,
-              guid: itemGuid || item.url || `${sourceId}-${Date.now()}`,
-              title: item.title || 'Untitled',
-              content: item.content || '',
-              url: item.url,
-              publishedAt,
-              fetchedAt: new Date(),
-              processed: false, // NOT processed by AI yet
-            }
-          });
+          console.log(`✅ Creating new feed item: ${feedItemForSave.title}`);
 
-          savedArticles.push(savedContent);
-          console.log(`✅ Saved content (feed item): ${savedContent.title}`);
+          // Save using Repository pattern
+          const saveResult = await this.feedItemRepository.save(feedItemForSave);
+
+          if (saveResult.isSuccess()) {
+            savedFeedItems.push(saveResult.value);
+            console.log(`🎉 Successfully saved feed item: ${saveResult.value.id}`);
+          } else {
+            console.error(`❌ Failed to save feed item "${item.title}":`, saveResult.error.message);
+          }
         } else {
-          console.log(`⚠️ Duplicate content skipped: ${item.title} (found existing: ${existingContent?.title})`);
+          console.log(`⚠️ Duplicate content skipped: ${item.title} (existing: ${existingItem.id})`);
         }
       } catch (error) {
-        console.error(`❌ Error saving content "${item.title}":`, error);
-        console.error('Full error details:', error);
-        errors.push({
-          title: item.title,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        });
-        // Continue with other articles even if one fails
+        console.error(`💥 Unexpected error processing item "${item.title}":`, error);
+        // Continue with other items
       }
     }
 
-    console.log(`💾 Saved ${savedArticles.length} articles out of ${fetchedItems.length} fetched`);
+    console.log(`🏗️ [Clean Architecture] Saved ${savedFeedItems.length} feed items out of ${fetchedItems.length} fetched`);
 
-    // TEMPORARY DEBUG: Return error details if no items were saved
-    if (savedArticles.length === 0 && fetchedItems.length > 0) {
-      console.error(`🚨 CRITICAL: 0 items saved from ${fetchedItems.length} fetched items!`);
-      console.error('All errors:', errors);
-
-      // FORCE SAVE ONE ITEM FOR TESTING
-      if (fetchedItems.length > 0) {
-        const testItem = fetchedItems[0];
-        try {
-          console.log('🔧 FORCE SAVING FIRST ITEM FOR DEBUG...');
-          const forcedSave = await prisma.feedItem.create({
-            data: {
-              sourceId: sourceId,
-              guid: `DEBUG-${Date.now()}`,
-              title: testItem.title || 'DEBUG Test Item',
-              content: testItem.content || 'Debug content',
-              url: testItem.url,
-              publishedAt: new Date(),
-              fetchedAt: new Date(),
-              processed: false,
-            }
-          });
-          savedArticles.push(forcedSave);
-          console.log('✅ FORCED SAVE SUCCESSFUL:', forcedSave.id);
-        } catch (forceError) {
-          console.error('❌ FORCED SAVE FAILED:', forceError);
-        }
-      }
-    }
-
-    return savedArticles;
+    return savedFeedItems;
   }
 }
 

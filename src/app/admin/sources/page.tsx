@@ -119,19 +119,22 @@ export default function SourcesPage() {
         await fetchSources();
         setShowModal(false);
         setEditingSource(null);
-        setFormData({
-          name: '',
-          type: activeTab,
-          url: '',
-          defaultCategory: '',
-          configuration: {
-            maxItems: 10,
-            pollingInterval: 60,
-            enabled: true,
-            autoGenerate: false,
-          },
-          testConnection: true,
-        });
+        // Solo resetta il form per nuove creazioni, non per modifiche
+        if (!editingSource) {
+          setFormData({
+            name: '',
+            type: activeTab,
+            url: '',
+            defaultCategory: '',
+            configuration: {
+              maxItems: 10,
+              pollingInterval: 60,
+              enabled: true,
+              autoGenerate: false,
+            },
+            testConnection: true,
+          });
+        }
       } else {
         console.error(`❌ [Frontend] Save failed:`, { status: response.status, data });
         alert('Errore: ' + data.error);

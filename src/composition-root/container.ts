@@ -29,14 +29,7 @@ import { PerplexityService } from '../modules/content/infrastructure/services/Pe
 import { GenerateArticle } from '../modules/content/application/use-cases/GenerateArticle';
 import { ContentAdminFacade } from '../modules/content/admin/ContentAdminFacade';
 
-// Automation Module
-import { EventBus } from '../modules/automation/shared/domain/base/DomainEvent';
-import { InMemoryEventBus } from '../modules/automation/infrastructure/events/InMemoryEventBus';
-import { AutomationOrchestrator } from '../modules/automation/domain/ports/AutomationOrchestrator';
-import { InMemoryAutomationOrchestrator } from '../modules/automation/infrastructure/services/InMemoryAutomationOrchestrator';
-import { HandleContentAutomation } from '../modules/automation/application/use-cases/HandleContentAutomation';
-import { AutomationAdminFacade } from '../modules/automation/admin/AutomationAdminFacade';
-import { NewFeedItemsDetectedHandler } from '../modules/automation/infrastructure/event-handlers/NewFeedItemsDetectedHandler';
+// Automation Module REMOVED - Architecture simplified
 
 // Configuration
 import { Config } from '../shared/config/env';
@@ -56,12 +49,7 @@ export class Container {
   private _generateArticle: GenerateArticle | null = null;
   private _contentAdminFacade: ContentAdminFacade | null = null;
 
-  // Automation module dependencies
-  private _eventBus: EventBus | null = null;
-  private _automationOrchestrator: AutomationOrchestrator | null = null;
-  private _handleContentAutomation: HandleContentAutomation | null = null;
-  private _automationAdminFacade: AutomationAdminFacade | null = null;
-  private _newFeedItemsHandler: NewFeedItemsDetectedHandler | null = null;
+  // Automation module REMOVED - Simplified architecture
 
   private constructor(config: Config) {
     this._config = config;
@@ -169,63 +157,8 @@ export class Container {
   }
 
   // =============================================
-  // Automation Module Dependencies
+  // Automation Module REMOVED - Simplified architecture
   // =============================================
-
-  get eventBus(): EventBus {
-    if (!this._eventBus) {
-      this._eventBus = new InMemoryEventBus(this.logger);
-
-      // Register event handlers
-      this._eventBus.subscribe(
-        'sources.feed_items.new_items_detected',
-        this.newFeedItemsDetectedHandler
-      );
-    }
-    return this._eventBus;
-  }
-
-  get automationOrchestrator(): AutomationOrchestrator {
-    if (!this._automationOrchestrator) {
-      // For now, we'll create a simple implementation
-      // In a full implementation, this would be a proper repository-backed service
-      this._automationOrchestrator = new InMemoryAutomationOrchestrator(
-        this.logger
-      );
-    }
-    return this._automationOrchestrator;
-  }
-
-  get handleContentAutomation(): HandleContentAutomation {
-    if (!this._handleContentAutomation) {
-      this._handleContentAutomation = new HandleContentAutomation(
-        this.automationOrchestrator,
-        this.logger
-      );
-    }
-    return this._handleContentAutomation;
-  }
-
-  get automationAdminFacade(): AutomationAdminFacade {
-    if (!this._automationAdminFacade) {
-      this._automationAdminFacade = new AutomationAdminFacade(
-        this.automationOrchestrator,
-        this.handleContentAutomation,
-        this.logger
-      );
-    }
-    return this._automationAdminFacade;
-  }
-
-  get newFeedItemsDetectedHandler(): NewFeedItemsDetectedHandler {
-    if (!this._newFeedItemsHandler) {
-      this._newFeedItemsHandler = new NewFeedItemsDetectedHandler(
-        this.handleContentAutomation,
-        this.logger
-      );
-    }
-    return this._newFeedItemsHandler;
-  }
 
   // =============================================
   // Lifecycle Management
@@ -253,9 +186,7 @@ export class Container {
         });
       }
 
-      // Initialize event bus and register handlers
-      this.eventBus; // This will initialize the event bus and register handlers
-      this.logger.info('Event bus initialized with automation handlers');
+      // Event bus and automation handlers REMOVED - simplified architecture
 
       this.logger.info('Container initialization completed successfully');
     } catch (error) {

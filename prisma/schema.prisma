@@ -109,8 +109,6 @@ model FeedItem {
   updatedAt   DateTime @updatedAt
   source      Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
 
-  @@unique([sourceId, guid])
-  @@unique([sourceId, url])
   @@index([sourceId, publishedAt])
   @@index([processed])
   @@map("feed_items")

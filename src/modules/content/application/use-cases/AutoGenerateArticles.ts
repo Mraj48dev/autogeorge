@@ -113,11 +113,23 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
 
     // Generate content using AI service
     const generateResult = await this.aiService.generateArticle({
+      prompt: this.buildPrompt(feedItem, settings),
+      model: generationParams.model || 'sonar',
       sourceContent: feedItem.content,
-      title: feedItem.title,
-      url: feedItem.url,
-      publishedAt: feedItem.publishedAt,
-      parameters: generationParams
+      language: generationParams.language,
+      tone: generationParams.tone,
+      style: generationParams.style,
+      targetAudience: generationParams.targetAudience,
+      targetWordCount: generationParams.maxTokens ? Math.floor(generationParams.maxTokens * 0.75) : undefined,
+      parameters: generationParams,
+      metadata: {
+        requestId: `auto-gen-${feedItem.id}-${Date.now()}`,
+        context: {
+          sourceUrl: feedItem.url,
+          publishedAt: feedItem.publishedAt.toISOString(),
+          originalTitle: feedItem.title
+        }
+      }
     });
 
     if (!generateResult.isSuccess()) {

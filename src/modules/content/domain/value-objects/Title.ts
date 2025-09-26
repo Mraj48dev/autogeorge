@@ -14,7 +14,7 @@ import { Result } from '../../shared/domain/types/Result';
  * This ensures all article titles meet quality and safety standards.
  */
 export class Title extends StringValueObject {
-  private static readonly MIN_LENGTH = 10;
+  private static readonly MIN_LENGTH = 1; // Further relaxed for RSS content
   private static readonly MAX_LENGTH = 200;
 
   // Pattern to detect HTML tags
@@ -30,13 +30,19 @@ export class Title extends StringValueObject {
   }
 
   protected validateNotEmpty(): void {
-    if (!this.value || this.value.trim().length === 0) {
-      throw new Error('Title cannot be empty');
+    // Allow empty titles for RSS content - will be handled gracefully
+    if (this.value === null || this.value === undefined) {
+      throw new Error('Title cannot be null or undefined');
     }
   }
 
   private validateLength(): void {
     const trimmedValue = this.value.trim();
+
+    // Skip length validation for empty strings (RSS feeds might have empty titles)
+    if (trimmedValue.length === 0) {
+      return;
+    }
 
     if (trimmedValue.length < Title.MIN_LENGTH) {
       throw new Error(

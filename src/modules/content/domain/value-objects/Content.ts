@@ -14,7 +14,7 @@ import { Result } from '../../shared/domain/types/Result';
  * This ensures that all articles meet quality standards and are safe for publication.
  */
 export class Content extends StringValueObject {
-  private static readonly MIN_LENGTH = 100; // Minimum article length in characters
+  private static readonly MIN_LENGTH = 1; // Further relaxed for RSS content
   private static readonly MAX_LENGTH = 50000; // Maximum article length in characters
 
   // Basic patterns to detect potentially malicious content
@@ -28,13 +28,19 @@ export class Content extends StringValueObject {
   }
 
   protected validateNotEmpty(): void {
-    if (!this.value || this.value.trim().length === 0) {
-      throw new Error('Content cannot be empty');
+    // Allow empty content for RSS feeds - will be handled gracefully
+    if (this.value === null || this.value === undefined) {
+      throw new Error('Content cannot be null or undefined');
     }
   }
 
   private validateLength(): void {
     const cleanContent = this.stripHtmlTags(this.value);
+
+    // Skip length validation for empty content (RSS feeds might have empty content)
+    if (cleanContent.length === 0) {
+      return;
+    }
 
     if (cleanContent.length < Content.MIN_LENGTH) {
       throw new Error(

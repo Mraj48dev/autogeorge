@@ -20,32 +20,14 @@ export async function GET(request: NextRequest) {
     if (sourceId) where.sourceId = sourceId;
     if (priority) where.priority = priority;
 
-    // Query per ottenere i record con relazioni
+    // Query per ottenere i record (prima senza relazioni per debug)
+    console.log('🔍 [DEBUG] Querying monitors with where:', where);
+
     const [monitors, totalCount] = await Promise.all([
       prisma.monitorGeneration.findMany({
         where,
-        include: {
-          source: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              url: true,
-              configuration: true
-            }
-          },
-          feedItem: {
-            select: {
-              id: true,
-              guid: true,
-              fetchedAt: true,
-              processed: true
-            }
-          }
-        },
         orderBy: [
-          { priority: 'desc' }, // Priority first (high, normal, low)
-          { createdAt: 'desc' }  // Then by creation date
+          { createdAt: 'desc' }  // Solo ordinamento per data
         ],
         take: limit,
         skip: offset
@@ -53,18 +35,17 @@ export async function GET(request: NextRequest) {
       prisma.monitorGeneration.count({ where })
     ]);
 
-    // Aggiungi statistiche per status
-    const statusCounts = await prisma.monitorGeneration.groupBy({
-      by: ['status'],
-      _count: true
-    });
+    console.log(`📊 [DEBUG] Found ${monitors.length} monitors, ${totalCount} total`);
 
+    // Statistiche semplici senza groupBy per ora
     const stats = {
       total: totalCount,
-      byStatus: statusCounts.reduce((acc, item) => {
-        acc[item.status] = item._count;
-        return acc;
-      }, {} as Record<string, number>)
+      byStatus: {
+        pending: 0,
+        processing: 0,
+        completed: 0,
+        error: 0
+      }
     };
 
     console.log(`📊 Monitor Generation Query: ${monitors.length} records found, ${totalCount} total`);
@@ -72,7 +53,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        monitors,
+        monitors: monitors.map(m => ({
+          ...m,
+          source: { name: m.sourceName }, // Mock relation per ora
+          feedItem: { processed: false }   // Mock relation per ora
+        })),
         pagination: {
           total: totalCount,
           limit,

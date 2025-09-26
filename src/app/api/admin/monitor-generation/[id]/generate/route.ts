@@ -53,14 +53,22 @@ export async function POST(
 
       console.log(`🤖 Using ArticleAutoGenerator for feedItem: ${monitor.feedItem.id}`);
 
-      // 4. Genera l'articolo dal feedItem
+      // 4. Converte monitor in formato FeedItemForGeneration
+      const feedItemForGeneration = {
+        id: monitor.feedItem.id,
+        guid: monitor.feedItem.guid,
+        title: monitor.title,
+        content: monitor.content,
+        url: monitor.url,
+        publishedAt: new Date(monitor.publishedAt)
+      };
+
+      console.log(`🔄 Generating article for feed item: ${feedItemForGeneration.title}`);
+
+      // 5. Genera l'articolo dal feedItem
       const generationResult = await autoGenerator.generateFromFeedItems({
         sourceId: monitor.sourceId,
-        feedItemIds: [monitor.feedItemId],
-        options: {
-          forceRegenerate: false,
-          skipProcessedItems: false
-        }
+        feedItems: [feedItemForGeneration]
       });
 
       if (generationResult.isFailure()) {
@@ -87,10 +95,10 @@ export async function POST(
 
       const result = generationResult.value;
 
-      // 5. Trova l'articolo generato (se presente)
+      // 6. Trova l'articolo generato (se presente)
       let articleId = null;
-      if (result.summary.successful > 0 && result.results.length > 0) {
-        const generatedResult = result.results[0];
+      if (result.summary.successful > 0 && result.generatedArticles.length > 0) {
+        const generatedResult = result.generatedArticles[0];
         if (generatedResult.success && generatedResult.articleId) {
           articleId = generatedResult.articleId;
         }

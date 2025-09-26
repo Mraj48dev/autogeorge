@@ -3,7 +3,8 @@ import { BaseUseCase } from '../../shared/application/base/UseCase';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
 import { FeedItemRepository, FeedItemForSave, SavedFeedItem } from '../../domain/ports/FeedItemRepository';
 import { SourceFetchService, FetchResult, FetchedItem } from '../../domain/ports/SourceFetchService';
-import { ArticleAutoGenerator, FeedItemForGeneration } from '../../domain/ports/ArticleAutoGenerator';
+import { EventBus } from '../../../automation/shared/domain/base/DomainEvent';
+import { NewFeedItemsDetectedEvent } from '../../domain/events/NewFeedItemsDetectedEvent';
 import { SourceId } from '../../domain/value-objects/SourceId';
 
 /**
@@ -15,7 +16,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     private readonly sourceRepository: SourceRepository,
     private readonly feedItemRepository: FeedItemRepository,
     private readonly sourceFetchService: SourceFetchService,
-    private readonly articleAutoGenerator?: ArticleAutoGenerator
+    private readonly eventBus: EventBus
   ) {
     super();
   }
@@ -85,42 +86,37 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           return Result.failure(saveResult.error);
         }
 
-        // Trigger auto-generation if enabled and there are new items
-        let generatedArticles = 0;
-        if (savedFeedItems.length > 0 && source.shouldAutoGenerate() && this.articleAutoGenerator) {
-          console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${savedFeedItems.length} new items...`);
+        // Publish event for new feed items if any were saved
+        if (savedFeedItems.length > 0) {
+          console.log(`📢 Publishing NewFeedItemsDetectedEvent for ${source.name.getValue()}: ${savedFeedItems.length} new items`);
 
           try {
-            const feedItemsForGeneration: FeedItemForGeneration[] = savedFeedItems.map(item => ({
-              id: item.id,
-              guid: item.guid,
-              title: item.title,
-              content: item.content,
-              url: item.url,
-              publishedAt: item.publishedAt
-            }));
+            const event = NewFeedItemsDetectedEvent.create(
+              request.sourceId,
+              source.name.getValue(),
+              source.type.getValue(),
+              {
+                enabled: source.configuration?.enabled ?? true,
+                autoGenerate: source.configuration?.autoGenerate ?? false,
+                pollingInterval: source.configuration?.pollingInterval,
+                ...source.configuration
+              },
+              savedFeedItems.map(item => ({
+                id: item.id,
+                guid: item.guid,
+                title: item.title,
+                content: item.content,
+                url: item.url,
+                publishedAt: item.publishedAt.toISOString(),
+                fetchedAt: new Date().toISOString()
+              }))
+            );
 
-            const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
-              sourceId: request.sourceId,
-              feedItems: feedItemsForGeneration
-            });
-
-            if (autoGenResult.isSuccess()) {
-              const genResult = autoGenResult.value;
-              generatedArticles = genResult.summary.successful;
-              console.log(`✅ Auto-generation completed for source ${source.name.getValue()}: ${generatedArticles}/${genResult.summary.total} articles generated`);
-
-              // Mark successfully generated feed items as processed using Repository
-              for (const result of genResult.generatedArticles) {
-                if (result.success && result.articleId) {
-                  await this.feedItemRepository.markAsProcessed(result.feedItemId, result.articleId);
-                }
-              }
-            } else {
-              console.error(`❌ Auto-generation failed for source ${source.name.getValue()}:`, autoGenResult.error.message);
-            }
+            await this.eventBus.publish(event);
+            console.log(`✅ Event published successfully for ${source.name.getValue()}`);
           } catch (error) {
-            console.error(`💥 Auto-generation error for source ${source.name.getValue()}:`, error);
+            console.error(`💥 Failed to publish event for ${source.name.getValue()}:`, error);
+            // Don't fail the entire operation if event publishing fails
           }
         }
 
@@ -128,11 +124,10 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           sourceId: source.id.getValue(),
           fetchedItems: result.fetchedItems.length,
           newItems: savedFeedItems.length,
-          generatedArticles,
           duration,
           items: savedFeedItems,
           metadata: result.metadata,
-          message: `Successfully fetched ${savedFeedItems.length} new items from ${result.fetchedItems.length} total items${generatedArticles > 0 ? `, generated ${generatedArticles} articles` : ''}`
+          message: `Successfully fetched ${savedFeedItems.length} new items from ${result.fetchedItems.length} total items${savedFeedItems.length > 0 ? ', event published for automation' : ''}`
         });
 
       } catch (error) {
@@ -243,7 +238,6 @@ export interface FetchFromSourceResponse {
   sourceId: string;
   fetchedItems: number;
   newItems: number;
-  generatedArticles?: number;
   duration: number;
   items: any[]; // FetchedItem[]
   metadata: any; // FetchMetadata

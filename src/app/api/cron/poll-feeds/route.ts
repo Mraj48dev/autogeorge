@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
 import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
+import { createContainer } from '@/composition-root/container';
 
 /**
  * GET /api/cron/poll-feeds
@@ -38,8 +39,10 @@ export async function GET(request: NextRequest) {
 
     const startTime = Date.now();
 
-    // Initialize sources container instead of direct Prisma
+    // Initialize main container and inject EventBus into sources container
+    const mainContainer = createContainer();
     const sourcesContainer = createSourcesContainer();
+    sourcesContainer.setEventBus(mainContainer.eventBus);
     const prisma = new PrismaClient(); // Still need for basic queries
 
     try {

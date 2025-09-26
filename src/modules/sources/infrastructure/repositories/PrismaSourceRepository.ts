@@ -489,6 +489,7 @@ export class PrismaSourceRepository implements SourceRepository {
       type,
       status,
       url,
+      prismaSource.defaultCategory, // <-- MISSING defaultCategory parameter!
       configuration,
       metadata,
       prismaSource.lastFetchAt,

@@ -167,9 +167,24 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       fullGeneratedObject: generated
     });
 
+    // Extract title and content with explicit null checking
+    const titleValue = generated?.title || generated?.fullGenerated?.title || '';
+    const contentValue = generated?.content || generated?.fullGenerated?.content || '';
+
+    // 🚨 FINAL DEBUG: What are we actually passing to Value Objects?
+    this.logger.info('FINAL VALUE OBJECTS INPUT [DEBUG-v4]', {
+      feedItemId: feedItem.id,
+      titleValue,
+      titleType: typeof titleValue,
+      titleLength: titleValue?.length || 0,
+      contentValue: contentValue?.substring(0, 100) || 'EMPTY',
+      contentType: typeof contentValue,
+      contentLength: contentValue?.length || 0
+    });
+
     // Create article entity
-    const title = Title.create(generated.title);
-    const content = Content.create(generated.content);
+    const title = Title.create(titleValue);
+    const content = Content.create(contentValue);
 
     if (!title.isSuccess() || !content.isSuccess()) {
       this.logger.error('Failed to create article value objects', {

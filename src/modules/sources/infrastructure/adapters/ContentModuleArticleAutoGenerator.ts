@@ -80,7 +80,7 @@ export class ContentModuleArticleAutoGenerator implements ArticleAutoGenerator {
       titlePrompt: 'Crea un titolo accattivante e SEO-friendly per questo articolo',
       contentPrompt: 'Scrivi un articolo completo e ben strutturato basato su questo contenuto',
       seoPrompt: 'Includi meta description, tags e parole chiave ottimizzate per i motori di ricerca',
-      model: 'gpt-4',
+      model: 'sonar', // Use Perplexity model instead of GPT-4
       temperature: 0.7,
       maxTokens: 2000,
       language: 'it',

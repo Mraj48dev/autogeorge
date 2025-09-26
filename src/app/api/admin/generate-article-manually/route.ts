@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
-import { ThreeStepArticleGenerationService } from '@/modules/content/infrastructure/services/ThreeStepArticleGenerationService';
+import { SingleStepArticleGenerationService } from '@/modules/content/infrastructure/services/SingleStepArticleGenerationService';
 
 /**
  * POST /api/admin/generate-article-manually
- * Generates an article manually from a specific feed item using 3-step AI workflow:
- * 1. Perplexity research from original URL
- * 2. ChatGPT content generation with user prompts
- * 3. ChatGPT optimization (title, SEO, metadata)
+ * Generates an article manually from a specific feed item using unified single-step workflow:
+ * - Uses only Perplexity with customizable prompts for title, content, and SEO
+ * - Combines feed content with user prompts in one API call
+ * - Simpler, faster, and more cost-effective than the previous 3-step approach
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Starting 3-step article generation...');
+    console.log('🚀 Starting unified single-step article generation...');
     const body = await request.json();
 
     // Validate required fields
@@ -45,14 +45,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate that feed item has URL for Perplexity research
-    if (!feedItem.url) {
-      return NextResponse.json(
-        { error: 'Feed item must have URL for article generation' },
-        { status: 400 }
-      );
-    }
-
     // Get user generation settings
     const userId = request.headers.get('x-user-id') || 'demo-user';
     let settings = await prisma.generationSettings.findUnique({
@@ -76,29 +68,27 @@ export async function POST(request: NextRequest) {
     const contentPrompt = body.customPrompts?.contentPrompt || settings.contentPrompt;
     const seoPrompt = body.customPrompts?.seoPrompt || settings.seoPrompt;
 
-    // Get API keys from environment variables
+    // Get API key from environment variables (only Perplexity needed)
     const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
-    const openaiApiKey = process.env.OPENAI_API_KEY;
 
-    if (!perplexityApiKey || !openaiApiKey) {
-      console.error('Missing API keys:', { perplexity: !!perplexityApiKey, openai: !!openaiApiKey });
+    if (!perplexityApiKey) {
+      console.error('Missing Perplexity API key');
       return NextResponse.json(
-        { error: 'AI services not configured. Missing API keys.' },
+        { error: 'AI service not configured. Missing Perplexity API key.' },
         { status: 500 }
       );
     }
 
-    // Initialize the 3-step generation service
-    const generationService = new ThreeStepArticleGenerationService(
-      perplexityApiKey,
-      openaiApiKey
-    );
+    // Initialize the unified single-step generation service
+    const generationService = new SingleStepArticleGenerationService(perplexityApiKey);
 
-    console.log('🔧 Starting 3-step generation for URL:', feedItem.url);
+    console.log('🔧 Starting single-step generation for feed item:', feedItem.id);
 
-    // Execute the 3-step workflow
+    // Execute the unified workflow
     const generationResult = await generationService.generateArticle({
-      articleUrl: feedItem.url,
+      feedItemContent: feedItem.content,
+      feedItemTitle: feedItem.title,
+      feedItemUrl: feedItem.url,
       customPrompts: {
         titlePrompt,
         contentPrompt,
@@ -116,25 +106,25 @@ export async function POST(request: NextRequest) {
     });
 
     if (generationResult.isFailure()) {
-      console.error('❌ 3-step generation failed:', generationResult.error);
+      console.error('❌ Single-step generation failed:', generationResult.error);
       return NextResponse.json(
         {
-          error: `Article generation failed at step ${generationResult.error.step}`,
-          details: generationResult.error.error,
-          step: generationResult.error.step
+          error: 'Article generation failed',
+          details: generationResult.error.message,
+          errorDetails: generationResult.error.details
         },
         { status: 500 }
       );
     }
 
     const result = generationResult.value;
-    console.log('✅ 3-step generation completed successfully!');
+    console.log('✅ Single-step generation completed successfully!');
 
     // Create the article with generated content
     const article = await prisma.article.create({
       data: {
-        title: result.step3.optimizedTitle,
-        content: result.step2.finalArticle,
+        title: result.title,
+        content: result.content,
         status: 'generated',
         sourceId: feedItem.sourceId
       }
@@ -168,16 +158,13 @@ export async function POST(request: NextRequest) {
           articleId: article.id
         },
         generationMetadata: {
-          totalCost: result.totalCost,
-          totalTime: result.totalTime,
-          steps: {
-            step1: 'Perplexity research completed',
-            step2: 'ChatGPT content generation completed',
-            step3: 'ChatGPT optimization completed'
-          },
-          sources: result.step1.sources,
-          metaDescription: result.step3.metaDescription,
-          seoTags: result.step3.seoTags
+          totalCost: result.cost,
+          totalTime: result.generationTime,
+          model: result.model,
+          workflow: 'single-step-unified',
+          metaDescription: result.metaDescription,
+          seoTags: result.seoTags,
+          statistics: result.statistics
         }
       }
     });

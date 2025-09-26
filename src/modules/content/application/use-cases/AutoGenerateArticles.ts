@@ -99,29 +99,21 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     sourceId: string,
     settings: GenerationSettings
   ): Promise<Article | null> {
-    // Prepare generation parameters
-    const generationParams: GenerationParameters = {
+    // Generate content using AI service with unified workflow
+    const generateResult = await this.aiService.generateArticle({
       prompt: this.buildPrompt(feedItem, settings),
-      model: settings.model || 'gpt-4',
-      temperature: settings.temperature || 0.7,
-      maxTokens: settings.maxTokens || 2000,
+      model: settings.model || 'sonar',
+      sourceContent: feedItem.content,
       language: settings.language || 'it',
       tone: settings.tone || 'professionale',
       style: settings.style || 'giornalistico',
-      targetAudience: settings.targetAudience || 'generale'
-    };
-
-    // Generate content using AI service
-    const generateResult = await this.aiService.generateArticle({
-      prompt: this.buildPrompt(feedItem, settings),
-      model: generationParams.model || 'sonar',
-      sourceContent: feedItem.content,
-      language: generationParams.language,
-      tone: generationParams.tone,
-      style: generationParams.style,
-      targetAudience: generationParams.targetAudience,
-      targetWordCount: generationParams.maxTokens ? Math.floor(generationParams.maxTokens * 0.75) : undefined,
-      parameters: generationParams,
+      targetAudience: settings.targetAudience || 'generale',
+      targetWordCount: settings.maxTokens ? Math.floor(settings.maxTokens * 0.75) : undefined,
+      parameters: {
+        model: settings.model || 'sonar',
+        temperature: settings.temperature || 0.7,
+        maxTokens: settings.maxTokens || 2000
+      },
       metadata: {
         requestId: `auto-gen-${feedItem.id}-${Date.now()}`,
         context: {
@@ -199,7 +191,16 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       title.value,
       content.value,
       sourceId,
-      generationParams,
+      {
+        prompt: this.buildPrompt(feedItem, settings),
+        model: settings.model || 'sonar',
+        temperature: settings.temperature || 0.7,
+        maxTokens: settings.maxTokens || 2000,
+        language: settings.language || 'it',
+        tone: settings.tone || 'professionale',
+        style: settings.style || 'giornalistico',
+        targetAudience: settings.targetAudience || 'generale'
+      },
       generated.seoMetadata
     );
   }
@@ -215,7 +216,18 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       'Includi meta description, tags e parole chiave ottimizzate per i motori di ricerca';
 
     return `
-ISTRUZIONI PER LA GENERAZIONE DELL'ARTICOLO:
+Genera un articolo completo in formato JSON con questa struttura esatta:
+
+\`\`\`json
+{
+  "title": "...",
+  "content": "...",
+  "metaDescription": "...",
+  "seoTags": ["tag1", "tag2", "tag3"]
+}
+\`\`\`
+
+ISTRUZIONI DETTAGLIATE:
 
 TITOLO:
 ${titlePrompt}
@@ -223,23 +235,30 @@ ${titlePrompt}
 CONTENUTO:
 ${contentPrompt}
 
-SEO:
+SEO E METADATA:
 ${seoPrompt}
 
-CONTENUTO SORGENTE:
-Titolo: ${feedItem.title}
+CONTENUTO SORGENTE DA ELABORARE:
+Titolo originale: ${feedItem.title}
 Contenuto: ${feedItem.content}
-URL originale: ${feedItem.url || 'N/A'}
+${feedItem.url ? `URL originale: ${feedItem.url}` : ''}
 Data pubblicazione: ${feedItem.publishedAt}
 
-PARAMETRI AGGIUNTIVI:
+PARAMETRI DI STILE:
 - Lingua: ${settings.language || 'italiano'}
 - Tono: ${settings.tone || 'professionale'}
 - Stile: ${settings.style || 'giornalistico'}
 - Target audience: ${settings.targetAudience || 'generale'}
 
-Genera un articolo completo, originale e ben strutturato.
-`;
+REQUISITI TECNICI:
+- Rispondi SOLO con il JSON valido
+- Non aggiungere testo prima o dopo il JSON
+- Il contenuto deve essere formattato in Markdown
+- La meta description deve essere max 160 caratteri
+- Includi 3-5 tag SEO pertinenti
+- L'articolo deve essere originale e ben strutturato
+
+Genera l'articolo ora:`;
   }
 }
 

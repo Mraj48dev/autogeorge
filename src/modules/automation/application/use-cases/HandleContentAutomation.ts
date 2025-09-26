@@ -72,7 +72,7 @@ export class HandleContentAutomation implements UseCase<HandleContentAutomationR
       }
 
       const ruleEvaluations = evaluationResult.value;
-      const triggeredRules = ruleEvaluations.filter(eval => eval.shouldExecute);
+      const triggeredRules = ruleEvaluations.filter(evaluation => evaluation.shouldExecute);
 
       this.logger.info('Automation rules evaluated', {
         sourceId: request.sourceId,

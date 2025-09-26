@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
 
     // Initialize main container and inject EventBus into sources container
     const mainContainer = createContainer();
+    await mainContainer.initialize(); // CRITICAL: Initialize EventBus handlers!
     const sourcesContainer = createSourcesContainer();
     sourcesContainer.setEventBus(mainContainer.eventBus);
     const prisma = new PrismaClient(); // Still need for basic queries
@@ -199,6 +200,7 @@ export async function GET(request: NextRequest) {
       );
     } finally {
       await prisma.$disconnect();
+      await mainContainer.shutdown(); // Properly shutdown containers
     }
 
   } catch (error) {

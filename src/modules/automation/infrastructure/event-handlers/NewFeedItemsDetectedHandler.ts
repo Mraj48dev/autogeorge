@@ -2,6 +2,7 @@ import { DomainEventHandler } from '../../shared/domain/base/DomainEvent';
 import { Logger } from '../../shared/infrastructure/logger/Logger';
 import { HandleContentAutomation } from '../../application/use-cases/HandleContentAutomation';
 import { AutomationTriggerType } from '../../domain/entities/AutomationRule';
+import { NewFeedItemsDetectedEvent } from '../../../sources/domain/events/NewFeedItemsDetectedEvent';
 
 /**
  * Event handler for NewFeedItemsDetectedEvent.
@@ -78,26 +79,4 @@ export class NewFeedItemsDetectedHandler implements DomainEventHandler<NewFeedIt
   }
 }
 
-// Import the event type (will be available once we create the event)
-interface NewFeedItemsDetectedEvent {
-  eventId: string;
-  eventType: string;
-  aggregateId: string;
-  data: {
-    sourceId: string;
-    sourceName: string;
-    sourceType: string;
-    sourceConfiguration: Record<string, any>;
-    newFeedItems: Array<{
-      id: string;
-      guid?: string;
-      title: string;
-      content: string;
-      url?: string;
-      publishedAt: string;
-      fetchedAt: string;
-    }>;
-    totalNewItems: number;
-  };
-  metadata?: Record<string, any>;
-}
+// Event type is now imported from the sources module

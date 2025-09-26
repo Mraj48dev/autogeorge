@@ -27,6 +27,12 @@ export class Content extends StringValueObject {
     this.validateSafety();
   }
 
+  protected validateNotEmpty(): void {
+    if (!this.value || this.value.trim().length === 0) {
+      throw new Error('Content cannot be empty');
+    }
+  }
+
   private validateLength(): void {
     const cleanContent = this.stripHtmlTags(this.value);
 

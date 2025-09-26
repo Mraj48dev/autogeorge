@@ -29,6 +29,12 @@ export class Title extends StringValueObject {
     this.validateContent();
   }
 
+  protected validateNotEmpty(): void {
+    if (!this.value || this.value.trim().length === 0) {
+      throw new Error('Title cannot be empty');
+    }
+  }
+
   private validateLength(): void {
     const trimmedValue = this.value.trim();
 

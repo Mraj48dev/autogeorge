@@ -85,13 +85,16 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           return Result.failure(saveResult.error);
         }
 
-        // Trigger auto-generation if enabled and there are new items
+        // Trigger auto-generation if enabled - check for new items OR existing unprocessed items
         let generatedArticles = 0;
-        if (savedFeedItems.length > 0 && source.shouldAutoGenerate() && this.articleAutoGenerator) {
-          console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${savedFeedItems.length} new items...`);
+        if (source.shouldAutoGenerate() && this.articleAutoGenerator) {
+          // Get all unprocessed items for this source
+          const unprocessedResult = await this.feedItemRepository.getUnprocessedForSource(request.sourceId);
+          let itemsToProcess: FeedItemForGeneration[] = [];
 
-          try {
-            const feedItemsForGeneration: FeedItemForGeneration[] = savedFeedItems.map(item => ({
+          if (savedFeedItems.length > 0) {
+            // Process new items
+            itemsToProcess = savedFeedItems.map(item => ({
               id: item.id,
               guid: item.guid,
               title: item.title,
@@ -99,28 +102,45 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
               url: item.url,
               publishedAt: item.publishedAt
             }));
+            console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${savedFeedItems.length} new items...`);
+          } else if (unprocessedResult.isSuccess() && unprocessedResult.value.length > 0) {
+            // Process existing unprocessed items
+            const unprocessedItems = unprocessedResult.value;
+            itemsToProcess = unprocessedItems.map(item => ({
+              id: item.id,
+              guid: item.guid || item.id,
+              title: item.title,
+              content: item.content,
+              url: item.url,
+              publishedAt: item.publishedAt
+            }));
+            console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, processing ${unprocessedItems.length} existing unprocessed items...`);
+          }
 
-            const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
-              sourceId: request.sourceId,
-              feedItems: feedItemsForGeneration
-            });
+          if (itemsToProcess.length > 0) {
+            try {
+              const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
+                sourceId: request.sourceId,
+                feedItems: itemsToProcess
+              });
 
-            if (autoGenResult.isSuccess()) {
-              const genResult = autoGenResult.value;
-              generatedArticles = genResult.summary.successful;
-              console.log(`✅ Auto-generation completed for source ${source.name.getValue()}: ${generatedArticles}/${genResult.summary.total} articles generated`);
+              if (autoGenResult.isSuccess()) {
+                const genResult = autoGenResult.value;
+                generatedArticles = genResult.summary.successful;
+                console.log(`✅ Auto-generation completed for source ${source.name.getValue()}: ${generatedArticles}/${genResult.summary.total} articles generated`);
 
-              // Mark successfully generated feed items as processed using Repository
-              for (const result of genResult.generatedArticles) {
-                if (result.success && result.articleId) {
-                  await this.feedItemRepository.markAsProcessed(result.feedItemId, result.articleId);
+                // Mark successfully generated feed items as processed using Repository
+                for (const result of genResult.generatedArticles) {
+                  if (result.success && result.articleId) {
+                    await this.feedItemRepository.markAsProcessed(result.feedItemId, result.articleId);
+                  }
                 }
+              } else {
+                console.error(`❌ Auto-generation failed for source ${source.name.getValue()}:`, autoGenResult.error.message);
               }
-            } else {
-              console.error(`❌ Auto-generation failed for source ${source.name.getValue()}:`, autoGenResult.error.message);
+            } catch (error) {
+              console.error(`💥 Auto-generation error for source ${source.name.getValue()}:`, error);
             }
-          } catch (error) {
-            console.error(`💥 Auto-generation error for source ${source.name.getValue()}:`, error);
           }
         }
 

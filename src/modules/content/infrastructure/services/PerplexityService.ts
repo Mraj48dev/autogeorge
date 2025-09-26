@@ -462,17 +462,47 @@ export class PerplexityService implements AiService {
 
       return result;
     } catch {
-      // Fallback: extract title from first line and use rest as content
-      const lines = content.split('\n');
+      // 🚨 CRITICAL FIX: Handle ```json code blocks properly
+      let cleanContent = content;
+
+      // Remove code block markers if present
+      if (content.startsWith('```json\n') && content.endsWith('\n```')) {
+        cleanContent = content.slice(8, -4); // Remove ```json\n from start and \n``` from end
+
+        // Try parsing the cleaned content as JSON
+        try {
+          const parsed = JSON.parse(cleanContent);
+          const result = {
+            title: parsed.title || 'Generated Article',
+            content: parsed.content || cleanContent,
+          };
+
+          console.log('🤖 [PerplexityService] Code block JSON parsed result:', {
+            originalStarted: content.startsWith('```json'),
+            cleanedContentLength: cleanContent.length,
+            titleLength: result.title?.length || 0,
+            contentLength: result.content?.length || 0,
+            titlePreview: result.title?.substring(0, 50) || 'EMPTY',
+            contentPreview: result.content?.substring(0, 100) || 'EMPTY'
+          });
+
+          return result;
+        } catch (jsonError) {
+          console.log('🚨 [PerplexityService] Failed to parse cleaned JSON, falling back to text parsing');
+        }
+      }
+
+      // Final fallback: extract title from first line and use rest as content
+      const lines = cleanContent.split('\n');
       const title = lines[0].replace(/^#\s*/, '') || 'Generated Article';
       const articleContent = lines.slice(1).join('\n').trim();
 
       const result = {
         title,
-        content: articleContent || content,
+        content: articleContent || cleanContent,
       };
 
-      console.log('🤖 [PerplexityService] Fallback parsed result:', {
+      console.log('🤖 [PerplexityService] Final fallback parsed result:', {
         linesCount: lines.length,
         firstLine: lines[0] || 'EMPTY',
         titleLength: result.title?.length || 0,

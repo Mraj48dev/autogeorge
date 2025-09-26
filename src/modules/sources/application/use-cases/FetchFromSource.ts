@@ -129,10 +129,12 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
                 generatedArticles = genResult.summary.successful;
                 console.log(`✅ Auto-generation completed for source ${source.name.getValue()}: ${generatedArticles}/${genResult.summary.total} articles generated`);
 
-                // Mark successfully generated feed items as processed using Repository
+                // Mark successfully generated feed items as processed
+                // The ArticleAutoGenerator already saves articles as drafts in /admin/articles
                 for (const result of genResult.generatedArticles) {
                   if (result.success && result.articleId) {
                     await this.feedItemRepository.markAsProcessed(result.feedItemId, result.articleId);
+                    console.log(`📝 Article draft created and saved in /admin/articles with ID: ${result.articleId}`);
                   }
                 }
               } else {

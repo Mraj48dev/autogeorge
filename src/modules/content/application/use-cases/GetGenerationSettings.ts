@@ -20,23 +20,23 @@ export class GetGenerationSettings implements UseCase<GetGenerationSettingsReque
       const existingSettings = await this.generationSettingsRepository.findByUserId(request.userId);
 
       if (!existingSettings.isSuccess()) {
-        return Result.failure(`Failed to retrieve settings: ${existingSettings.getError()}`);
+        return Result.failure(`Failed to retrieve settings: ${existingSettings.error}`);
       }
 
-      const settings = existingSettings.getValue();
+      const settings = existingSettings.value;
 
       if (!settings) {
         // Create default settings for user
         const createResult = GenerationSettings.create(request.userId);
         if (!createResult.isSuccess()) {
-          return Result.failure(`Failed to create default settings: ${createResult.getError()}`);
+          return Result.failure(`Failed to create default settings: ${createResult.error}`);
         }
 
-        const newSettings = createResult.getValue();
+        const newSettings = createResult.value;
         const saveResult = await this.generationSettingsRepository.save(newSettings);
 
         if (!saveResult.isSuccess()) {
-          return Result.failure(`Failed to save default settings: ${saveResult.getError()}`);
+          return Result.failure(`Failed to save default settings: ${saveResult.error}`);
         }
 
         this.logger.info('Created default generation settings', { userId: request.userId });

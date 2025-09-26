@@ -123,12 +123,12 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     if (!generateResult.isSuccess()) {
       this.logger.error('AI service failed to generate article', {
         feedItemId: feedItem.id,
-        error: generateResult.getError()
+        error: generateResult.error
       });
       return null;
     }
 
-    const generated = generateResult.getValue();
+    const generated = generateResult.value;
 
     // Create article entity
     const title = Title.create(generated.title);
@@ -137,15 +137,15 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     if (!title.isSuccess() || !content.isSuccess()) {
       this.logger.error('Failed to create article value objects', {
         feedItemId: feedItem.id,
-        titleError: title.isFailure() ? title.getError() : null,
-        contentError: content.isFailure() ? content.getError() : null
+        titleError: title.isFailure() ? title.error : null,
+        contentError: content.isFailure() ? content.error : null
       });
       return null;
     }
 
     return Article.createGenerated(
-      title.getValue(),
-      content.getValue(),
+      title.value,
+      content.value,
       sourceId,
       generationParams,
       generated.seoMetadata

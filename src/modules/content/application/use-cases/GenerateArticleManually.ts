@@ -49,12 +49,12 @@ export class GenerateArticleManually implements UseCase<ManualGenerateRequest, M
       if (!generateResult.isSuccess()) {
         this.logger.error('AI service failed to generate article', {
           feedItemId: request.feedItem.id,
-          error: generateResult.getError()
+          error: generateResult.error
         });
-        return Result.failure(`Generation failed: ${generateResult.getError()}`);
+        return Result.failure(`Generation failed: ${generateResult.error}`);
       }
 
-      const generated = generateResult.getValue();
+      const generated = generateResult.value;
 
       // Create article entity
       const title = Title.create(generated.title);
@@ -62,8 +62,8 @@ export class GenerateArticleManually implements UseCase<ManualGenerateRequest, M
 
       if (!title.isSuccess() || !content.isSuccess()) {
         const errors = [
-          title.isFailure() ? `Title: ${title.getError()}` : null,
-          content.isFailure() ? `Content: ${content.getError()}` : null
+          title.isFailure() ? `Title: ${title.error}` : null,
+          content.isFailure() ? `Content: ${content.error}` : null
         ].filter(Boolean);
 
         return Result.failure(`Failed to create article: ${errors.join(', ')}`);
@@ -71,8 +71,8 @@ export class GenerateArticleManually implements UseCase<ManualGenerateRequest, M
 
       // Create and save article
       const article = Article.createGenerated(
-        title.getValue(),
-        content.getValue(),
+        title.value,
+        content.value,
         request.sourceId,
         generationParams,
         generated.seoMetadata

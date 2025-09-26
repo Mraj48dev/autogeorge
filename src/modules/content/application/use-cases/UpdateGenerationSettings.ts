@@ -21,10 +21,10 @@ export class UpdateGenerationSettings implements UseCase<UpdateGenerationSetting
       const existingSettings = await this.generationSettingsRepository.findByUserId(request.userId);
 
       if (!existingSettings.isSuccess()) {
-        return Result.failure(`Failed to retrieve existing settings: ${existingSettings.getError()}`);
+        return Result.failure(`Failed to retrieve existing settings: ${existingSettings.error}`);
       }
 
-      let settings = existingSettings.getValue();
+      let settings = existingSettings.value;
 
       if (!settings) {
         // Create new settings if they don't exist
@@ -36,10 +36,10 @@ export class UpdateGenerationSettings implements UseCase<UpdateGenerationSetting
         );
 
         if (!createResult.isSuccess()) {
-          return Result.failure(`Failed to create settings: ${createResult.getError()}`);
+          return Result.failure(`Failed to create settings: ${createResult.error}`);
         }
 
-        settings = createResult.getValue();
+        settings = createResult.value;
 
         // Apply additional updates if provided
         if (request.modelSettings) {
@@ -61,7 +61,7 @@ export class UpdateGenerationSettings implements UseCase<UpdateGenerationSetting
 
         const saveResult = await this.generationSettingsRepository.save(settings);
         if (!saveResult.isSuccess()) {
-          return Result.failure(`Failed to save new settings: ${saveResult.getError()}`);
+          return Result.failure(`Failed to save new settings: ${saveResult.error}`);
         }
 
         this.logger.info('Created new generation settings', { userId: request.userId });
@@ -94,7 +94,7 @@ export class UpdateGenerationSettings implements UseCase<UpdateGenerationSetting
 
         const updateResult = await this.generationSettingsRepository.update(settings);
         if (!updateResult.isSuccess()) {
-          return Result.failure(`Failed to update settings: ${updateResult.getError()}`);
+          return Result.failure(`Failed to update settings: ${updateResult.error}`);
         }
 
         this.logger.info('Updated generation settings', { userId: request.userId });

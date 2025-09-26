@@ -122,11 +122,11 @@ export class PrismaGenerationSettingsRepository implements GenerationSettingsRep
   private toDomainEntity(record: any): GenerationSettings {
     const id = GenerationSettingsId.create(record.id);
     if (!id.isSuccess()) {
-      throw new Error(`Invalid generation settings ID: ${id.getError()}`);
+      throw new Error(`Invalid generation settings ID: ${id.error}`);
     }
 
     return new GenerationSettings(
-      id.getValue(),
+      id.value,
       record.userId,
       record.titlePrompt,
       record.contentPrompt,

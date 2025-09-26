@@ -102,7 +102,7 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     // Generate content using AI service with unified workflow
     const generateResult = await this.aiService.generateArticle({
       prompt: this.buildPrompt(feedItem, settings),
-      model: settings.model || 'sonar',
+      model: settings.model || 'sonar-pro',
       sourceContent: feedItem.content,
       language: settings.language || 'it',
       tone: settings.tone || 'professionale',
@@ -110,7 +110,7 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       targetAudience: settings.targetAudience || 'generale',
       targetWordCount: settings.maxTokens ? Math.floor(settings.maxTokens * 0.75) : undefined,
       parameters: {
-        model: settings.model || 'sonar',
+        model: settings.model || 'sonar-pro',
         temperature: settings.temperature || 0.7,
         maxTokens: settings.maxTokens || 2000
       },
@@ -193,7 +193,7 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       sourceId,
       {
         prompt: this.buildPrompt(feedItem, settings),
-        model: settings.model || 'sonar',
+        model: settings.model || 'sonar-pro',
         temperature: settings.temperature || 0.7,
         maxTokens: settings.maxTokens || 2000,
         language: settings.language || 'it',

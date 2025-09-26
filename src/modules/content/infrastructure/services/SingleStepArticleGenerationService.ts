@@ -67,7 +67,7 @@ export class SingleStepArticleGenerationService {
       // Single call to Perplexity with all requirements
       const generationResult = await this.perplexityService.generateArticle({
         prompt: unifiedPrompt,
-        model: request.settings?.model || 'sonar',
+        model: request.settings?.model || 'sonar-pro',
         sourceContent: request.feedItemContent,
         language: request.settings?.language || 'it',
         tone: request.settings?.tone || 'professionale',
@@ -77,7 +77,7 @@ export class SingleStepArticleGenerationService {
         parameters: {
           temperature: request.settings?.temperature || 0.7,
           maxTokens: request.settings?.maxTokens || 2000,
-          model: request.settings?.model || 'sonar'
+          model: request.settings?.model || 'sonar-pro'
         },
         metadata: {
           requestId: `single-step-${Date.now()}`,
@@ -122,7 +122,7 @@ export class SingleStepArticleGenerationService {
         },
         cost: generated.metadata?.cost || 0,
         generationTime,
-        model: generated.modelUsed || request.settings?.model || 'sonar'
+        model: generated.modelUsed || request.settings?.model || 'sonar-pro'
       };
 
       return Result.success(result);

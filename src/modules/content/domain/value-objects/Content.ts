@@ -1,4 +1,5 @@
 import { StringValueObject } from '../../shared/domain/base/ValueObject';
+import { Result } from '../../shared/domain/types/Result';
 
 /**
  * Value Object representing article content.
@@ -147,6 +148,18 @@ export class Content extends StringValueObject {
 
   static getMaxLength(): number {
     return Content.MAX_LENGTH;
+  }
+
+  /**
+   * Creates a new Content instance safely, returning a Result
+   */
+  static create(value: string): Result<Content, string> {
+    try {
+      const content = new Content(value);
+      return Result.success(content);
+    } catch (error) {
+      return Result.failure(error instanceof Error ? error.message : 'Invalid content');
+    }
   }
 }
 

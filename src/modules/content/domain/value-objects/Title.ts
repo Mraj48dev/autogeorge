@@ -1,4 +1,5 @@
 import { StringValueObject } from '../../shared/domain/base/ValueObject';
+import { Result } from '../../shared/domain/types/Result';
 
 /**
  * Value Object representing an article title.
@@ -228,6 +229,18 @@ export class Title extends StringValueObject {
 
   static getMaxLength(): number {
     return Title.MAX_LENGTH;
+  }
+
+  /**
+   * Creates a new Title instance safely, returning a Result
+   */
+  static create(value: string): Result<Title, string> {
+    try {
+      const title = new Title(value);
+      return Result.success(title);
+    } catch (error) {
+      return Result.failure(error instanceof Error ? error.message : 'Invalid title');
+    }
   }
 }
 

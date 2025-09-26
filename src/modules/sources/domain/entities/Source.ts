@@ -351,6 +351,7 @@ export class Source extends AggregateRoot<SourceId> {
 
   /**
    * Records a successful fetch operation
+   * 🚨 CRITICAL: Does NOT overwrite source configuration, only updates fetch metadata
    */
   recordSuccessfulFetch(
     fetchedItems: number,
@@ -362,7 +363,9 @@ export class Source extends AggregateRoot<SourceId> {
     this._lastError = undefined;
     this._lastErrorAt = undefined;
 
-    // Update metadata
+    // 🚨 CRITICAL FIX: Update ONLY metadata, preserve configuration
+    // The configuration field contains user settings like autoGenerate
+    // and MUST NOT be overwritten by fetch operations
     this.updateMetadata({
       ...this._metadata,
       lastFetch: {

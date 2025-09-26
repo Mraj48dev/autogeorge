@@ -303,6 +303,17 @@ export class PerplexityService implements AiService {
   private async makeApiCall(endpoint: string, payload: any): Promise<Response> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    // 🚨 DEBUG: Log request details (hide sensitive data)
+    console.log('🌐 [PerplexityService] Making API call:', {
+      url,
+      endpoint,
+      hasApiKey: !!this.apiKey,
+      apiKeyStart: this.apiKey?.substring(0, 8) + '...' || 'MISSING',
+      payloadKeys: Object.keys(payload),
+      model: payload.model,
+      messagesCount: payload.messages?.length || 0
+    });
+
     return fetch(url, {
       method: 'POST',
       headers: {
@@ -319,6 +330,17 @@ export class PerplexityService implements AiService {
    */
   private async handleApiError(response: Response): Promise<Result<any, AiServiceError>> {
     const errorData = await response.json().catch(() => ({}));
+
+    // 🚨 DEBUG: Log full error details
+    console.error('🔥 [PerplexityService] API Error Details:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      errorData,
+      hasApiKey: !!this.apiKey,
+      apiKeyLength: this.apiKey?.length || 0,
+      apiKeyStart: this.apiKey?.substring(0, 8) + '...' || 'MISSING'
+    });
 
     switch (response.status) {
       case 401:

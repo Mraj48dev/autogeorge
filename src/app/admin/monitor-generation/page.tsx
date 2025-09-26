@@ -1,12 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Clock, CheckCircle, XCircle, Play, Loader2, Trash2, RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface MonitorRecord {
   id: string;
@@ -137,32 +131,32 @@ export default function MonitorGenerationPage() {
     loadData(selectedStatus);
   }, [selectedStatus]);
 
-  // Status colors e icons
-  const getStatusBadge = (status: string) => {
+  // Status colors e styles
+  const getStatusClass = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'processing':
-        return <Badge variant="default"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Processing</Badge>;
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
-        return <Badge variant="outline" className="text-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'error':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Error</Badge>;
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityClass = (priority: string) => {
     switch (priority) {
       case 'high':
-        return <Badge variant="destructive">High</Badge>;
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'normal':
-        return <Badge variant="secondary">Normal</Badge>;
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       case 'low':
-        return <Badge variant="outline">Low</Badge>;
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
-        return <Badge variant="secondary">{priority}</Badge>;
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -170,8 +164,8 @@ export default function MonitorGenerationPage() {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <span className="ml-2">Loading monitor generation records...</span>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-gray-600">Loading monitor generation records...</span>
         </div>
       </div>
     );
@@ -181,178 +175,190 @@ export default function MonitorGenerationPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Monitor Generation</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold text-gray-900">Monitor Generation</h1>
+          <p className="text-gray-500 mt-1">
             Gestisci la coda di generazione articoli automatica
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
+          <button
             onClick={() => loadData(selectedStatus)}
             disabled={loading}
+            className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            <RefreshCw className="w-4 h-4 mr-1" />
-            Refresh
-          </Button>
-          <Button
-            variant="outline"
+            🔄 Refresh
+          </button>
+          <button
             onClick={() => cleanupRecords('completed')}
+            className="px-4 py-2 bg-red-50 border border-red-200 rounded-md shadow-sm text-sm font-medium text-red-700 hover:bg-red-100"
           >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Cleanup Completed
-          </Button>
+            🗑️ Cleanup Completed
+          </button>
         </div>
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex">
+            <div className="text-red-600 font-medium">⚠️ Error</div>
+          </div>
+          <div className="mt-1 text-red-600 text-sm">{error}</div>
+        </div>
       )}
 
       {/* Stats Cards */}
       {data && (
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data.stats.total}</div>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-500">Total Records</div>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mt-1">{data.stats.total}</div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data.stats.byStatus['pending'] || 0}</div>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-500">Pending</div>
+              <div className="text-yellow-500">⏳</div>
+            </div>
+            <div className="text-2xl font-bold text-yellow-600 mt-1">{data.stats.byStatus['pending'] || 0}</div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{data.stats.byStatus['completed'] || 0}</div>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-500">Completed</div>
+              <div className="text-green-500">✅</div>
+            </div>
+            <div className="text-2xl font-bold text-green-600 mt-1">{data.stats.byStatus['completed'] || 0}</div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Errors</CardTitle>
-              <XCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{data.stats.byStatus['error'] || 0}</div>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-500">Errors</div>
+              <div className="text-red-500">❌</div>
+            </div>
+            <div className="text-2xl font-bold text-red-600 mt-1">{data.stats.byStatus['error'] || 0}</div>
+          </div>
         </div>
       )}
 
       {/* Tabs per Status */}
-      <Tabs value={selectedStatus} onValueChange={setSelectedStatus}>
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="processing">Processing</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="error">Errors</TabsTrigger>
-        </TabsList>
+      <div className="bg-white rounded-lg border border-gray-200">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            {['all', 'pending', 'processing', 'completed', 'error'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className={`py-2 px-4 border-b-2 font-medium text-sm ${
+                  selectedStatus === status
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-        <TabsContent value={selectedStatus} className="mt-6">
+        <div className="p-6">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span className="ml-2">Loading...</span>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-gray-600">Loading...</span>
             </div>
           ) : data && data.monitors.length > 0 ? (
-            <div className="grid gap-4">
+            <div className="space-y-4">
               {data.monitors.map((monitor) => (
-                <Card key={monitor.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {getStatusBadge(monitor.status)}
-                          {getPriorityBadge(monitor.priority)}
-                          <Badge variant="outline">{monitor.source.name}</Badge>
-                        </div>
-                        <CardTitle className="text-lg">{monitor.title}</CardTitle>
-                        <CardDescription>
-                          {monitor.content.substring(0, 200)}
-                          {monitor.content.length > 200 && '...'}
-                        </CardDescription>
+                <div key={monitor.id} className="bg-white rounded-lg border border-gray-200 p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusClass(monitor.status)}`}>
+                          {monitor.status === 'pending' && '⏳'}
+                          {monitor.status === 'processing' && '⚡'}
+                          {monitor.status === 'completed' && '✅'}
+                          {monitor.status === 'error' && '❌'}
+                          {monitor.status.charAt(0).toUpperCase() + monitor.status.slice(1)}
+                        </span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityClass(monitor.priority)}`}>
+                          {monitor.priority.charAt(0).toUpperCase() + monitor.priority.slice(1)}
+                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                          {monitor.source.name}
+                        </span>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        {monitor.status === 'pending' && (
-                          <Button
-                            size="sm"
-                            onClick={() => generateArticle(monitor.id)}
-                            disabled={generatingIds.has(monitor.id)}
-                          >
-                            {generatingIds.has(monitor.id) ? (
-                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                            ) : (
-                              <Play className="w-4 h-4 mr-1" />
-                            )}
-                            Generate
-                          </Button>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">{monitor.title}</h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        {monitor.content.substring(0, 200)}
+                        {monitor.content.length > 200 && '...'}
+                      </p>
+                      <div className="flex flex-col gap-2 text-sm text-gray-500">
+                        <div className="flex justify-between">
+                          <span>Created: {new Date(monitor.createdAt).toLocaleString()}</span>
+                          <span>Published: {new Date(monitor.publishedAt).toLocaleString()}</span>
+                        </div>
+                        {monitor.generatedAt && (
+                          <div>Generated: {new Date(monitor.generatedAt).toLocaleString()}</div>
                         )}
-                        {monitor.articleId && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`/admin/articles/${monitor.articleId}`, '_blank')}
-                          >
-                            View Article
-                          </Button>
+                        {monitor.error && (
+                          <div className="bg-red-50 text-red-600 font-mono text-xs p-2 rounded border border-red-200">
+                            {monitor.error}
+                          </div>
+                        )}
+                        {monitor.url && (
+                          <div>
+                            <a href={monitor.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              🔗 Original URL
+                            </a>
+                          </div>
                         )}
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                      <div className="flex justify-between">
-                        <span>Created: {new Date(monitor.createdAt).toLocaleString()}</span>
-                        <span>Published: {new Date(monitor.publishedAt).toLocaleString()}</span>
-                      </div>
-                      {monitor.generatedAt && (
-                        <div>Generated: {new Date(monitor.generatedAt).toLocaleString()}</div>
+                    <div className="flex flex-col gap-2 ml-4">
+                      {monitor.status === 'pending' && (
+                        <button
+                          onClick={() => generateArticle(monitor.id)}
+                          disabled={generatingIds.has(monitor.id)}
+                          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {generatingIds.has(monitor.id) ? (
+                            <>
+                              <span className="animate-spin inline-block mr-1">⏳</span>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              ▶️ Generate
+                            </>
+                          )}
+                        </button>
                       )}
-                      {monitor.error && (
-                        <div className="text-red-600 font-mono text-xs bg-red-50 p-2 rounded">
-                          {monitor.error}
-                        </div>
-                      )}
-                      {monitor.url && (
-                        <div>
-                          <a href={monitor.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            Original URL
-                          </a>
-                        </div>
+                      {monitor.articleId && (
+                        <button
+                          onClick={() => window.open(`/admin/articles/${monitor.articleId}`, '_blank')}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 border border-gray-300"
+                        >
+                          📄 View Article
+                        </button>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center h-32">
-                <Clock className="w-8 h-8 text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No monitor generation records found</p>
-              </CardContent>
-            </Card>
+            <div className="bg-gray-50 rounded-lg p-8 text-center">
+              <div className="text-gray-400 text-4xl mb-2">⏳</div>
+              <p className="text-gray-600">No monitor generation records found</p>
+              <p className="text-gray-500 text-sm mt-1">
+                Records will appear here when RSS feeds with auto-generation enabled receive new content
+              </p>
+            </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,44 +1,31 @@
-import { Result } from '../../shared/domain/types/Result';
+import { Result } from '../../../../shared/domain/types/Result';
+import {
+  MediaService,
+  MediaUpload,
+  MediaResult,
+  MediaError,
+  PlatformConfig
+} from '../../domain/ports/MediaService';
 
-export interface WordPressMediaUpload {
-  file: File;
-  title?: string;
-  alt_text?: string;
-  caption?: string;
-}
-
-export interface WordPressMediaResult {
-  id: number;
-  url: string;
-  title: string;
-  alt_text: string;
-  media_type: string;
-  mime_type: string;
-}
-
-export interface WordPressMediaError {
-  message: string;
-  details?: any;
-}
-
-export interface WordPressConfig {
-  siteUrl: string;
-  username: string;
-  password: string;
-}
+// Legacy exports for backward compatibility
+export interface WordPressMediaUpload extends MediaUpload {}
+export interface WordPressMediaResult extends MediaResult {}
+export interface WordPressMediaError extends MediaError {}
+export interface WordPressConfig extends PlatformConfig {}
 
 /**
- * Service for uploading media to WordPress via REST API
+ * WordPress implementation of MediaService
+ * Handles media upload/management via WordPress REST API
  */
-export class WordPressMediaService {
+export class WordPressMediaService implements MediaService {
 
   /**
    * Uploads a file to WordPress media library
    */
   async uploadMedia(
-    config: WordPressConfig,
-    upload: WordPressMediaUpload
-  ): Promise<Result<WordPressMediaResult, WordPressMediaError>> {
+    config: PlatformConfig,
+    upload: MediaUpload
+  ): Promise<Result<MediaResult, MediaError>> {
     try {
       // Prepare form data for WordPress API
       const formData = new FormData();
@@ -78,7 +65,7 @@ export class WordPressMediaService {
 
       const mediaData = await response.json();
 
-      const result: WordPressMediaResult = {
+      const result: MediaResult = {
         id: mediaData.id,
         url: mediaData.source_url,
         title: mediaData.title?.rendered || upload.title || 'Uploaded Image',
@@ -102,9 +89,9 @@ export class WordPressMediaService {
    * Gets media by ID from WordPress
    */
   async getMedia(
-    config: WordPressConfig,
+    config: PlatformConfig,
     mediaId: number
-  ): Promise<Result<WordPressMediaResult, WordPressMediaError>> {
+  ): Promise<Result<MediaResult, MediaError>> {
     try {
       const wpApiUrl = `${config.siteUrl.replace(/\/$/, '')}/wp-json/wp/v2/media/${mediaId}`;
       const auth = Buffer.from(`${config.username}:${config.password}`).toString('base64');
@@ -126,7 +113,7 @@ export class WordPressMediaService {
 
       const mediaData = await response.json();
 
-      const result: WordPressMediaResult = {
+      const result: MediaResult = {
         id: mediaData.id,
         url: mediaData.source_url,
         title: mediaData.title?.rendered || 'Media',
@@ -150,10 +137,10 @@ export class WordPressMediaService {
    * Deletes media from WordPress
    */
   async deleteMedia(
-    config: WordPressConfig,
+    config: PlatformConfig,
     mediaId: number,
     force: boolean = false
-  ): Promise<Result<void, WordPressMediaError>> {
+  ): Promise<Result<void, MediaError>> {
     try {
       const wpApiUrl = `${config.siteUrl.replace(/\/$/, '')}/wp-json/wp/v2/media/${mediaId}${force ? '?force=true' : ''}`;
       const auth = Buffer.from(`${config.username}:${config.password}`).toString('base64');

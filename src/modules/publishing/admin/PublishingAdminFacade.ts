@@ -1,6 +1,7 @@
 import { Result } from '../../../../shared/domain/types/Result';
 import { PublishArticle, PublishArticleInput, PublishArticleOutput, PublishArticleError } from '../application/use-cases/PublishArticle';
 import { GetPublications, GetPublicationsInput, GetPublicationsOutput, GetPublicationsError } from '../application/use-cases/GetPublications';
+import { MediaService, MediaUpload, MediaResult, MediaError, PlatformConfig } from '../domain/ports/MediaService';
 
 /**
  * Admin Facade for the Publishing module.
@@ -21,7 +22,8 @@ import { GetPublications, GetPublicationsInput, GetPublicationsOutput, GetPublic
 export class PublishingAdminFacade {
   constructor(
     private readonly publishArticle: PublishArticle,
-    private readonly getPublications: GetPublications
+    private readonly getPublications: GetPublications,
+    private readonly mediaService: MediaService
   ) {}
 
   /**
@@ -752,6 +754,37 @@ export class AdminError extends Error {
       `Health check failed: ${message}`,
       'HEALTH_CHECK_FAILED'
     );
+  }
+
+  /**
+   * Uploads media to a platform (WordPress, etc.)
+   */
+  async uploadMedia(
+    config: PlatformConfig,
+    upload: MediaUpload
+  ): Promise<Result<MediaResult, MediaError>> {
+    return await this.mediaService.uploadMedia(config, upload);
+  }
+
+  /**
+   * Gets media by ID from a platform
+   */
+  async getMedia(
+    config: PlatformConfig,
+    mediaId: number
+  ): Promise<Result<MediaResult, MediaError>> {
+    return await this.mediaService.getMedia(config, mediaId);
+  }
+
+  /**
+   * Deletes media from a platform
+   */
+  async deleteMedia(
+    config: PlatformConfig,
+    mediaId: number,
+    force: boolean = false
+  ): Promise<Result<void, MediaError>> {
+    return await this.mediaService.deleteMedia(config, mediaId, force);
   }
 }
 

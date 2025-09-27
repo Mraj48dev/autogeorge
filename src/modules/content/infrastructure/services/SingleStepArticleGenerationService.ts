@@ -1,7 +1,7 @@
 import { PerplexityService } from './PerplexityService';
 import { Result } from '../../shared/domain/types/Result';
 import { ImageGenerationService } from './ImageGenerationService';
-import { WordPressMediaService, WordPressConfig } from './WordPressMediaService';
+import { WordPressMediaService, WordPressConfig } from '../../../publishing/infrastructure/services/WordPressMediaService';
 
 export interface SingleStepGenerationRequest {
   feedItemContent: string;

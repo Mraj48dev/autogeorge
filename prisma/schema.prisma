@@ -9,14 +9,81 @@ datasource db {
 
 model Article {
   id        String   @id @default(cuid())
+
+  // Campi base dell'articolo
   title     String
   content   String
+  excerpt   String?
   status    String   @default("generated")
-  sourceId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  source    Source?  @relation(fields: [sourceId], references: [id])
+  slug      String?
 
+  // Metadati WordPress
+  wordpressId       Int?        // ID del post su WordPress
+  wordpressSiteId   String?     // Riferimento al sito WordPress
+  wordpressUrl      String?     // URL del post pubblicato
+  wordpressStatus   String?     // draft, publish, private, future
+
+  // Tassonomie
+  categories        Json?       // Array di ID categorie WordPress
+  tags              Json?       // Array di ID tag WordPress
+
+  // Media e allegati
+  featuredMediaId   Int?        // ID immagine in evidenza WordPress
+  featuredMediaUrl  String?     // URL immagine in evidenza
+
+  // Metadati di pubblicazione
+  publishedAt       DateTime?   // Data di pubblicazione
+  scheduledAt       DateTime?   // Data programmata (per status=future)
+  modifiedAt        DateTime?   // Ultima modifica su WordPress
+
+  // Configurazione post
+  postFormat        String?     // standard, aside, gallery, etc.
+  postTemplate      String?     // Template personalizzato
+  postPassword      String?     // Password per contenuti protetti
+
+  // Controlli di interazione
+  commentStatus     String?     // open, closed
+  pingStatus        String?     // open, closed
+  isSticky          Boolean?    // Post in evidenza
+
+  // Metadati autore
+  authorId          Int?        // ID autore WordPress
+  authorName        String?     // Nome autore
+
+  // Custom fields e meta
+  customFields      Json?       // Custom fields del post
+  yoastSeo          Json?       // Metadati Yoast SEO
+  metaFields        Json?       // Altri meta fields
+
+  // Statistiche e tracciamento
+  viewCount         Int?        // Numero di visualizzazioni
+  shareCount        Int?        // Numero di condivisioni
+
+  // Fonte e generazione
+  sourceId          String?     // Fonte da cui è stato generato
+  sourceType        String?     // manual, rss, telegram, etc.
+  sourceUrl         String?     // URL fonte originale
+  sourceTitle       String?     // Titolo fonte
+
+  // AI e generazione
+  aiModel           String?     // Modello AI usato per generazione
+  aiPrompts         Json?       // Prompt utilizzati
+  generationConfig  Json?       // Configurazione generazione
+
+  // Metadati sistema
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  lastSyncAt        DateTime?   // Ultima sincronizzazione con WordPress
+
+  // Relazioni
+  source            Source?     @relation(fields: [sourceId], references: [id])
+  wordpressSite     WordPressSite? @relation(fields: [wordpressSiteId], references: [id])
+
+  @@index([wordpressId, wordpressSiteId])
+  @@index([publishedAt])
+  @@index([status])
+  @@index([sourceType])
+  @@index([createdAt])
   @@map("articles")
 }
 
@@ -153,6 +220,9 @@ model WordPressSite {
   lastError        String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  // Relazioni
+  articles         Article[]
 
   @@map("wordpress_sites")
 }

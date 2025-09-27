@@ -180,30 +180,61 @@ export async function POST(
 
     const createdPost = await response.json();
 
-    // Salva anche nel nostro database per tracciamento
+    // Salva anche nel nostro database per tracciamento completo
     try {
       await prisma.article.create({
         data: {
+          // Campi base dell'articolo
           title: createdPost.title?.rendered || postData.title,
           content: createdPost.content?.rendered || postData.content,
+          excerpt: createdPost.excerpt?.rendered || postData.excerpt || null,
+          status: 'published',
+          slug: createdPost.slug || postData.slug || null,
+
+          // Metadati WordPress
+          wordpressId: createdPost.id,
+          wordpressSiteId: site.id,
+          wordpressUrl: createdPost.link || null,
+          wordpressStatus: createdPost.status || postData.status,
+
+          // Tassonomie
+          categories: createdPost.categories || postData.categories || null,
+          tags: createdPost.tags || postData.tags || null,
+
+          // Media e allegati
+          featuredMediaId: createdPost.featured_media || postData.featured_media || null,
+          featuredMediaUrl: null, // Da popolare in un secondo momento se necessario
+
+          // Metadati di pubblicazione
+          publishedAt: createdPost.status === 'publish' ? new Date(createdPost.date) : null,
+          scheduledAt: createdPost.status === 'future' ? new Date(createdPost.date) : null,
+          modifiedAt: createdPost.modified ? new Date(createdPost.modified) : null,
+
+          // Configurazione post
+          postFormat: postData.format || 'standard',
+          postTemplate: postData.template || null,
+          postPassword: postData.password || null,
+
+          // Controlli di interazione
+          commentStatus: postData.comment_status || null,
+          pingStatus: postData.ping_status || null,
+          isSticky: postData.sticky || false,
+
+          // Metadati autore
+          authorId: createdPost.author || postData.author || null,
+          authorName: null, // Da popolare con lookup utente se necessario
+
+          // Custom fields e meta
+          customFields: postData.meta || null,
+          metaFields: createdPost.meta || null,
+
+          // Fonte e generazione
           sourceType: 'manual',
-          sourceId: site.id,
           sourceUrl: site.url,
           sourceTitle: site.name,
-          wordpressId: createdPost.id,
-          status: 'published',
-          publishedAt: createdPost.status === 'publish' ? new Date(createdPost.date) : null,
-          metadata: {
-            wordpress: {
-              id: createdPost.id,
-              link: createdPost.link,
-              slug: createdPost.slug,
-              status: createdPost.status,
-              categories: createdPost.categories,
-              tags: createdPost.tags,
-              featured_media: createdPost.featured_media
-            }
-          }
+
+          // Metadati sistema
+          lastSyncAt: new Date()
         }
       });
     } catch (dbError) {

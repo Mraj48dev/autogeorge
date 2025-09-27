@@ -36,17 +36,35 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
           );
 
           if (article) {
-            await this.articleRepository.save(article);
-            results.push({
-              feedItemId: feedItem.id,
-              articleId: article.id.getValue(),
-              success: true
-            });
+            // 🚨 CRITICAL FIX: Check Result from repository.save()
+            const saveResult = await this.articleRepository.save(article);
 
-            this.logger.info('Article generated successfully', {
-              feedItemId: feedItem.id,
-              articleId: article.id.getValue()
-            });
+            if (saveResult.isSuccess()) {
+              results.push({
+                feedItemId: feedItem.id,
+                articleId: article.id.getValue(),
+                success: true
+              });
+
+              this.logger.info('Article generated and saved successfully', {
+                feedItemId: feedItem.id,
+                articleId: article.id.getValue(),
+                articleTitle: article.title.getValue()
+              });
+            } else {
+              // Save failed - log the error and mark as failed
+              this.logger.error('Failed to save generated article to database', {
+                feedItemId: feedItem.id,
+                articleId: article.id.getValue(),
+                saveError: saveResult.error
+              });
+
+              results.push({
+                feedItemId: feedItem.id,
+                success: false,
+                error: `Database save failed: ${saveResult.error.message || 'Unknown error'}`
+              });
+            }
           } else {
             results.push({
               feedItemId: feedItem.id,

@@ -28,8 +28,15 @@ export class PrismaArticleRepository implements ArticleRepository {
     try {
       const data = this.toPrismaModel(article);
 
+      console.log(`🗄️ [PrismaArticleRepository] Attempting to save article:`, {
+        id: article.id.getValue(),
+        title: article.title.getValue().substring(0, 50),
+        sourceId: article.sourceId,
+        status: article.status.getValue()
+      });
+
       // Use upsert to handle both creates and updates
-      await this.prisma.article.upsert({
+      const savedArticle = await this.prisma.article.upsert({
         where: { id: article.id.getValue() },
         create: data,
         update: {
@@ -40,8 +47,20 @@ export class PrismaArticleRepository implements ArticleRepository {
         },
       });
 
+      console.log(`✅ [PrismaArticleRepository] Article saved successfully:`, {
+        id: savedArticle.id,
+        title: savedArticle.title.substring(0, 50),
+        sourceId: savedArticle.sourceId
+      });
+
       return Result.success(undefined);
     } catch (error) {
+      console.error(`❌ [PrismaArticleRepository] Save failed:`, {
+        articleId: article.id.getValue(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
       return this.handlePrismaError(error);
     }
   }

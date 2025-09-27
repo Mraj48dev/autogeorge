@@ -299,7 +299,7 @@ export class PrismaArticleRepository implements ArticleRepository {
   /**
    * Converts a domain Article entity to a Prisma model
    */
-  private toPrismaModel(article: Article): Prisma.ArticleCreateInput {
+  private toPrismaModel(article: Article): Prisma.ArticleUncheckedCreateInput {
     return {
       id: article.id.getValue(),
       title: article.title.getValue(),

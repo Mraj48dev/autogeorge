@@ -152,7 +152,13 @@ export default function PublishingPage() {
       const response = await fetch('/api/admin/sites');
       if (response.ok) {
         const data = await response.json();
-        setSites(data.sites || []);
+        const sitesData = data.sites || [];
+        setSites(sitesData);
+
+        // Auto-seleziona il primo sito se ce n'è uno solo
+        if (sitesData.length === 1) {
+          setSelectedSite(sitesData[0].id);
+        }
       }
     } catch (error) {
       console.error('Errore caricamento siti:', error);
@@ -289,7 +295,7 @@ export default function PublishingPage() {
 
   const publishArticle = async () => {
     if (!selectedSite) {
-      setMessage({ type: 'error', text: 'Seleziona un sito per pubblicare' });
+      setMessage({ type: 'error', text: 'Nessun sito WordPress configurato. Configura un sito nelle Impostazioni.' });
       return;
     }
 
@@ -351,12 +357,19 @@ export default function PublishingPage() {
     }
   };
 
+  // Trova il sito selezionato
+  const currentSite = sites.find(site => site.id === selectedSite);
+  const pageTitle = currentSite ? `Pubblicazione ${currentSite.name}` : 'Pubblicazione WordPress';
+
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Pubblicazione WordPress</h1>
+        <h1 className="text-3xl font-bold mb-2">{pageTitle}</h1>
         <p className="text-muted-foreground">
-          Crea e pubblica articoli completi con tutti i campi WordPress disponibili
+          {currentSite
+            ? `Pubblica articoli su ${currentSite.name} (${currentSite.url})`
+            : 'Crea e pubblica articoli completi con tutti i campi WordPress disponibili'
+          }
         </p>
       </div>
 
@@ -371,29 +384,53 @@ export default function PublishingPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Colonna principale - Form contenuto */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Selezione Sito */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Sito di Destinazione
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select value={selectedSite} onValueChange={setSelectedSite}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona un sito WordPress configurato" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites.map((site) => (
-                    <SelectItem key={site.id} value={site.id}>
-                      {site.name} ({site.url})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+          {/* Selezione Sito - Solo se ci sono più siti */}
+          {sites.length > 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Sito di Destinazione
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select value={selectedSite} onValueChange={setSelectedSite}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona un sito WordPress configurato" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sites.map((site) => (
+                      <SelectItem key={site.id} value={site.id}>
+                        {site.name} ({site.url})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Messaggio se nessun sito configurato */}
+          {sites.length === 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Configurazione Richiesta
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground mb-4">
+                    Nessun sito WordPress configurato. Vai nelle Impostazioni per configurare un sito.
+                  </p>
+                  <Button variant="outline" onClick={() => window.location.href = '/admin/settings'}>
+                    Vai alle Impostazioni
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Dati Principali Articolo */}
           <Card>
@@ -870,9 +907,9 @@ export default function PublishingPage() {
                 </Button>
               </div>
 
-              {!selectedSite && (
+              {!selectedSite && sites.length === 0 && (
                 <p className="text-sm text-muted-foreground mt-2 text-center">
-                  Seleziona un sito per abilitare la pubblicazione
+                  Configura un sito WordPress nelle Impostazioni per abilitare la pubblicazione
                 </p>
               )}
             </CardContent>

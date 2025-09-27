@@ -12,7 +12,7 @@ export async function GET(
     const perPage = parseInt(url.searchParams.get('per_page') || '10');
 
     // Recupera i dati del sito dal database
-    const site = await prisma.site.findUnique({
+    const site = await prisma.wordPressSite.findUnique({
       where: { id: siteId }
     });
 
@@ -90,7 +90,7 @@ export async function POST(
     const { siteId } = params;
 
     // Recupera i dati del sito dal database
-    const site = await prisma.site.findUnique({
+    const site = await prisma.wordPressSite.findUnique({
       where: { id: siteId }
     });
 

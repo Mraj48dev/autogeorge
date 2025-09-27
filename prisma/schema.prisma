@@ -25,6 +25,9 @@ model Article {
   status        String      @default("generated")
   slug          String?
 
+  // Nuova struttura JSON articolo
+  articleData   Json?       // Struttura JSON completa dell'articolo (metadati, seo, contenuto, immagine, link)
+
   // Metadati WordPress
   wordpressId       Int?        // ID del post su WordPress
   wordpressSiteId   String?     // Riferimento al sito WordPress
@@ -201,6 +204,7 @@ model GenerationSettings {
   titlePrompt           String
   contentPrompt         String
   seoPrompt             String
+  imagePrompt           String   @default("Genera un'immagine in evidenza per questo articolo")
   defaultModel          String   @default("sonar-pro")
   defaultTemperature    Float    @default(0.7)
   defaultMaxTokens      Int      @default(2000)

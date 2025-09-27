@@ -33,6 +33,7 @@ export class Article extends AggregateRoot<ArticleId> {
   private _sourceId?: string; // ID of the source that triggered generation
   private _generationParams?: GenerationParameters;
   private _publishedAt?: Date;
+  private _articleData?: ArticleJsonData; // Structured JSON data from AI generation
 
   constructor(
     id: ArticleId,
@@ -42,6 +43,7 @@ export class Article extends AggregateRoot<ArticleId> {
     seoMetadata?: SeoMetadata,
     sourceId?: string,
     generationParams?: GenerationParameters,
+    articleData?: ArticleJsonData,
     createdAt?: Date,
     updatedAt?: Date
   ) {
@@ -52,6 +54,7 @@ export class Article extends AggregateRoot<ArticleId> {
     this._seoMetadata = seoMetadata;
     this._sourceId = sourceId;
     this._generationParams = generationParams;
+    this._articleData = articleData;
 
     this.validateInvariants();
   }
@@ -63,7 +66,8 @@ export class Article extends AggregateRoot<ArticleId> {
     title: Title,
     content: Content,
     sourceId?: string,
-    generationParams?: GenerationParameters
+    generationParams?: GenerationParameters,
+    articleData?: ArticleJsonData
   ): Article {
     const id = ArticleId.generate();
     const article = new Article(
@@ -73,7 +77,8 @@ export class Article extends AggregateRoot<ArticleId> {
       ArticleStatus.draft(),
       undefined,
       sourceId,
-      generationParams
+      generationParams,
+      articleData
     );
 
     return article;
@@ -87,7 +92,8 @@ export class Article extends AggregateRoot<ArticleId> {
     content: Content,
     sourceId: string,
     generationParams: GenerationParameters,
-    seoMetadata?: SeoMetadata
+    seoMetadata?: SeoMetadata,
+    articleData?: ArticleJsonData
   ): Article {
     const id = ArticleId.generate();
     const article = new Article(
@@ -97,7 +103,8 @@ export class Article extends AggregateRoot<ArticleId> {
       ArticleStatus.generated(),
       seoMetadata,
       sourceId,
-      generationParams
+      generationParams,
+      articleData
     );
 
     article.addDomainEvent(
@@ -142,6 +149,10 @@ export class Article extends AggregateRoot<ArticleId> {
     return this._publishedAt ? new Date(this._publishedAt) : undefined;
   }
 
+  get articleData(): ArticleJsonData | undefined {
+    return this._articleData;
+  }
+
   /**
    * Updates the article title and content
    */
@@ -173,6 +184,22 @@ export class Article extends AggregateRoot<ArticleId> {
         this.id.getValue(),
         'seo',
         { seoMetadata: seoMetadata.toJSON() }
+      )
+    );
+  }
+
+  /**
+   * Updates the structured article data
+   */
+  updateArticleData(articleData: ArticleJsonData): void {
+    this._articleData = articleData;
+    this.markAsUpdated();
+
+    this.addDomainEvent(
+      new ArticleUpdated(
+        this.id.getValue(),
+        'article_data',
+        { articleData }
       )
     );
   }
@@ -329,6 +356,7 @@ export class Article extends AggregateRoot<ArticleId> {
       sourceId: this._sourceId,
       generationParams: this._generationParams,
       publishedAt: this._publishedAt,
+      articleData: this._articleData,
       stats: this._content.getStats(),
     };
   }
@@ -361,4 +389,33 @@ export interface ArticleSummary {
   createdAt: Date;
   updatedAt: Date;
   publishedAt?: Date;
+}
+
+/**
+ * Structured JSON data format for articles as per content-desiderata.md
+ */
+export interface ArticleJsonData {
+  articolo: {
+    metadati: {
+      titolo: string;
+      slug: string;
+      meta_descrizione: string;
+    };
+    seo: {
+      keyword_principale: string;
+      meta_title: string;
+      meta_description: string;
+    };
+    contenuto: any; // Can be HTML, markdown, or structured content
+    immagine_principale: {
+      comando_ai: string;
+      alt_text: string;
+      caption: string;
+      nome_file: string;
+    };
+    link_interni: Array<{
+      anchor_text: string;
+      url: string;
+    }>;
+  };
 }

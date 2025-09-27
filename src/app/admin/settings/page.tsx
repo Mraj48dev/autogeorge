@@ -7,6 +7,7 @@ interface GenerationConfig {
     titlePrompt: string;
     contentPrompt: string;
     seoPrompt: string;
+    imagePrompt: string;
   };
   modelSettings: {
     model: string;
@@ -148,6 +149,7 @@ export default function SettingsPage() {
           titlePrompt: generationSettings.prompts.titlePrompt,
           contentPrompt: generationSettings.prompts.contentPrompt,
           seoPrompt: generationSettings.prompts.seoPrompt,
+          imagePrompt: generationSettings.prompts.imagePrompt,
           modelSettings: generationSettings.modelSettings,
           languageSettings: generationSettings.languageSettings
         })
@@ -663,6 +665,24 @@ export default function SettingsPage() {
               />
               <p className="text-xs text-gray-500 mt-1">
                 Descrive come generare meta description, tags e parole chiave
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prompt per Immagine in Evidenza
+              </label>
+              <textarea
+                rows={3}
+                value={generationSettings.prompts.imagePrompt}
+                onChange={(e) => updateGenerationSettings({
+                  prompts: { ...generationSettings.prompts, imagePrompt: e.target.value }
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Genera un'immagine in evidenza per questo articolo..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Descrive come generare il comando AI per l'immagine in evidenza
               </p>
             </div>
           </div>

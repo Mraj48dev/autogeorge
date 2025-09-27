@@ -2,7 +2,7 @@ import { CommandUseCase, ExecutionContext } from '../../shared/application/base/
 import { Result } from '../../shared/domain/types/Result';
 import { ArticleRepository } from '../../domain/ports/ArticleRepository';
 import { AiService, ArticleGenerationRequest } from '../../domain/ports/AiService';
-import { Article, GenerationParameters } from '../../domain/entities/Article';
+import { Article, GenerationParameters, ArticleJsonData } from '../../domain/entities/Article';
 import { Title } from '../../domain/value-objects/Title';
 import { Content } from '../../domain/value-objects/Content';
 import { ArticleId } from '../../domain/value-objects/ArticleId';
@@ -104,7 +104,19 @@ export class GenerateArticle extends CommandUseCase<
         return Result.failure(contentResult.error);
       }
 
-      // Step 4: Create article entity
+      // Step 4: Parse the structured JSON response and extract article data
+      let articleData = null;
+      try {
+        const jsonMatch = generatedContent.content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          articleData = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        // If JSON parsing fails, we'll continue with basic structure
+        console.warn('Failed to parse structured JSON response:', e);
+      }
+
+      // Step 5: Create article entity with articleData
       const generationParams: GenerationParameters = {
         prompt: input.prompt,
         model: input.model,
@@ -120,10 +132,12 @@ export class GenerateArticle extends CommandUseCase<
         titleResult.value,
         contentResult.value,
         input.sourceId || 'manual',
-        generationParams
+        generationParams,
+        undefined, // seoMetadata - can be extracted from articleData later
+        articleData // Pass the structured JSON data
       );
 
-      // Step 5: Save the article
+      // Step 6: Save the article
       const saveResult = await this.articleRepository.save(article);
       if (saveResult.isFailure()) {
         return Result.failure(
@@ -159,17 +173,20 @@ export class GenerateArticle extends CommandUseCase<
   }
 
   /**
-   * Builds the AI service request from the use case input
+   * Builds the AI service request with structured JSON prompt
    */
   private buildAiRequest(
     input: GenerateArticleInput,
     context: ExecutionContext
   ): ArticleGenerationRequest {
+    // Build the structured JSON prompt as per content-desiderata.md
+    const structuredPrompt = this.buildStructuredPrompt(input);
+
     return {
-      prompt: input.prompt,
+      prompt: structuredPrompt,
       model: input.model,
       sourceContent: input.sourceContent,
-      language: input.language || 'en',
+      language: input.language || 'it',
       tone: input.tone,
       style: input.style,
       targetAudience: input.targetAudience,
@@ -193,6 +210,45 @@ export class GenerateArticle extends CommandUseCase<
         },
       },
     };
+  }
+
+  /**
+   * Builds the structured prompt according to content-desiderata.md requirements
+   */
+  private buildStructuredPrompt(input: GenerateArticleInput): string {
+    const titlePrompt = input.titlePrompt || 'Genera un titolo accattivante e SEO-friendly';
+    const articlePrompt = input.articlePrompt || 'Scrivi un articolo ben strutturato e informatico';
+    const imagePrompt = input.imagePrompt || 'Genera un\'\'immagine in evidenza per questo articolo';
+    const sourceContent = input.sourceContent || 'contenuto della fonte';
+
+    return `Compila questo JSON per un articolo su ${sourceContent}, per il titolo utilizza queste indicazioni {${titlePrompt}}, per il testo dell'articolo utilizza queste indicazioni {${articlePrompt}} e per la generazione dell'immagine in evidenza usa questo prompt {${imagePrompt}}
+{
+  "articolo": {
+    "metadati": {
+      "titolo": "",
+      "slug": "",
+      "meta_descrizione": ""
+    },
+    "seo": {
+      "keyword_principale": "",
+      "meta_title": "",
+      "meta_description": ""
+    },
+    "contenuto": {},
+    "immagine_principale": {
+      "comando_ai": "",
+      "alt_text": "",
+      "caption": "",
+      "nome_file": ""
+    },
+    "link_interni": [
+      {
+        "anchor_text": "",
+        "url": ""
+      }
+    ]
+  }
+}`;
   }
 
   /**
@@ -247,7 +303,7 @@ export class GenerateArticle extends CommandUseCase<
 }
 
 /**
- * Input for the GenerateArticle use case
+ * Input for the GenerateArticle use case with new structured prompts
  */
 export interface GenerateArticleInput {
   /** The prompt describing what content to generate */
@@ -279,6 +335,16 @@ export interface GenerateArticleInput {
 
   /** Keywords to include in the content */
   keywords?: string[];
+
+  // New structured prompts
+  /** Specific prompt for title generation */
+  titlePrompt?: string;
+
+  /** Specific prompt for article content generation */
+  articlePrompt?: string;
+
+  /** Specific prompt for image generation */
+  imagePrompt?: string;
 
   // AI Generation parameters
   /** Temperature for randomness (0.0-2.0) */

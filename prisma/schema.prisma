@@ -10,18 +10,28 @@ datasource db {
 model Article {
   id        String   @id @default(cuid())
 
-  // Campi base dell'articolo
-  title     String
-  content   String
-  excerpt   String?
-  status    String   @default("generated")
-  slug      String?
+  // Campi base dell'articolo (oggetti WordPress)
+  title         String
+  titleRaw      String?     // title.raw da WordPress
+  titleRendered String?     // title.rendered da WordPress
+  content       String
+  contentRaw    String?     // content.raw da WordPress
+  contentRendered String?   // content.rendered da WordPress
+  contentProtected Boolean? // content.protected da WordPress
+  excerpt       String?
+  excerptRaw    String?     // excerpt.raw da WordPress
+  excerptRendered String?   // excerpt.rendered da WordPress
+  excerptProtected Boolean? // excerpt.protected da WordPress
+  status        String      @default("generated")
+  slug          String?
 
   // Metadati WordPress
   wordpressId       Int?        // ID del post su WordPress
   wordpressSiteId   String?     // Riferimento al sito WordPress
-  wordpressUrl      String?     // URL del post pubblicato
+  wordpressUrl      String?     // URL del post pubblicato (link)
   wordpressStatus   String?     // draft, publish, private, future
+  wordpressType     String?     // Tipo di post WordPress
+  wordpressGuid     Json?       // Globally unique identifier object
 
   // Tassonomie
   categories        Json?       // Array di ID categorie WordPress
@@ -31,10 +41,12 @@ model Article {
   featuredMediaId   Int?        // ID immagine in evidenza WordPress
   featuredMediaUrl  String?     // URL immagine in evidenza
 
-  // Metadati di pubblicazione
-  publishedAt       DateTime?   // Data di pubblicazione
+  // Metadati di pubblicazione (WordPress native)
+  publishedAt       DateTime?   // Data di pubblicazione (date)
+  publishedAtGmt    DateTime?   // Data di pubblicazione GMT (date_gmt)
+  modifiedAt        DateTime?   // Ultima modifica su WordPress (modified)
+  modifiedAtGmt     DateTime?   // Ultima modifica GMT (modified_gmt)
   scheduledAt       DateTime?   // Data programmata (per status=future)
-  modifiedAt        DateTime?   // Ultima modifica su WordPress
 
   // Configurazione post
   postFormat        String?     // standard, aside, gallery, etc.
@@ -54,6 +66,7 @@ model Article {
   customFields      Json?       // Custom fields del post
   yoastSeo          Json?       // Metadati Yoast SEO
   metaFields        Json?       // Altri meta fields
+  wordpressData     Json?       // JSON completo della risposta WordPress
 
   // Statistiche e tracciamento
   viewCount         Int?        // Numero di visualizzazioni

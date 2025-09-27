@@ -180,22 +180,32 @@ export async function POST(
 
     const createdPost = await response.json();
 
-    // Salva anche nel nostro database per tracciamento completo
+    // Salva anche nel nostro database per tracciamento COMPLETO di tutti i campi WordPress
     try {
       await prisma.article.create({
         data: {
-          // Campi base dell'articolo
+          // Campi base dell'articolo (oggetti WordPress)
           title: createdPost.title?.rendered || postData.title,
+          titleRaw: createdPost.title?.raw || null,
+          titleRendered: createdPost.title?.rendered || null,
           content: createdPost.content?.rendered || postData.content,
+          contentRaw: createdPost.content?.raw || null,
+          contentRendered: createdPost.content?.rendered || null,
+          contentProtected: createdPost.content?.protected || null,
           excerpt: createdPost.excerpt?.rendered || postData.excerpt || null,
+          excerptRaw: createdPost.excerpt?.raw || null,
+          excerptRendered: createdPost.excerpt?.rendered || null,
+          excerptProtected: createdPost.excerpt?.protected || null,
           status: 'published',
           slug: createdPost.slug || postData.slug || null,
 
-          // Metadati WordPress
+          // Metadati WordPress COMPLETI
           wordpressId: createdPost.id,
           wordpressSiteId: site.id,
           wordpressUrl: createdPost.link || null,
           wordpressStatus: createdPost.status || postData.status,
+          wordpressType: createdPost.type || 'post',
+          wordpressGuid: createdPost.guid || null,
 
           // Tassonomie
           categories: createdPost.categories || postData.categories || null,
@@ -203,30 +213,33 @@ export async function POST(
 
           // Media e allegati
           featuredMediaId: createdPost.featured_media || postData.featured_media || null,
-          featuredMediaUrl: null, // Da popolare in un secondo momento se necessario
+          featuredMediaUrl: null, // Da popolare con lookup media se necessario
 
-          // Metadati di pubblicazione
-          publishedAt: createdPost.status === 'publish' ? new Date(createdPost.date) : null,
-          scheduledAt: createdPost.status === 'future' ? new Date(createdPost.date) : null,
+          // Metadati di pubblicazione (WordPress native)
+          publishedAt: createdPost.date ? new Date(createdPost.date) : null,
+          publishedAtGmt: createdPost.date_gmt ? new Date(createdPost.date_gmt) : null,
           modifiedAt: createdPost.modified ? new Date(createdPost.modified) : null,
+          modifiedAtGmt: createdPost.modified_gmt ? new Date(createdPost.modified_gmt) : null,
+          scheduledAt: createdPost.status === 'future' ? new Date(createdPost.date) : null,
 
           // Configurazione post
-          postFormat: postData.format || 'standard',
-          postTemplate: postData.template || null,
+          postFormat: createdPost.format || postData.format || 'standard',
+          postTemplate: createdPost.template || postData.template || null,
           postPassword: postData.password || null,
 
           // Controlli di interazione
-          commentStatus: postData.comment_status || null,
-          pingStatus: postData.ping_status || null,
-          isSticky: postData.sticky || false,
+          commentStatus: createdPost.comment_status || postData.comment_status || null,
+          pingStatus: createdPost.ping_status || postData.ping_status || null,
+          isSticky: createdPost.sticky || postData.sticky || false,
 
           // Metadati autore
           authorId: createdPost.author || postData.author || null,
           authorName: null, // Da popolare con lookup utente se necessario
 
-          // Custom fields e meta
+          // Custom fields e meta COMPLETI
           customFields: postData.meta || null,
           metaFields: createdPost.meta || null,
+          wordpressData: createdPost, // JSON completo della risposta WordPress
 
           // Fonte e generazione
           sourceType: 'manual',

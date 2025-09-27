@@ -1,4 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
+import { Result } from '../../shared/domain/types/Result';
 
 export interface WordPressMediaUpload {
   file: File;

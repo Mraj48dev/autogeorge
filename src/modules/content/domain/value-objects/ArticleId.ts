@@ -16,7 +16,7 @@ export class ArticleId extends StringValueObject {
   private static readonly UUID_PATTERN = /^art_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   protected validate(value: string): void {
-    this.validateNotEmpty();
+    this.validateNotEmpty(value);
 
     if (!ArticleId.UUID_PATTERN.test(value)) {
       throw new Error(

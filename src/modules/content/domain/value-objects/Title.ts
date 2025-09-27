@@ -24,20 +24,20 @@ export class Title extends StringValueObject {
   private static readonly SPECIAL_CHAR_PATTERN = /[^a-zA-Z0-9\s\-.,!?:;'"()]/g;
 
   protected validate(value: string): void {
-    this.validateNotEmpty();
-    this.validateLength();
-    this.validateContent();
+    this.validateNotEmpty(value);
+    this.validateLength(value);
+    this.validateContent(value);
   }
 
-  protected validateNotEmpty(): void {
+  protected validateNotEmpty(value: string): void {
     // Allow empty titles for RSS content - will be handled gracefully
-    if (this.value === null || this.value === undefined) {
+    if (value === null || value === undefined) {
       throw new Error('Title cannot be null or undefined');
     }
   }
 
-  private validateLength(): void {
-    const trimmedValue = this.value.trim();
+  private validateLength(value: string): void {
+    const trimmedValue = value.trim();
 
     // Skip length validation for empty strings (RSS feeds might have empty titles)
     if (trimmedValue.length === 0) {
@@ -57,26 +57,26 @@ export class Title extends StringValueObject {
     }
   }
 
-  private validateContent(): void {
+  private validateContent(value: string): void {
     // Check for HTML tags
-    if (Title.HTML_TAG_PATTERN.test(this.value)) {
+    if (Title.HTML_TAG_PATTERN.test(value)) {
       throw new Error('Title cannot contain HTML tags');
     }
 
     // Check for excessive special characters
-    const specialChars = this.value.match(Title.SPECIAL_CHAR_PATTERN) || [];
-    const specialCharPercentage = specialChars.length / this.value.length;
+    const specialChars = value.match(Title.SPECIAL_CHAR_PATTERN) || [];
+    const specialCharPercentage = specialChars.length / value.length;
 
     if (specialCharPercentage > 0.2) {
       throw new Error('Title contains too many special characters');
     }
 
     // Check for common problematic patterns
-    if (this.value.includes('  ')) {
+    if (value.includes('  ')) {
       throw new Error('Title cannot contain multiple consecutive spaces');
     }
 
-    if (/^\s|\s$/.test(this.value)) {
+    if (/^\s|\s$/.test(value)) {
       throw new Error('Title cannot start or end with whitespace');
     }
   }

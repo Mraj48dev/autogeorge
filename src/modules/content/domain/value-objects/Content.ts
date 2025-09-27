@@ -22,20 +22,20 @@ export class Content extends StringValueObject {
   private static readonly DANGEROUS_ATTRIBUTES = /on\w+\s*=/gi;
 
   protected validate(value: string): void {
-    this.validateNotEmpty();
-    this.validateLength();
-    this.validateSafety();
+    this.validateNotEmpty(value);
+    this.validateLength(value);
+    this.validateSafety(value);
   }
 
-  protected validateNotEmpty(): void {
+  protected validateNotEmpty(value: string): void {
     // Allow empty content for RSS feeds - will be handled gracefully
-    if (this.value === null || this.value === undefined) {
+    if (value === null || value === undefined) {
       throw new Error('Content cannot be null or undefined');
     }
   }
 
-  private validateLength(): void {
-    const cleanContent = this.stripHtmlTags(this.value);
+  private validateLength(value: string): void {
+    const cleanContent = this.stripHtmlTags(value);
 
     // Skip length validation for empty content (RSS feeds might have empty content)
     if (cleanContent.length === 0) {
@@ -48,21 +48,21 @@ export class Content extends StringValueObject {
       );
     }
 
-    if (this.value.length > Content.MAX_LENGTH) {
+    if (value.length > Content.MAX_LENGTH) {
       throw new Error(
         `Article content cannot exceed ${Content.MAX_LENGTH} characters`
       );
     }
   }
 
-  private validateSafety(): void {
+  private validateSafety(value: string): void {
     // Check for script tags
-    if (Content.SCRIPT_PATTERN.test(this.value)) {
+    if (Content.SCRIPT_PATTERN.test(value)) {
       throw new Error('Article content cannot contain script tags');
     }
 
     // Check for dangerous event attributes (onclick, onload, etc.)
-    if (Content.DANGEROUS_ATTRIBUTES.test(this.value)) {
+    if (Content.DANGEROUS_ATTRIBUTES.test(value)) {
       throw new Error('Article content cannot contain event handler attributes');
     }
   }

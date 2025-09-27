@@ -80,6 +80,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </li>
               <li>
                 <Link
+                  href="/admin/publishing"
+                  className="flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-5 h-5 mr-3 bg-red-100 rounded flex items-center justify-center">
+                    <span className="text-red-600 text-xs font-bold">📤</span>
+                  </div>
+                  <span className="font-medium">Publishing</span>
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/admin/settings"
                   className="flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                 >

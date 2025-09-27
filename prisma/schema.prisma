@@ -201,7 +201,7 @@ model GenerationSettings {
   titlePrompt           String
   contentPrompt         String
   seoPrompt             String
-  defaultModel          String   @default("gpt-4")
+  defaultModel          String   @default("sonar-pro")
   defaultTemperature    Float    @default(0.7)
   defaultMaxTokens      Int      @default(2000)
   defaultLanguage       String   @default("it")

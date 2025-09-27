@@ -100,31 +100,28 @@ export abstract class ValueObject<T> {
  * Base class for string-based value objects with common validation
  */
 export abstract class StringValueObject extends ValueObject<string> {
-  protected validateNotEmpty(): void {
-    if (!this.value || this.value.trim().length === 0) {
-      throw new Error(`${this.constructor.name} cannot be empty`);
+  protected validateNotEmpty(value?: string): void {
+    const val = value ?? this.value;
+    if (!val || (typeof val === 'string' && val.trim().length === 0)) {
+      throw new Error(`Value cannot be empty`);
     }
   }
 
   protected validateMaxLength(maxLength: number): void {
     if (this.value.length > maxLength) {
-      throw new Error(
-        `${this.constructor.name} cannot exceed ${maxLength} characters`
-      );
+      throw new Error(`Value cannot exceed ${maxLength} characters`);
     }
   }
 
   protected validateMinLength(minLength: number): void {
     if (this.value.length < minLength) {
-      throw new Error(
-        `${this.constructor.name} must be at least ${minLength} characters`
-      );
+      throw new Error(`Value must be at least ${minLength} characters`);
     }
   }
 
   protected validatePattern(pattern: RegExp, errorMessage: string): void {
     if (!pattern.test(this.value)) {
-      throw new Error(`${this.constructor.name}: ${errorMessage}`);
+      throw new Error(`Validation failed: ${errorMessage}`);
     }
   }
 }
@@ -135,27 +132,25 @@ export abstract class StringValueObject extends ValueObject<string> {
 export abstract class NumericValueObject extends ValueObject<number> {
   protected validatePositive(): void {
     if (this.value <= 0) {
-      throw new Error(`${this.constructor.name} must be positive`);
+      throw new Error(`Value must be positive`);
     }
   }
 
   protected validateNonNegative(): void {
     if (this.value < 0) {
-      throw new Error(`${this.constructor.name} cannot be negative`);
+      throw new Error(`Value cannot be negative`);
     }
   }
 
   protected validateRange(min: number, max: number): void {
     if (this.value < min || this.value > max) {
-      throw new Error(
-        `${this.constructor.name} must be between ${min} and ${max}`
-      );
+      throw new Error(`Value must be between ${min} and ${max}`);
     }
   }
 
   protected validateInteger(): void {
     if (!Number.isInteger(this.value)) {
-      throw new Error(`${this.constructor.name} must be an integer`);
+      throw new Error(`Value must be an integer`);
     }
   }
 }

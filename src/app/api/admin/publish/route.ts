@@ -76,6 +76,9 @@ export async function POST(request: NextRequest) {
         if (metadata.tags) {
           postData.tags = metadata.tags;
         }
+        if (metadata.featuredMediaId) {
+          postData.featured_media = metadata.featuredMediaId;
+        }
 
         console.log('API - Post data prepared:', JSON.stringify(postData));
 

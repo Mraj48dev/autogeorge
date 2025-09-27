@@ -402,6 +402,7 @@ export interface PublicationMetadata {
   content?: string;
   excerpt?: string;
   featuredImageUrl?: string;
+  featuredMediaId?: number; // ID dell'immagine in evidenza su WordPress
   tags?: string[];
   categories?: string[];
   customFields?: Record<string, any>;

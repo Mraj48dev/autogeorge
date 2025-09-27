@@ -63,6 +63,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Get WordPress configuration for image upload (if available)
+    const wordpressSite = await prisma.wordPressSite.findUnique({
+      where: { userId }
+    });
+
+    let wordpressConfig = undefined;
+    if (wordpressSite && body.generateFeaturedImage) {
+      wordpressConfig = {
+        siteUrl: wordpressSite.url,
+        username: wordpressSite.username,
+        password: wordpressSite.password
+      };
+    }
+
     // Use custom prompts if provided, otherwise use default settings
     const titlePrompt = body.customPrompts?.titlePrompt || settings.titlePrompt;
     const contentPrompt = body.customPrompts?.contentPrompt || settings.contentPrompt;
@@ -102,7 +116,9 @@ export async function POST(request: NextRequest) {
         tone: body.settings?.tone || settings.defaultTone,
         style: body.settings?.style || settings.defaultStyle,
         targetAudience: body.settings?.targetAudience || settings.defaultTargetAudience
-      }
+      },
+      wordpressConfig,
+      generateFeaturedImage: body.generateFeaturedImage || false
     });
 
     if (generationResult.isFailure()) {
@@ -126,7 +142,9 @@ export async function POST(request: NextRequest) {
         title: result.title,
         content: result.content,
         status: 'generated',
-        sourceId: feedItem.sourceId
+        sourceId: feedItem.sourceId,
+        featuredMediaId: result.featuredImageId || null,
+        featuredMediaUrl: result.featuredImageUrl || null
       }
     });
 
@@ -164,7 +182,11 @@ export async function POST(request: NextRequest) {
           workflow: 'single-step-unified',
           metaDescription: result.metaDescription,
           seoTags: result.seoTags,
-          statistics: result.statistics
+          statistics: result.statistics,
+          featuredImage: result.featuredImageId ? {
+            id: result.featuredImageId,
+            url: result.featuredImageUrl
+          } : null
         }
       }
     });

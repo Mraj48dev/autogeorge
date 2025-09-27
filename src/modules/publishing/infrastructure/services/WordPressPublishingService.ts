@@ -478,6 +478,11 @@ export class WordPressPublishingService implements PublishingService {
       postData.meta = { ...config.customFields, ...metadata.customFields };
     }
 
+    // Immagine in evidenza
+    if (metadata.featuredMediaId) {
+      postData.featured_media = metadata.featuredMediaId;
+    }
+
     return postData;
   }
 

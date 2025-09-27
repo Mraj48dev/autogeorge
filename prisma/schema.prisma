@@ -40,7 +40,7 @@ model Article {
   // Media e allegati
   featuredMediaId   Int?        // ID immagine in evidenza WordPress
   featuredMediaUrl  String?     // URL immagine in evidenza
-  featuredMedia     WordPressMedia? @relation("FeaturedMedia", fields: [featuredMediaId], references: [wordpressId])
+  featuredMedia     WordPressMedia? @relation("FeaturedMedia", fields: [featuredMediaId, wordpressSiteId], references: [wordpressId, wordpressSiteId])
 
   // Metadati di pubblicazione (WordPress native)
   publishedAt       DateTime?   // Data di pubblicazione (date)
@@ -295,7 +295,7 @@ model WordPressMedia {
   wordpressSite    WordPressSite @relation(fields: [wordpressSiteId], references: [id])
   articlesAsFeature Article[] @relation("FeaturedMedia")
 
-  @@index([wordpressId, wordpressSiteId])
+  @@unique([wordpressId, wordpressSiteId])
   @@index([mediaType])
   @@index([uploadedAt])
   @@map("wordpress_media")

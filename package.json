@@ -9,7 +9,7 @@
     "build:prod": "npm run build && prisma db push",
     "build:vercel": "prisma generate && next build",
     "start": "next start",
-    "vercel-build": "prisma generate && (prisma db push || echo 'Database unavailable, continuing with in-memory fallback') && next build",
+    "vercel-build": "npm install && prisma generate && (prisma db push || echo 'Database unavailable, continuing with in-memory fallback') && next build",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",

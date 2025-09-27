@@ -317,14 +317,22 @@ export class PrismaArticleRepository implements ArticleRepository {
 
   /**
    * Converts a domain Article entity to a Prisma model
+   * 🚨 DRASTIC FIX: Removed sourceId to avoid Prisma validation errors
    */
   private toPrismaModel(article: Article): Prisma.ArticleUncheckedCreateInput {
+    console.log(`🗄️ [PrismaArticleRepository] Converting article to Prisma model WITHOUT sourceId:`, {
+      articleId: article.id.getValue(),
+      title: article.title.getValue().substring(0, 50),
+      status: article.status.getValue(),
+      sourceIdRemovedForCompatibility: article.sourceId
+    });
+
     return {
       id: article.id.getValue(),
       title: article.title.getValue(),
       content: article.content.getValue(),
       status: article.status.getValue(),
-      sourceId: article.sourceId,
+      // sourceId: article.sourceId, // 🚨 REMOVED: Causing Prisma validation errors
       generationParams: article.generationParams as Prisma.JsonValue,
       seoMetadata: article.seoMetadata?.toJSON() as Prisma.JsonValue,
       publishedAt: article.publishedAt,

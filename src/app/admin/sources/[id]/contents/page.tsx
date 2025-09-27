@@ -41,6 +41,7 @@ export default function SourceContenutiPage() {
     contentPrompt: '',
     seoPrompt: ''
   });
+  const [generateFeaturedImage, setGenerateFeaturedImage] = useState(false);
 
   useEffect(() => {
     if (sourceId) {
@@ -123,7 +124,8 @@ export default function SourceContenutiPage() {
 
       const payload = {
         feedItemId: contenuto.id,
-        customPrompts: useCustomPrompts ? customPrompts : undefined
+        customPrompts: useCustomPrompts ? customPrompts : undefined,
+        generateFeaturedImage: useCustomPrompts ? generateFeaturedImage : false
       };
 
       const response = await fetch('/api/admin/generate-article-manually', {
@@ -142,9 +144,7 @@ export default function SourceContenutiPage() {
         await fetchSourceAndArticles();
 
         // Close modal if open
-        setShowPromptModal(false);
-        setSelectedContent(null);
-        setCustomPrompts({ titlePrompt: '', contentPrompt: '', seoPrompt: '' });
+        closePromptModal();
       } else {
         alert('Errore durante la generazione: ' + data.error);
       }
@@ -163,6 +163,13 @@ export default function SourceContenutiPage() {
   const openPromptModal = (contenuto: Contenuto) => {
     setSelectedContent(contenuto);
     setShowPromptModal(true);
+  };
+
+  const closePromptModal = () => {
+    setShowPromptModal(false);
+    setSelectedContent(null);
+    setCustomPrompts({ titlePrompt: '', contentPrompt: '', seoPrompt: '' });
+    setGenerateFeaturedImage(false);
   };
 
 
@@ -360,14 +367,14 @@ export default function SourceContenutiPage() {
 
         {/* Custom Prompts Modal */}
         {showPromptModal && selectedContent && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onClick={() => setShowPromptModal(false)}>
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onClick={closePromptModal}>
             <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-lg bg-white" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center border-b pb-4 mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
                   Genera Articolo con Prompt Personalizzati
                 </h2>
                 <button
-                  onClick={() => setShowPromptModal(false)}
+                  onClick={closePromptModal}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -425,11 +432,29 @@ export default function SourceContenutiPage() {
                     placeholder="Includi meta description, tags pertinenti e parole chiave..."
                   />
                 </div>
+
+                <div className="border-t pt-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="generateFeaturedImage"
+                      checked={generateFeaturedImage}
+                      onChange={(e) => setGenerateFeaturedImage(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="generateFeaturedImage" className="ml-2 block text-sm text-gray-700">
+                      <span className="font-medium">Genera immagine in evidenza automaticamente</span>
+                      <div className="text-xs text-gray-500 mt-1">
+                        🖼️ Trova e carica automaticamente un'immagine pertinente su WordPress
+                      </div>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
                 <button
-                  onClick={() => setShowPromptModal(false)}
+                  onClick={closePromptModal}
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Annulla

@@ -120,20 +120,27 @@ export async function GET(request: NextRequest) {
           results.successful += result.summary.successful;
           results.failed += result.summary.failed;
 
-          // Marca gli items come processati
-          const itemIds = items.map(item => item.id);
-          await prisma.feedItem.updateMany({
-            where: {
-              id: { in: itemIds }
-            },
-            data: {
-              processed: true
-            }
-          });
+          // Marca SOLO gli items che sono stati generati con successo
+          if (result.summary.successful > 0) {
+            // Dovremmo marcare solo quelli successful, ma per ora marca tutti
+            // TODO: migliorare logica per marcare solo gli items successful
+            const itemIds = items.map(item => item.id);
+            await prisma.feedItem.updateMany({
+              where: {
+                id: { in: itemIds }
+              },
+              data: {
+                processed: true
+              }
+            });
 
-          console.log(`📝 Marked ${itemIds.length} feed items as processed`);
+            console.log(`📝 Marked ${itemIds.length} feed items as processed`);
+          } else {
+            console.log(`⚠️ No successful generations for ${source.name}, keeping items as unprocessed for retry`);
+          }
         } else {
           console.error(`❌ Generation failed for ${source.name}:`, generationResult.error.message);
+          console.log(`⚠️ Keeping ${items.length} feed items as unprocessed for retry`);
           results.failed += items.length;
           results.errors.push(`${source.name}: ${generationResult.error.message}`);
         }

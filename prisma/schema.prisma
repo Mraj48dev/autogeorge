@@ -40,6 +40,7 @@ model Article {
   // Media e allegati
   featuredMediaId   Int?        // ID immagine in evidenza WordPress
   featuredMediaUrl  String?     // URL immagine in evidenza
+  featuredMedia     WordPressMedia? @relation("FeaturedMedia", fields: [featuredMediaId], references: [wordpressId])
 
   // Metadati di pubblicazione (WordPress native)
   publishedAt       DateTime?   // Data di pubblicazione (date)
@@ -236,8 +237,68 @@ model WordPressSite {
 
   // Relazioni
   articles         Article[]
+  media            WordPressMedia[]
 
   @@map("wordpress_sites")
+}
+
+model WordPressMedia {
+  id               String   @id @default(cuid())
+
+  // Metadati WordPress Media
+  wordpressId      Int      // ID del media su WordPress
+  wordpressSiteId  String   // Riferimento al sito WordPress
+  status           String   // publish, draft, etc.
+  slug             String?  // Identificatore univoco
+  author           Int?     // ID autore che ha caricato
+
+  // Date WordPress native
+  uploadedAt       DateTime? // data caricamento
+  uploadedAtGmt    DateTime? // data caricamento GMT
+  modifiedAt       DateTime? // ultima modifica
+  modifiedAtGmt    DateTime? // ultima modifica GMT
+
+  // Metadati base del file
+  title            String?   // Titolo del media
+  altText          String?   // Testo alternativo (importante per SEO)
+  caption          String?   // Didascalia
+  description      String?   // Descrizione completa
+
+  // Informazioni tecniche del file
+  mediaType        String?   // image, file, video, audio
+  mimeType         String?   // image/jpeg, image/png, etc.
+  sourceUrl        String    // URL originale del file
+  link             String?   // URL pagina media WordPress
+
+  // Dettagli tecnici avanzati
+  fileSize         Int?      // Dimensione in bytes
+  fileName         String?   // Nome file originale
+  width            Int?      // Larghezza immagine
+  height           Int?      // Altezza immagine
+
+  // Metadati WordPress avanzati
+  guid             Json?     // Globally unique identifier
+  mediaDetails     Json?     // Dettagli specifici media (sizes, exif, etc.)
+  postId           Int?      // ID post associato (se allegato)
+
+  // Metadati aggiuntivi
+  customFields     Json?     // Custom fields del media
+  metaFields       Json?     // Meta fields WordPress
+  wordpressData    Json?     // JSON completo risposta WordPress
+
+  // Metadati sistema
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  lastSyncAt       DateTime? // Ultima sincronizzazione
+
+  // Relazioni
+  wordpressSite    WordPressSite @relation(fields: [wordpressSiteId], references: [id])
+  articlesAsFeature Article[] @relation("FeaturedMedia")
+
+  @@index([wordpressId, wordpressSiteId])
+  @@index([mediaType])
+  @@index([uploadedAt])
+  @@map("wordpress_media")
 }
 
 model Publication {

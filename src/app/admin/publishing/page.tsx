@@ -128,6 +128,12 @@ export default function PublishingPage() {
   // Stati per il caricamento immagini
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [mediaMetadata, setMediaMetadata] = useState({
+    title: '',
+    alt_text: '',
+    caption: '',
+    description: ''
+  });
 
   // Stati UI
   const [isLoading, setIsLoading] = useState(false);
@@ -208,7 +214,7 @@ export default function PublishingPage() {
     }
   };
 
-  const uploadMedia = async () => {
+  const uploadMediaWithMetadata = async () => {
     if (!selectedSite || selectedFiles.length === 0) return;
 
     setUploadingMedia(true);
@@ -218,9 +224,12 @@ export default function PublishingPage() {
       for (const file of selectedFiles) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('title', file.name);
-        formData.append('alt_text', '');
-        formData.append('caption', '');
+
+        // Usa i metadati dal form o defaults intelligenti
+        formData.append('title', mediaMetadata.title || file.name.replace(/\.[^/.]+$/, ''));
+        formData.append('alt_text', mediaMetadata.alt_text || '');
+        formData.append('caption', mediaMetadata.caption || '');
+        formData.append('description', mediaMetadata.description || '');
 
         const response = await fetch(`/api/admin/wordpress/${selectedSite}/media`, {
           method: 'POST',
@@ -230,12 +239,21 @@ export default function PublishingPage() {
         if (response.ok) {
           const mediaData = await response.json();
           uploaded.push(mediaData.media);
+
+          // Auto-seleziona la prima immagine come featured media se non ce n'è una
+          if (uploaded.length === 1 && postData.featured_media === 0) {
+            setPostData({ ...postData, featured_media: mediaData.media.id });
+          }
         }
       }
 
       setUploadedMedia(prev => [...prev, ...uploaded]);
       setSelectedFiles([]);
-      setMessage({ type: 'success', text: `${uploaded.length} file caricati con successo` });
+      setMediaMetadata({ title: '', alt_text: '', caption: '', description: '' }); // Reset form
+      setMessage({
+        type: 'success',
+        text: `${uploaded.length} file caricati con successo. ${uploaded.length > 0 && postData.featured_media === uploaded[0].id ? 'Impostato come immagine in evidenza.' : ''}`
+      });
     } catch (error) {
       console.error('Errore upload media:', error);
       setMessage({ type: 'error', text: 'Errore durante il caricamento dei file' });
@@ -520,7 +538,7 @@ export default function PublishingPage() {
                   </div>
 
                   {selectedFiles.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       <Label>File Selezionati:</Label>
                       {selectedFiles.map((file, index) => (
                         <div key={index} className="flex items-center justify-between p-2 border rounded">
@@ -534,13 +552,63 @@ export default function PublishingPage() {
                           </Button>
                         </div>
                       ))}
+
+                      {/* Metadati Immagine */}
+                      <div className="space-y-3 border-t pt-4">
+                        <Label className="text-sm font-medium">Metadati Immagine (applicati a tutti i file)</Label>
+
+                        <div>
+                          <Label htmlFor="media-title">Titolo</Label>
+                          <Input
+                            id="media-title"
+                            value={mediaMetadata.title}
+                            onChange={(e) => setMediaMetadata({ ...mediaMetadata, title: e.target.value })}
+                            placeholder="Titolo dell'immagine (opzionale)"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="media-alt">Testo Alternativo (ALT) *</Label>
+                          <Input
+                            id="media-alt"
+                            value={mediaMetadata.alt_text}
+                            onChange={(e) => setMediaMetadata({ ...mediaMetadata, alt_text: e.target.value })}
+                            placeholder="Descrizione per accessibilità e SEO"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Importante per SEO e accessibilità
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="media-caption">Didascalia</Label>
+                          <Input
+                            id="media-caption"
+                            value={mediaMetadata.caption}
+                            onChange={(e) => setMediaMetadata({ ...mediaMetadata, caption: e.target.value })}
+                            placeholder="Didascalia visibile sotto l'immagine"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="media-description">Descrizione</Label>
+                          <Textarea
+                            id="media-description"
+                            value={mediaMetadata.description}
+                            onChange={(e) => setMediaMetadata({ ...mediaMetadata, description: e.target.value })}
+                            placeholder="Descrizione dettagliata dell'immagine"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+
                       <Button
-                        onClick={uploadMedia}
+                        onClick={uploadMediaWithMetadata}
                         disabled={uploadingMedia || !selectedSite}
                         className="w-full"
                       >
                         <Upload className="h-4 w-4 mr-2" />
-                        {uploadingMedia ? 'Caricamento...' : 'Carica File'}
+                        {uploadingMedia ? 'Caricamento...' : 'Carica File con Metadati'}
                       </Button>
                     </div>
                   )}

@@ -129,7 +129,61 @@ export async function POST(
 
     const uploadedMedia = await response.json();
 
-    // Mappa il media nel formato necessario
+    // Salva il media nel nostro database con TUTTI i metadati WordPress
+    try {
+      await prisma.wordPressMedia.create({
+        data: {
+          // Metadati WordPress Media
+          wordpressId: uploadedMedia.id,
+          wordpressSiteId: site.id,
+          status: uploadedMedia.status || 'publish',
+          slug: uploadedMedia.slug || null,
+          author: uploadedMedia.author || null,
+
+          // Date WordPress native
+          uploadedAt: uploadedMedia.date ? new Date(uploadedMedia.date) : null,
+          uploadedAtGmt: uploadedMedia.date_gmt ? new Date(uploadedMedia.date_gmt) : null,
+          modifiedAt: uploadedMedia.modified ? new Date(uploadedMedia.modified) : null,
+          modifiedAtGmt: uploadedMedia.modified_gmt ? new Date(uploadedMedia.modified_gmt) : null,
+
+          // Metadati base del file
+          title: uploadedMedia.title?.rendered || title || uploadedMedia.slug,
+          altText: uploadedMedia.alt_text || altText || null,
+          caption: uploadedMedia.caption?.rendered || caption || null,
+          description: uploadedMedia.description?.rendered || null,
+
+          // Informazioni tecniche del file
+          mediaType: uploadedMedia.media_type || 'image',
+          mimeType: uploadedMedia.mime_type || file.type,
+          sourceUrl: uploadedMedia.source_url,
+          link: uploadedMedia.link || null,
+
+          // Dettagli tecnici avanzati
+          fileSize: uploadedMedia.media_details?.filesize || file.size || null,
+          fileName: uploadedMedia.media_details?.file || file.name || null,
+          width: uploadedMedia.media_details?.width || null,
+          height: uploadedMedia.media_details?.height || null,
+
+          // Metadati WordPress avanzati
+          guid: uploadedMedia.guid || null,
+          mediaDetails: uploadedMedia.media_details || null,
+          postId: uploadedMedia.post || null,
+
+          // Metadati aggiuntivi
+          customFields: null, // Da popolare con custom fields se necessario
+          metaFields: uploadedMedia.meta || null,
+          wordpressData: uploadedMedia, // JSON completo della risposta WordPress
+
+          // Metadati sistema
+          lastSyncAt: new Date()
+        }
+      });
+    } catch (dbError) {
+      console.error('Errore salvataggio media nel database:', dbError);
+      // Non bloccare la risposta se il salvataggio locale fallisce
+    }
+
+    // Mappa il media nel formato necessario per il frontend
     const mappedMedia = {
       id: uploadedMedia.id,
       title: uploadedMedia.title?.rendered || uploadedMedia.slug,
@@ -138,7 +192,10 @@ export async function POST(
       caption: uploadedMedia.caption?.rendered || '',
       media_type: uploadedMedia.media_type,
       mime_type: uploadedMedia.mime_type,
-      media_details: uploadedMedia.media_details
+      media_details: uploadedMedia.media_details,
+      file_size: uploadedMedia.media_details?.filesize,
+      width: uploadedMedia.media_details?.width,
+      height: uploadedMedia.media_details?.height
     };
 
     return NextResponse.json({

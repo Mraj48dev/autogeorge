@@ -159,9 +159,9 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       fullGeneratedObject: generated
     });
 
-    // Extract title and content with explicit null checking
-    const titleValue = generated?.title || generated?.fullGenerated?.title || '';
-    const contentValue = generated?.content || generated?.fullGenerated?.content || '';
+    // Extract title and content with explicit null checking and force string conversion
+    const titleValue = String(generated?.title || generated?.fullGenerated?.title || 'Generated Article');
+    const contentValue = String(generated?.content || generated?.fullGenerated?.content || 'Generated content');
 
     // 🚨 FINAL DEBUG: What are we actually passing to Value Objects?
     this.logger.info('FINAL VALUE OBJECTS INPUT [DEBUG-v4]', {

@@ -501,7 +501,10 @@ export class WordPressPublishingService implements PublishingService {
       postData.slug = content.slug || metadata.slug;
     }
 
-    if (content.excerpt || metadata.excerpt) {
+    // ✅ ENHANCED: Use meta description as excerpt if provided
+    if (metadata.yoast_wpseo_metadesc) {
+      postData.excerpt = metadata.yoast_wpseo_metadesc;
+    } else if (content.excerpt || metadata.excerpt) {
       postData.excerpt = content.excerpt || metadata.excerpt;
     }
 
@@ -543,8 +546,19 @@ export class WordPressPublishingService implements PublishingService {
     }
 
     // ✅ YOAST SEO: Add Yoast meta description if provided
+    // Note: Different field names for different WordPress setups
     if (metadata.yoast_wpseo_metadesc) {
+      // Try multiple field name formats for Yoast SEO compatibility
       metaFields._yoast_wpseo_metadesc = metadata.yoast_wpseo_metadesc;
+      metaFields.yoast_wpseo_metadesc = metadata.yoast_wpseo_metadesc;
+      metaFields._aioseop_description = metadata.yoast_wpseo_metadesc; // All in One SEO fallback
+
+      // ✅ YOAST HEAD JSON: Try Yoast's structured format
+      metaFields.yoast_head_json = JSON.stringify({
+        description: metadata.yoast_wpseo_metadesc,
+        og_description: metadata.yoast_wpseo_metadesc,
+        twitter_description: metadata.yoast_wpseo_metadesc
+      });
     }
 
     // Only add meta object if we have fields to add
@@ -573,7 +587,12 @@ export class WordPressPublishingService implements PublishingService {
       hasMetaFields: !!postData.meta,
       metaFieldsCount: postData.meta ? Object.keys(postData.meta).length : 0,
       hasYoastMetaDesc: !!(postData.meta && postData.meta._yoast_wpseo_metadesc),
-      yoastMetaDescLength: postData.meta?._yoast_wpseo_metadesc?.length || 0
+      yoastMetaDescLength: postData.meta?._yoast_wpseo_metadesc?.length || 0,
+      // ✅ ENHANCED: Debug all Yoast field attempts
+      yoastFieldsAttempted: postData.meta ? Object.keys(postData.meta).filter(key =>
+        key.includes('yoast') || key.includes('seo') || key.includes('description')
+      ) : [],
+      excerptUsedAsMetaDesc: !!(metadata.yoast_wpseo_metadesc && postData.excerpt === metadata.yoast_wpseo_metadesc)
     });
 
     return postData;

@@ -312,10 +312,20 @@ export default function ArticlesBySourcePage() {
       if (result.success) {
         setImageSearchResult(result.data);
         console.log('✅ [Frontend] Image search successful:', result.data);
-        alert(`Immagine trovata con successo!\nURL: ${result.data.image.url}\nFonte: ${result.data.metadata.provider}`);
+
+        // Enhanced success message with image details
+        const wasGenerated = result.data.metadata.wasGenerated;
+        const provider = result.data.metadata.provider;
+        const imageUrl = result.data.image.url;
+
+        alert(`🖼️ Immagine in evidenza trovata!\n\n` +
+              `${wasGenerated ? '🎨 Generata con AI' : '📷 Trovata su fonte libera'}\n` +
+              `Fonte: ${provider}\n` +
+              `URL: ${imageUrl.substring(0, 50)}...\n\n` +
+              `✅ Pronta per la pubblicazione su WordPress!`);
       } else {
         console.error('❌ [Frontend] Image search failed:', result.error);
-        alert(`Errore nella ricerca immagine: ${result.error}`);
+        alert(`❌ Errore nella ricerca immagine:\n${result.error}`);
       }
 
     } catch (error) {
@@ -350,7 +360,7 @@ export default function ArticlesBySourcePage() {
 
       const site = wpData.data.site;
 
-      // Prepare publication data
+      // Prepare publication data with featured image
       const publicationData = {
         articleId: article.id,
         target: {
@@ -377,7 +387,14 @@ export default function ArticlesBySourcePage() {
           excerpt: articleDetail?.article.metaDescription || article.excerpt, // ✅ YOAST: Consistent excerpt
           // ✅ YOAST SEO: Include meta description for Yoast plugin (fallback approach)
           yoast_wpseo_metadesc: articleDetail?.article.metaDescription
-        }
+        },
+        // ✅ FEATURED IMAGE: Include featured image if available
+        featuredImage: imageSearchResult ? {
+          url: imageSearchResult.image.url,
+          filename: imageSearchResult.image.filename,
+          altText: imageSearchResult.image.altText,
+          title: imageSearchResult.image.altText
+        } : undefined
       };
 
       // Publish to WordPress

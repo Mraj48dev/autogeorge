@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       target,
       content,
       metadata,
+      featuredImage, // ✅ NEW: Featured image data
       scheduledAt,
       allowDuplicate = false
     } = body;
@@ -62,6 +63,28 @@ export async function POST(request: NextRequest) {
         // SIMPLIFIED APPROACH: Call WordPress API directly to bypass PublicationTarget issues
         console.log('API - Attempting direct WordPress publishing');
 
+        // ✅ STEP 1: Upload featured image if provided
+        let featuredMediaId = null;
+        if (featuredImage) {
+          console.log('🖼️ [WordPress] Uploading featured image:', featuredImage.url);
+
+          try {
+            featuredMediaId = await uploadImageToWordPress(
+              featuredImage.url,
+              featuredImage.filename,
+              featuredImage.altText,
+              target.siteUrl,
+              target.configuration.username,
+              target.configuration.password
+            );
+
+            console.log('✅ [WordPress] Image uploaded successfully. Media ID:', featuredMediaId);
+          } catch (imageError) {
+            console.error('❌ [WordPress] Image upload failed:', imageError);
+            // Continue without featured image rather than failing the whole publication
+          }
+        }
+
         // Create WordPress post data
         const postData = {
           title: content.title,
@@ -76,7 +99,10 @@ export async function POST(request: NextRequest) {
         if (metadata.tags) {
           postData.tags = metadata.tags;
         }
-        if (metadata.featuredMediaId) {
+        // ✅ FEATURED IMAGE: Set the uploaded image as featured media
+        if (featuredMediaId) {
+          postData.featured_media = featuredMediaId;
+        } else if (metadata.featuredMediaId) {
           postData.featured_media = metadata.featuredMediaId;
         }
 
@@ -295,4 +321,100 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Upload an image to WordPress media library
+ *
+ * @param imageUrl - URL of the image to download and upload
+ * @param filename - Desired filename for the image
+ * @param altText - Alt text for the image
+ * @param siteUrl - WordPress site URL
+ * @param username - WordPress username
+ * @param password - WordPress password
+ * @returns Promise<number> - WordPress media ID
+ */
+async function uploadImageToWordPress(
+  imageUrl: string,
+  filename: string,
+  altText: string,
+  siteUrl: string,
+  username: string,
+  password: string
+): Promise<number> {
+  console.log('🔄 [WordPress Media] Starting image upload process');
+
+  // Step 1: Download the image from the external URL
+  console.log('📥 [WordPress Media] Downloading image from:', imageUrl);
+
+  const imageResponse = await fetch(imageUrl);
+  if (!imageResponse.ok) {
+    throw new Error(`Failed to download image: ${imageResponse.status} ${imageResponse.statusText}`);
+  }
+
+  const imageBuffer = await imageResponse.arrayBuffer();
+  const imageData = new Uint8Array(imageBuffer);
+
+  console.log('✅ [WordPress Media] Image downloaded, size:', imageData.length, 'bytes');
+
+  // Step 2: Determine content type
+  const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+  console.log('📄 [WordPress Media] Content type:', contentType);
+
+  // Step 3: Prepare WordPress media upload
+  const wpMediaUrl = `${siteUrl.replace(/\/$/, '')}/wp-json/wp/v2/media`;
+  const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+
+  // Step 4: Upload to WordPress
+  console.log('📤 [WordPress Media] Uploading to WordPress:', wpMediaUrl);
+
+  const uploadResponse = await fetch(wpMediaUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader,
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${filename}"`
+    },
+    body: imageData
+  });
+
+  if (!uploadResponse.ok) {
+    const errorData = await uploadResponse.json().catch(() => ({ message: `HTTP ${uploadResponse.status}` }));
+    console.error('❌ [WordPress Media] Upload failed:', errorData);
+    throw new Error(`WordPress media upload failed: ${errorData.message || uploadResponse.statusText}`);
+  }
+
+  const mediaResult = await uploadResponse.json();
+  console.log('✅ [WordPress Media] Upload successful:', mediaResult.id);
+
+  // Step 5: Update media metadata (alt text, title)
+  if (altText) {
+    try {
+      console.log('🏷️ [WordPress Media] Updating alt text:', altText);
+
+      const updateResponse = await fetch(`${wpMediaUrl}/${mediaResult.id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          alt_text: altText,
+          title: altText,
+          caption: altText
+        })
+      });
+
+      if (updateResponse.ok) {
+        console.log('✅ [WordPress Media] Alt text updated successfully');
+      } else {
+        console.warn('⚠️ [WordPress Media] Alt text update failed, but continuing...');
+      }
+    } catch (altError) {
+      console.warn('⚠️ [WordPress Media] Alt text update error:', altError);
+      // Don't fail the whole process for alt text issues
+    }
+  }
+
+  return mediaResult.id;
 }

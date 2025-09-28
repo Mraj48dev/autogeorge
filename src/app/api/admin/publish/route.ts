@@ -66,10 +66,16 @@ export async function POST(request: NextRequest) {
         // ✅ STEP 1: Upload featured image if provided
         let featuredMediaId = null;
         if (featuredImage) {
-          console.log('🖼️ [WordPress] Uploading featured image:', featuredImage.url);
+          console.log('🖼️ [WordPress] Starting featured image upload process');
+          console.log('🖼️ [WordPress] Image details:', {
+            url: featuredImage.url.substring(0, 80) + '...',
+            filename: featuredImage.filename,
+            altText: featuredImage.altText?.substring(0, 50),
+            siteUrl: target.siteUrl
+          });
 
           try {
-            featuredMediaId = await uploadImageToWordPress(
+            featuredMediaId = await uploadImageToWordPressWithRetry(
               featuredImage.url,
               featuredImage.filename,
               featuredImage.altText,
@@ -78,9 +84,18 @@ export async function POST(request: NextRequest) {
               target.configuration.password
             );
 
-            console.log('✅ [WordPress] Image uploaded successfully. Media ID:', featuredMediaId);
+            if (featuredMediaId) {
+              console.log('✅ [WordPress] Image uploaded successfully. Media ID:', featuredMediaId);
+              console.log('🔗 [WordPress] Featured image will be linked to post');
+            } else {
+              console.warn('⚠️ [WordPress] Image upload returned null/undefined media ID');
+            }
           } catch (imageError) {
-            console.error('❌ [WordPress] Image upload failed:', imageError);
+            console.error('❌ [WordPress] Image upload failed after retries:', {
+              error: imageError instanceof Error ? imageError.message : imageError,
+              imageUrl: featuredImage.url,
+              siteUrl: target.siteUrl
+            });
             // Continue without featured image rather than failing the whole publication
           }
         }
@@ -417,4 +432,129 @@ async function uploadImageToWordPress(
   }
 
   return mediaResult.id;
+}
+
+/**
+ * Upload image to WordPress with automatic retry and enhanced logging
+ */
+async function uploadImageToWordPressWithRetry(
+  imageUrl: string,
+  filename: string,
+  altText: string,
+  siteUrl: string,
+  username: string,
+  password: string,
+  maxRetries: number = 3
+): Promise<number> {
+  console.log('🔄 [WordPress Retry] Starting upload with retry mechanism');
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🎯 [WordPress Retry] Attempt ${attempt}/${maxRetries}`);
+
+      // Add delay between retries (except first attempt)
+      if (attempt > 1) {
+        const delay = attempt * 1000; // 1s, 2s, 3s
+        console.log(`⏱️ [WordPress Retry] Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+
+      const mediaId = await uploadImageToWordPress(
+        imageUrl,
+        filename,
+        altText,
+        siteUrl,
+        username,
+        password
+      );
+
+      console.log(`✅ [WordPress Retry] Success on attempt ${attempt}. Media ID: ${mediaId}`);
+
+      // Validate the media ID
+      if (!mediaId || isNaN(mediaId) || mediaId <= 0) {
+        throw new Error(`Invalid media ID returned: ${mediaId}`);
+      }
+
+      // Additional validation: verify the uploaded media exists
+      const verificationResult = await verifyUploadedMedia(mediaId, siteUrl, username, password);
+      if (verificationResult) {
+        console.log(`🔍 [WordPress Retry] Upload verified successfully`);
+        return mediaId;
+      } else {
+        throw new Error('Uploaded media verification failed');
+      }
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(`Upload failed: ${error}`);
+
+      console.error(`❌ [WordPress Retry] Attempt ${attempt} failed:`, {
+        error: lastError.message,
+        imageUrl: imageUrl.substring(0, 80) + '...',
+        attempt,
+        maxRetries
+      });
+
+      // If this was the last attempt, don't continue
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // Log retry information
+      console.log(`🔄 [WordPress Retry] Will retry... (${maxRetries - attempt} attempts remaining)`);
+    }
+  }
+
+  // All retries failed
+  console.error(`💥 [WordPress Retry] All ${maxRetries} attempts failed:`, {
+    finalError: lastError?.message || 'Unknown error',
+    imageUrl: imageUrl.substring(0, 80) + '...',
+    filename,
+    siteUrl
+  });
+
+  throw new Error(`WordPress image upload failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+}
+
+/**
+ * Verify that the uploaded media exists and is accessible
+ */
+async function verifyUploadedMedia(
+  mediaId: number,
+  siteUrl: string,
+  username: string,
+  password: string
+): Promise<boolean> {
+  try {
+    console.log(`🔍 [WordPress Verify] Checking media ID ${mediaId}...`);
+
+    const wpMediaUrl = `${siteUrl.replace(/\/$/, '')}/wp-json/wp/v2/media/${mediaId}`;
+    const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+
+    const response = await fetch(wpMediaUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const mediaData = await response.json();
+      console.log(`✅ [WordPress Verify] Media verified:`, {
+        id: mediaData.id,
+        title: mediaData.title?.rendered?.substring(0, 50),
+        url: mediaData.source_url?.substring(0, 80) + '...',
+        altText: mediaData.alt_text?.substring(0, 50)
+      });
+      return true;
+    } else {
+      console.warn(`⚠️ [WordPress Verify] Verification failed: ${response.status}`);
+      return false;
+    }
+  } catch (error) {
+    console.warn(`⚠️ [WordPress Verify] Verification error:`, error);
+    return false; // Don't fail the whole process for verification issues
+  }
 }

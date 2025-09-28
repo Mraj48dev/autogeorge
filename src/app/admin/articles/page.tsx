@@ -264,6 +264,10 @@ export default function ArticlesBySourcePage() {
       setSearchingImage(true);
       setImageSearchResult(null);
 
+      // Extract article data for enhanced search
+      const articleTitle = articleDetail?.article.title || article.title;
+      const articleContent = articleDetail?.article.content || article.excerpt || '';
+
       // Extract featured image data from article content if available
       let aiPrompt = '';
       let filename = '';
@@ -281,25 +285,28 @@ export default function ArticlesBySourcePage() {
 
       // Fallback: generate data from article title and content
       if (!aiPrompt || !filename || !altText) {
-        aiPrompt = `Professional image representing: ${article.title}`;
+        aiPrompt = `Professional image representing: ${articleTitle}`;
         filename = `featured-${article.id.substring(0, 8)}-${Date.now()}.jpg`;
-        altText = `Image related to ${article.title}`;
+        altText = `Image related to ${articleTitle}`;
       }
 
-      console.log('🖼️ [Frontend] Searching for featured image:', {
+      console.log('🎯 [Frontend Enhanced] Starting intelligent image search:', {
         articleId: article.id,
-        aiPrompt,
-        filename,
-        altText
+        titleLength: articleTitle.length,
+        contentLength: articleContent.length,
+        aiPrompt
       });
 
-      const response = await fetch('/api/admin/image/search', {
+      // Use enhanced search endpoint with article content analysis
+      const response = await fetch('/api/admin/image/search-enhanced', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           articleId: article.id,
+          articleTitle,
+          articleContent,
           aiPrompt,
           filename,
           altText,
@@ -313,16 +320,26 @@ export default function ArticlesBySourcePage() {
         setImageSearchResult(result.data);
         console.log('✅ [Frontend] Image search successful:', result.data);
 
-        // Enhanced success message with image details
-        const wasGenerated = result.data.metadata.wasGenerated;
-        const provider = result.data.metadata.provider;
-        const imageUrl = result.data.image.url;
+        // Enhanced success message with intelligent search details
+        const imageData = result.data.image;
+        const searchData = result.data.searchResults;
+        const metadata = result.data.metadata;
 
-        alert(`🖼️ Immagine in evidenza trovata!\n\n` +
-              `${wasGenerated ? '🎨 Generata con AI' : '📷 Trovata su fonte libera'}\n` +
-              `Fonte: ${provider}\n` +
-              `URL: ${imageUrl.substring(0, 50)}...\n\n` +
-              `✅ Pronta per la pubblicazione su WordPress!`);
+        const searchLevelText = {
+          'ultra-specific': '🎯 Ultra-specifica (massima pertinenza)',
+          'thematic': '🔍 Tematica (buona pertinenza)',
+          'ai-generated': '🎨 Generata con AI (pertinenza garantita)'
+        }[imageData.searchLevel] || imageData.searchLevel;
+
+        alert(`🖼️ Immagine intelligente trovata!\n\n` +
+              `${searchLevelText}\n` +
+              `📊 Score di pertinenza: ${imageData.relevanceScore}/100\n` +
+              `🔍 Livello ricerca: ${imageData.searchLevel}\n` +
+              `📋 Keywords analizzate: ${metadata.keywords?.slice(0, 3).join(', ') || 'N/A'}\n` +
+              `⏱️ Tempo elaborazione: ${metadata.searchTime}ms\n\n` +
+              `${metadata.wasGenerated ? '🎨 Generata con AI' : '📷 Fonte libera'}\n` +
+              `URL: ${imageData.url.substring(0, 40)}...\n\n` +
+              `✅ Pronta per caricamento automatico su WordPress!`);
       } else {
         console.error('❌ [Frontend] Image search failed:', result.error);
         alert(`❌ Errore nella ricerca immagine:\n${result.error}`);
@@ -1068,12 +1085,12 @@ export default function ArticlesBySourcePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <div>
-                    <p className="text-sm font-medium text-purple-800">Immagine in evidenza trovata</p>
+                    <p className="text-sm font-medium text-purple-800">Immagine intelligente trovata</p>
                     <p className="text-xs text-purple-600">
-                      {imageSearchResult.metadata.wasGenerated
-                        ? '🎨 Immagine generata con AI'
-                        : '📷 Immagine trovata su fonte libera'
-                      }
+                      {imageSearchResult.image?.searchLevel === 'ultra-specific' && '🎯 Ultra-specifica (score: ' + imageSearchResult.image.relevanceScore + '/100)'}
+                      {imageSearchResult.image?.searchLevel === 'thematic' && '🔍 Tematica (score: ' + imageSearchResult.image.relevanceScore + '/100)'}
+                      {imageSearchResult.image?.searchLevel === 'ai-generated' && '🎨 Generata con AI (pertinenza garantita)'}
+                      {!imageSearchResult.image?.searchLevel && (imageSearchResult.metadata.wasGenerated ? '🎨 Generata con AI' : '📷 Fonte libera')}
                     </p>
                   </div>
                 </div>

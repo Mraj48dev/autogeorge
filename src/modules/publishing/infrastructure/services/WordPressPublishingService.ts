@@ -546,19 +546,18 @@ export class WordPressPublishingService implements PublishingService {
     }
 
     // ✅ YOAST SEO: Add Yoast meta description if provided
-    // Note: Different field names for different WordPress setups
+    // Based on official Yoast documentation 2024
     if (metadata.yoast_wpseo_metadesc) {
-      // Try multiple field name formats for Yoast SEO compatibility
+      // ✅ OFFICIAL: The correct Yoast meta field (requires registration in WordPress)
       metaFields._yoast_wpseo_metadesc = metadata.yoast_wpseo_metadesc;
-      metaFields.yoast_wpseo_metadesc = metadata.yoast_wpseo_metadesc;
-      metaFields._aioseop_description = metadata.yoast_wpseo_metadesc; // All in One SEO fallback
 
-      // ✅ YOAST HEAD JSON: Try Yoast's structured format
-      metaFields.yoast_head_json = JSON.stringify({
-        description: metadata.yoast_wpseo_metadesc,
-        og_description: metadata.yoast_wpseo_metadesc,
-        twitter_description: metadata.yoast_wpseo_metadesc
-      });
+      // ✅ FALLBACKS: Alternative approaches for compatibility
+      metaFields.yoast_wpseo_metadesc = metadata.yoast_wpseo_metadesc; // Without underscore
+      metaFields._aioseop_description = metadata.yoast_wpseo_metadesc; // All in One SEO
+
+      // ✅ EXPERIMENTAL: Try direct database field names
+      metaFields.yoast_meta_description = metadata.yoast_wpseo_metadesc;
+      metaFields.seo_meta_description = metadata.yoast_wpseo_metadesc;
     }
 
     // Only add meta object if we have fields to add

@@ -452,6 +452,7 @@ Respond with ONLY the image generation prompt, nothing else.`;
     // Use Perplexity to generate a more detailed search and find relevant free images
     // Based on the AI-generated prompt
     console.log('🤖 [AI Generation] Generated prompt:', imagePrompt);
+    console.log('🔄 [AI Generation] Attempting enhanced search with AI-generated prompt...');
 
     const enhancedSearchPrompt = `Using this AI-generated image description: "${imagePrompt}"
 
@@ -499,7 +500,11 @@ Provide ONLY direct image URLs that closely match the description, one per line:
           url: enhancedCandidates[0].url,
           description: `${imagePrompt.substring(0, 150)}`
         });
+      } else {
+        console.log('⚠️ [AI Generation] Enhanced search found no valid images, proceeding to fallback');
       }
+    } else {
+      console.log('⚠️ [AI Generation] Enhanced search API call failed, proceeding to fallback');
     }
 
     // Final fallback: Use a more sophisticated placeholder or stock image service

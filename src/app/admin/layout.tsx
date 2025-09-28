@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { BUILD_INFO } from '@/lib/buildinfo';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -25,13 +26,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <div className="text-sm text-gray-500">
               <div>v1.0.0</div>
               <div className="text-xs">
-                Deploy: {new Date().toLocaleString('it-IT', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                Deploy: {BUILD_INFO.buildTime}
+              </div>
+              <div className="text-xs text-gray-400">
+                #{BUILD_INFO.commitHash}
               </div>
             </div>
           </div>

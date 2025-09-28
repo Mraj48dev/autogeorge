@@ -196,6 +196,91 @@ export async function POST(request: NextRequest) {
 
     console.log('💾 Article saved to database:', article.id);
 
+    // ✅ AUTO-PUBLISHING: Try to publish automatically to WordPress if configured
+    let publishingResult = null;
+    try {
+      // Check if auto-publishing is enabled and WordPress is configured
+      const autoPublishEnabled = body.autoPublish !== false; // Default to true unless explicitly disabled
+
+      if (autoPublishEnabled && wordpressConfig) {
+        console.log('🚀 [Auto-Publishing] Attempting automatic WordPress publication...');
+
+        // Import and use WordPress publishing service
+        const { WordPressPublishingService } = await import('@/modules/publishing/infrastructure/services/WordPressPublishingService');
+        const { PublicationTarget } = await import('@/modules/publishing/domain/value-objects/PublicationTarget');
+
+        const publishingService = new WordPressPublishingService();
+
+        // Create publication target
+        const target = PublicationTarget.wordpress(
+          wordpressSite.url,
+          wordpressSite.id,
+          {
+            username: wordpressSite.username,
+            password: wordpressSite.password,
+            status: wordpressSite.defaultStatus || 'publish'
+          }
+        );
+
+        // Prepare content for publishing
+        const publishingContent = {
+          title: result.title,
+          content: result.content,
+          excerpt: result.metaDescription || article.title.substring(0, 150)
+        };
+
+        const publishingMetadata = {
+          title: result.title,
+          excerpt: result.metaDescription,
+          categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
+          tags: result.seoTags || [],
+          author: wordpressSite.defaultAuthor,
+          featuredMediaId: result.featuredImageId
+        };
+
+        // Attempt to publish
+        const publishResult = await publishingService.publish(target, publishingContent, publishingMetadata);
+
+        if (publishResult.isSuccess()) {
+          // Update article status to published
+          await prisma.article.update({
+            where: { id: article.id },
+            data: {
+              status: 'published',
+              publishedAt: new Date()
+            }
+          });
+
+          publishingResult = {
+            success: true,
+            externalId: publishResult.value.externalId,
+            externalUrl: publishResult.value.externalUrl,
+            publishedAt: new Date().toISOString()
+          };
+
+          console.log('✅ [Auto-Publishing] Article published successfully to WordPress!', publishResult.value.externalUrl);
+        } else {
+          publishingResult = {
+            success: false,
+            error: publishResult.error.message,
+            details: publishResult.error.details
+          };
+
+          console.warn('⚠️ [Auto-Publishing] Failed to publish to WordPress:', publishResult.error.message);
+        }
+      } else {
+        console.log('ℹ️ [Auto-Publishing] Skipped - auto-publishing disabled or WordPress not configured');
+      }
+    } catch (autoPublishError) {
+      publishingResult = {
+        success: false,
+        error: 'Auto-publishing error',
+        details: autoPublishError instanceof Error ? autoPublishError.message : 'Unknown error'
+      };
+
+      console.error('💥 [Auto-Publishing] Error during automatic publishing:', autoPublishError);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -224,7 +309,9 @@ export async function POST(request: NextRequest) {
             id: result.featuredImageId,
             url: result.featuredImageUrl
           } : null
-        }
+        },
+        // ✅ Include auto-publishing result
+        autoPublishing: publishingResult
       }
     });
 

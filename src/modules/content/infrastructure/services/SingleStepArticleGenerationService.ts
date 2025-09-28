@@ -223,12 +223,15 @@ REQUISITI TECNICI:
 - Rispondi SOLO con il JSON valido
 - Non aggiungere testo prima o dopo il JSON
 - Il contenuto deve essere formattato in HTML completo e ben strutturato
+- OBBLIGATORIO: Usa almeno 3-4 tag <h2> per strutturare l'articolo in sezioni
 - Usa tag HTML semantici: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>
-- Includi div con classi CSS per una migliore struttura: <div class="intro">, <div class="section">, <div class="conclusion">
+- Struttura tipo: <h2>Introduzione</h2>, <h2>Sezione Principale</h2>, <h2>Approfondimento</h2>, <h2>Conclusione</h2>
+- Includi div con classi CSS: <div class="intro">, <div class="section">, <div class="conclusion">
 - La meta description deve essere max 160 caratteri
 - Includi 3-5 tag SEO pertinenti
 - L'articolo deve essere originale, ben strutturato e SEO-friendly
 - Il contenuto HTML deve essere pronto per essere inserito direttamente in una pagina web
+- IMPORTANTE: Ogni sezione deve avere il suo <h2> per migliore leggibilità
 
 Genera l'articolo ora:`;
   }

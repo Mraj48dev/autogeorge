@@ -258,20 +258,33 @@ export async function POST(request: NextRequest) {
           }
         );
 
+        // ✅ FIXED: Extract content from new advanced structure
+        const articleContent = advancedData.content || result.content;
+        const articleTitle = advancedData.basic_data?.title || result.title;
+        const articleSlug = advancedData.basic_data?.slug || null;
+        const articleTags = advancedData.basic_data?.tags || result.seoTags || [];
+        const articleMetaDescription = advancedData.seo_critical?.meta_description || result.metaDescription;
+        const articleCategory = advancedData.basic_data?.category || null;
+
         // Prepare content for publishing
         const publishingContent = {
-          title: result.title,
-          content: result.content,
-          excerpt: result.metaDescription || article.title.substring(0, 150)
+          title: articleTitle,
+          content: articleContent,
+          excerpt: articleMetaDescription || articleTitle.substring(0, 150),
+          slug: articleSlug
         };
 
+        // ✅ FIXED: WordPress expects tag names as strings, not IDs
+        // WordPress will create tags automatically if they don't exist
         const publishingMetadata = {
-          title: result.title,
-          excerpt: result.metaDescription,
+          title: articleTitle,
+          excerpt: articleMetaDescription,
           categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
-          tags: result.seoTags || [],
+          tags: articleTags, // WordPress REST API accepts tag names as strings
           author: wordpressSite.defaultAuthor,
-          featuredMediaId: result.featuredImageId
+          featuredMediaId: result.featuredImageId,
+          slug: articleSlug,
+          category_name: articleCategory // Category as name, not ID
         };
 
         // Attempt to publish

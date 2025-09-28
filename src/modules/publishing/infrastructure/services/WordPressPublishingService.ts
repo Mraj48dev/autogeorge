@@ -496,16 +496,35 @@ export class WordPressPublishingService implements PublishingService {
       status: config.status || 'draft'
     };
 
+    // ✅ ENHANCED: Add slug support
+    if (content.slug || metadata.slug) {
+      postData.slug = content.slug || metadata.slug;
+    }
+
     if (content.excerpt || metadata.excerpt) {
       postData.excerpt = content.excerpt || metadata.excerpt;
     }
 
+    // ✅ ENHANCED: Handle categories (can be IDs or names)
     if (metadata.categories && metadata.categories.length > 0) {
       postData.categories = metadata.categories;
     }
 
+    // ✅ NEW: Handle category by name (WordPress will handle creation/lookup)
+    if (metadata.category_name && !metadata.categories) {
+      // Note: For category names, WordPress typically requires a separate API call
+      // or you can try to include it as a string in categories array
+      postData.categories_names = [metadata.category_name];
+    }
+
+    // ✅ FIXED: Handle tags properly for WordPress REST API
     if (metadata.tags && metadata.tags.length > 0) {
-      postData.tags = metadata.tags;
+      // WordPress REST API expects tag names as strings
+      // It will automatically create tags if they don't exist
+      postData.tags = metadata.tags.map(tag => {
+        // Ensure tags are strings and clean them
+        return typeof tag === 'string' ? tag.trim() : String(tag).trim();
+      }).filter(tag => tag.length > 0);
     }
 
     if (config.author) {
@@ -520,6 +539,20 @@ export class WordPressPublishingService implements PublishingService {
     if (metadata.featuredMediaId) {
       postData.featured_media = metadata.featuredMediaId;
     }
+
+    // ✅ ENHANCED: Add debugging info
+    console.log('🔧 [WordPressPublishingService] Prepared post data:', {
+      title: postData.title,
+      contentLength: postData.content?.length || 0,
+      status: postData.status,
+      slug: postData.slug,
+      tagsCount: postData.tags?.length || 0,
+      tags: postData.tags,
+      categoriesCount: postData.categories?.length || 0,
+      categories: postData.categories,
+      hasSlug: !!postData.slug,
+      hasExcerpt: !!postData.excerpt
+    });
 
     return postData;
   }

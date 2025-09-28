@@ -1,7 +1,7 @@
 import { PrismaClient, Article as PrismaArticle, Prisma } from '@prisma/client';
 import { Result } from '../../shared/domain/types/Result';
 import { ArticleRepository, ArticleSearchCriteria, ArticleSearchResult, PaginationOptions, RepositoryError } from '../../domain/ports/ArticleRepository';
-import { Article, GenerationParameters } from '../../domain/entities/Article';
+import { Article, GenerationParameters, ArticleJsonData } from '../../domain/entities/Article';
 import { ArticleId } from '../../domain/value-objects/ArticleId';
 import { Title } from '../../domain/value-objects/Title';
 import { Content } from '../../domain/value-objects/Content';
@@ -317,34 +317,54 @@ export class PrismaArticleRepository implements ArticleRepository {
 
   /**
    * Converts a domain Article entity to a Prisma model
-   * 🚨 ULTRA-FIX: Save ONLY fields that exist in schema!
+   * ✅ FIXED: Save ALL available fields including new structured data
    */
   private toPrismaModel(article: Article): Prisma.ArticleUncheckedCreateInput {
-    console.log(`🗄️ [PrismaArticleRepository] Converting article to Prisma model - ONLY EXISTING FIELDS:`, {
+    console.log(`🗄️ [PrismaArticleRepository] Converting article to Prisma model - ALL FIELDS:`, {
       articleId: article.id.getValue(),
       title: article.title.getValue().substring(0, 50),
       status: article.status.getValue(),
-      sourceId: article.sourceId
+      sourceId: article.sourceId,
+      hasArticleData: !!article.articleData,
+      hasGenerationParams: !!article.generationParams
     });
 
-    // SAVE ONLY FIELDS THAT EXIST IN PRISMA SCHEMA
+    // Build generation data for saving
+    const generationParams = article.generationParams;
+    const aiModel = generationParams?.model;
+    const aiPrompts = generationParams ? {
+      prompt: generationParams.prompt,
+      titlePrompt: (generationParams as any).titlePrompt,
+      contentPrompt: (generationParams as any).contentPrompt,
+      imagePrompt: (generationParams as any).imagePrompt,
+    } : null;
+
+    // SAVE ALL AVAILABLE FIELDS INCLUDING NEW STRUCTURED DATA
     return {
       id: article.id.getValue(),
       title: article.title.getValue(),
       content: article.content.getValue(),
       status: article.status.getValue(),
       sourceId: article.sourceId,
+
+      // ✅ NEW: AI Generation Data
+      articleData: article.articleData as Prisma.JsonValue,
+      aiModel: aiModel,
+      aiPrompts: aiPrompts as Prisma.JsonValue,
+      generationConfig: generationParams as Prisma.JsonValue,
+
+      // ✅ RESTORED: SEO and Publishing Data
+      publishedAt: article.publishedAt,
+
+      // System fields
       createdAt: article.createdAt,
       updatedAt: article.updatedAt,
-      // 🚨 REMOVED - These fields don't exist in schema:
-      // generationParams: article.generationParams as Prisma.JsonValue,
-      // seoMetadata: article.seoMetadata?.toJSON() as Prisma.JsonValue,
-      // publishedAt: article.publishedAt,
     };
   }
 
   /**
    * Converts a Prisma model to a domain Article entity
+   * ✅ FIXED: Reconstruct with all new fields including articleData
    */
   private toDomainEntity = (prismaArticle: PrismaArticle): Article => {
     const id = ArticleId.fromString(prismaArticle.id);
@@ -352,14 +372,21 @@ export class PrismaArticleRepository implements ArticleRepository {
     const content = new Content(prismaArticle.content);
     const status = ArticleStatus.fromString(prismaArticle.status);
 
+    // ✅ Reconstruct generation parameters from stored data
+    const generationParams = prismaArticle.generationConfig as GenerationParameters || undefined;
+
+    // ✅ Get articleData from database
+    const articleData = prismaArticle.articleData as any;
+
     return new Article(
       id,
       title,
       content,
       status,
-      undefined, // seoMetadata - would need to reconstruct from JSON
+      undefined, // seoMetadata - could be extracted from articleData in future
       prismaArticle.sourceId || undefined,
-      prismaArticle.generationParams as GenerationParameters || undefined,
+      generationParams,
+      articleData,
       prismaArticle.createdAt,
       prismaArticle.updatedAt
     );

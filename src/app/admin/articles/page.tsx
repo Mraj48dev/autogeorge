@@ -747,12 +747,20 @@ export default function ArticlesBySourcePage() {
               {/* Main Content */}
               <div className="lg:col-span-2">
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-3">Contenuto Articolo</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    Contenuto Articolo
+                    <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                      HTML Format
+                    </span>
+                  </h3>
                   <div className="max-h-96 overflow-y-auto bg-white rounded border p-4">
                     <div className="prose max-w-none">
-                      <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm">
-                        {articleDetail?.article.content || selectedArticle.excerpt}
-                      </div>
+                      <div
+                        className="text-gray-700 leading-relaxed text-sm"
+                        dangerouslySetInnerHTML={{
+                          __html: articleDetail?.article.content || selectedArticle.excerpt
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

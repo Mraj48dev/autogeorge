@@ -162,7 +162,8 @@ export async function POST(request: NextRequest) {
           seoPrompt,
           feedItemContent: feedItem.content,
           feedItemTitle: feedItem.title,
-          feedItemUrl: feedItem.url
+          feedItemUrl: feedItem.url,
+          unifiedPromptSent: result.promptSent // ✅ Save the exact prompt sent to Perplexity
         },
 
         // Generation configuration for reproducibility

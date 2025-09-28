@@ -41,6 +41,7 @@ export interface SingleStepGenerationResult {
   generationTime: number;
   model: string;
   rawResponse?: any; // ✅ For JSON viewer button
+  promptSent?: string; // ✅ Exact prompt sent to Perplexity
 }
 
 export interface SingleStepGenerationError {
@@ -159,7 +160,8 @@ export class SingleStepArticleGenerationService {
         cost: generated.metadata?.cost || 0,
         generationTime,
         model: generated.modelUsed || request.settings?.model || 'sonar-pro',
-        rawResponse: generated.rawResponse || generated // ✅ Include raw response for JSON viewer
+        rawResponse: generated.rawResponse || generated, // ✅ Include raw response for JSON viewer
+        promptSent: unifiedPrompt // ✅ Include the exact prompt sent to Perplexity
       };
 
       return Result.success(result);
@@ -220,10 +222,13 @@ PARAMETRI DI STILE:
 REQUISITI TECNICI:
 - Rispondi SOLO con il JSON valido
 - Non aggiungere testo prima o dopo il JSON
-- Il contenuto deve essere formattato in Markdown
+- Il contenuto deve essere formattato in HTML completo e ben strutturato
+- Usa tag HTML semantici: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>
+- Includi div con classi CSS per una migliore struttura: <div class="intro">, <div class="section">, <div class="conclusion">
 - La meta description deve essere max 160 caratteri
 - Includi 3-5 tag SEO pertinenti
-- L'articolo deve essere originale e ben strutturato
+- L'articolo deve essere originale, ben strutturato e SEO-friendly
+- Il contenuto HTML deve essere pronto per essere inserito direttamente in una pagina web
 
 Genera l'articolo ora:`;
   }

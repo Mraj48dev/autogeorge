@@ -193,6 +193,7 @@ export async function GET(
         <button class="tab active" onclick="showTab('complete')">Completo</button>
         <button class="tab" onclick="showTab('rawResponse')">Raw Response</button>
         <button class="tab" onclick="showTab('prompts')">Prompts</button>
+        <button class="tab" onclick="showTab('perplexityPrompt')">🤖 Prompt Perplexity</button>
         <button class="tab" onclick="showTab('config')">Config</button>
     </div>
 
@@ -213,6 +214,19 @@ export async function GET(
     <div id="prompts" class="tab-content">
         <div class="json-container">
             <div class="json-viewer">${JSON.stringify(debugData.prompts, null, 2)}</div>
+        </div>
+    </div>
+
+    <div id="perplexityPrompt" class="tab-content">
+        <div class="json-container">
+            <h3 style="color: #ffffff; margin-top: 0;">🤖 Prompt Inviato a Perplexity</h3>
+            <div style="background-color: #1e1e1e; padding: 15px; border-radius: 5px; border-left: 4px solid #007acc; margin-bottom: 20px;">
+                <pre style="white-space: pre-wrap; font-family: 'Monaco', 'Menlo', monospace; color: #d4d4d4; margin: 0; font-size: 13px; line-height: 1.6;">${debugData.prompts?.unifiedPromptSent || 'Prompt non disponibile'}</pre>
+            </div>
+            <p style="color: #cccccc; font-size: 12px; margin: 0;">
+                <strong>📝 Questo è il prompt esatto inviato a Perplexity</strong><br>
+                Include tutti i parametri, istruzioni e contenuto sorgente utilizzati per generare l'articolo.
+            </p>
         </div>
     </div>
 

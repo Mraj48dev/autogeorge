@@ -119,8 +119,8 @@ export class SingleStepArticleGenerationService {
         cost: generated.metadata?.cost || 0
       });
 
-      // Extract SEO data from content if present
-      const { metaDescription, seoTags } = this.extractSeoData(generated.content);
+      // Extract SEO data from content and raw response
+      const { metaDescription, seoTags } = this.extractSeoData(generated.content, generated.rawResponse);
 
       let featuredImageId: number | undefined;
       let featuredImageUrl: string | undefined;
@@ -185,59 +185,151 @@ export class SingleStepArticleGenerationService {
     const settings = request.settings || {};
 
     return `
-Genera un articolo completo in formato JSON con questa struttura esatta:
+Genera un articolo professionale completo in formato JSON con questa struttura AVANZATA e dettagliata:
 
 \`\`\`json
 {
-  "title": "...",
-  "content": "...",
-  "metaDescription": "...",
-  "seoTags": ["tag1", "tag2", "tag3"]
+  "article": {
+    "basic_data": {
+      "title": "",
+      "slug": "",
+      "category": "",
+      "tags": [],
+      "status": "draft"
+    },
+
+    "seo_critical": {
+      "focus_keyword": "",
+      "seo_title": "",
+      "meta_description": "",
+      "h1_tag": ""
+    },
+
+    "content": {
+      "introduction": "",
+      "sections": [
+        {
+          "h2_title": "",
+          "content": "",
+          "target_keywords": []
+        }
+      ],
+      "conclusion": "",
+      "word_count": 0
+    },
+
+    "featured_image": {
+      "ai_prompt": "",
+      "alt_text": "",
+      "filename": ""
+    },
+
+    "internal_seo": {
+      "internal_links": [
+        {
+          "anchor_text": "",
+          "url": ""
+        }
+      ],
+      "related_keywords": [],
+      "entities": []
+    },
+
+    "user_engagement": {
+      "reading_time": "",
+      "cta": "",
+      "key_takeaways": []
+    }
+  }
 }
 \`\`\`
 
-ISTRUZIONI DETTAGLIATE:
+📋 ISTRUZIONI DETTAGLIATE PER OGNI SEZIONE:
 
-TITOLO:
-${titlePrompt}
+🎯 BASIC_DATA:
+- title: ${titlePrompt}
+- slug: Genera uno slug SEO-friendly (es: "danimarca-droni-vertice-ue")
+- category: Determina la categoria più appropriata (es: "Politica", "Cronaca", "Sport")
+- tags: Array di 5-8 tag pertinenti e specifici
+- status: "draft" (predefinito)
 
-CONTENUTO:
-${contentPrompt}
+🚀 SEO_CRITICAL:
+- focus_keyword: La parola chiave principale per SEO (2-3 parole max)
+- seo_title: Titolo ottimizzato per SERP (50-60 caratteri)
+- meta_description: ${seoPrompt} (150-160 caratteri)
+- h1_tag: Tag H1 principale dell'articolo
 
-SEO E METADATA:
-${seoPrompt}
+📝 CONTENT:
+- introduction: ${contentPrompt} - Paragrafo introduttivo coinvolgente (150-200 parole)
+- sections: Array di 3-5 sezioni con:
+  - h2_title: Titolo della sezione (ottimizzato SEO)
+  - content: Contenuto HTML della sezione (ben formattato)
+  - target_keywords: Parole chiave specifiche per la sezione
+- conclusion: Conclusione efficace che riassume e invita all'azione
+- word_count: Conteggio esatto delle parole dell'articolo completo
 
-CONTENUTO SORGENTE DA ELABORARE:
+🖼️ FEATURED_IMAGE:
+- ai_prompt: Prompt dettagliato per generare l'immagine in evidenza
+- alt_text: Testo alternativo SEO-friendly per l'immagine
+- filename: Nome file suggerito (es: "danimarca-droni-vertice-2025.jpg")
+
+🔗 INTERNAL_SEO:
+- internal_links: Suggerimenti per 3-5 link interni con anchor text
+- related_keywords: 10-15 parole chiave correlate per SEO semantico
+- entities: Entità principali menzionate nell'articolo
+
+👥 USER_ENGAGEMENT:
+- reading_time: Tempo di lettura stimato (es: "5 minuti")
+- cta: Call-to-action finale per coinvolgere il lettore
+- key_takeaways: 3-5 punti chiave dell'articolo
+
+📰 CONTENUTO SORGENTE DA ELABORARE:
 Titolo originale: ${request.feedItemTitle}
 Contenuto: ${request.feedItemContent}
 ${request.feedItemUrl ? `URL originale: ${request.feedItemUrl}` : ''}
 
-PARAMETRI DI STILE:
+⚙️ PARAMETRI DI STILE:
 - Lingua: ${settings.language || 'italiano'}
 - Tono: ${settings.tone || 'professionale'}
 - Stile: ${settings.style || 'giornalistico'}
 - Target audience: ${settings.targetAudience || 'generale'}
 - Lunghezza target: ${settings.maxTokens ? Math.floor(settings.maxTokens * 0.75) : 4000} parole
 
-REQUISITI TECNICI:
-- Rispondi SOLO con il JSON valido
-- Non aggiungere testo prima o dopo il JSON
-- Il contenuto deve essere formattato in HTML completo e ben strutturato
-- OBBLIGATORIO: Usa almeno 3-4 tag <h2> per strutturare l'articolo in sezioni
+🔧 REQUISITI TECNICI AVANZATI:
+- Rispondi SOLO con il JSON valido, senza testo aggiuntivo
+- Tutti i contenuti HTML devono essere completi e ben formattati
 - Usa tag HTML semantici: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>
-- Struttura tipo: <h2>Introduzione</h2>, <h2>Sezione Principale</h2>, <h2>Approfondimento</h2>, <h2>Conclusione</h2>
-- Includi div con classi CSS: <div class="intro">, <div class="section">, <div class="conclusion">
-- La meta description deve essere max 160 caratteri
-- Includi 3-5 tag SEO pertinenti
-- L'articolo deve essere originale, ben strutturato e SEO-friendly
-- Il contenuto HTML deve essere pronto per essere inserito direttamente in una pagina web
-- IMPORTANTE: Ogni sezione deve avere il suo <h2> per migliore leggibilità
+- Include div con classi CSS: <div class="intro">, <div class="section">, <div class="conclusion">
+- Ogni sezione deve essere autonoma e ben strutturata
+- Ottimizza per SEO on-page e user experience
+- Includi microdati e structured data quando possibile
+- Assicurati che word_count sia accurato
+- Focus keyword deve apparire nel titolo, H1, meta description e nel primo paragrafo
+- Related keywords devono essere distribuite naturalmente nel testo
 
-Genera l'articolo ora:`;
+🎯 GENERA L'ARTICOLO AVANZATO ORA:`;
   }
 
-  private extractSeoData(content: string): { metaDescription?: string; seoTags?: string[] } {
-    // Try to extract SEO data from content if it contains structured info
+  private extractSeoData(content: string, rawResponse?: any): { metaDescription?: string; seoTags?: string[] } {
+    // ✅ NEW: Extract from advanced structure first
+    if (rawResponse?.article) {
+      const article = rawResponse.article;
+
+      return {
+        metaDescription: article.seo_critical?.meta_description || article.basic_data?.meta_description,
+        seoTags: article.basic_data?.tags || article.internal_seo?.related_keywords?.slice(0, 5) || []
+      };
+    }
+
+    // ✅ LEGACY: Extract from old structure
+    if (rawResponse?.metaDescription || rawResponse?.seoTags) {
+      return {
+        metaDescription: rawResponse.metaDescription,
+        seoTags: rawResponse.seoTags || []
+      };
+    }
+
+    // ✅ FALLBACK: Try to extract SEO data from content text
     const metaMatch = content.match(/meta.{0,20}description[:\s]*([^.\n]{50,160})/i);
     const tagsMatch = content.match(/tags?[:\s]*([^.\n]+)/i);
 

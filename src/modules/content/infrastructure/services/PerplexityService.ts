@@ -35,7 +35,7 @@ import { Result } from '../../shared/domain/types/Result';
 export class PerplexityService implements AiService {
   private readonly baseUrl = 'https://api.perplexity.ai';
   private readonly apiKey: string;
-  private readonly defaultModel = 'llama-3.1-sonar-large-128k-online';
+  private readonly defaultModel = 'sonar-pro';
 
   constructor(apiKey: string) {
     if (!apiKey) {
@@ -599,12 +599,12 @@ export class PerplexityService implements AiService {
    * Validates and fixes model names for Perplexity compatibility
    */
   private validateAndFixModel(model: string): string {
-    // List of valid Perplexity models
+    // ✅ CORRECT: Official Perplexity model IDs from documentation
     const validModels = [
-      'llama-3.1-sonar-large-128k-online',
-      'llama-3.1-sonar-huge-128k-online',
       'sonar-pro',
-      'sonar'
+      'sonar',
+      'llama-3.1-8b-instruct',
+      'llama-3.1-70b-instruct'
     ];
 
     // If model is valid, return as-is
@@ -612,13 +612,15 @@ export class PerplexityService implements AiService {
       return model;
     }
 
-    // 🚨 FIX: Map invalid models to valid ones
+    // ✅ FIXED: Map to correct Perplexity model IDs
     const modelMappings: Record<string, string> = {
-      'gpt-4': 'llama-3.1-sonar-large-128k-online',
-      'gpt-4-turbo': 'llama-3.1-sonar-huge-128k-online',
-      'gpt-3.5-turbo': 'sonar-pro',
-      'gpt-4o': 'llama-3.1-sonar-large-128k-online',
-      'claude-3-5-sonnet': 'llama-3.1-sonar-huge-128k-online'
+      'gpt-4': 'sonar-pro',
+      'gpt-4-turbo': 'sonar-pro',
+      'gpt-3.5-turbo': 'sonar',
+      'gpt-4o': 'sonar-pro',
+      'claude-3-5-sonnet': 'sonar-pro',
+      'llama-3.1-sonar-large-128k-online': 'sonar-pro', // Fix our wrong model ID
+      'llama-3.1-sonar-huge-128k-online': 'sonar-pro'
     };
 
     const mappedModel = modelMappings[model];
@@ -627,9 +629,9 @@ export class PerplexityService implements AiService {
       return mappedModel;
     }
 
-    // Final fallback to default
-    console.warn(`🚨 [PerplexityService] Unknown model '${model}', using default '${this.defaultModel}'`);
-    return this.defaultModel;
+    // Final fallback to safe default
+    console.warn(`🚨 [PerplexityService] Unknown model '${model}', using fallback 'sonar-pro'`);
+    return 'sonar-pro';
   }
 
   /**
@@ -637,10 +639,10 @@ export class PerplexityService implements AiService {
    */
   private isValidPerplexityModel(model: string): boolean {
     const validModels = [
-      'llama-3.1-sonar-large-128k-online',
-      'llama-3.1-sonar-huge-128k-online',
       'sonar-pro',
-      'sonar'
+      'sonar',
+      'llama-3.1-8b-instruct',
+      'llama-3.1-70b-instruct'
     ];
     return validModels.includes(model);
   }
@@ -652,27 +654,9 @@ export class PerplexityService implements AiService {
     // Based on current Perplexity API documentation
     return [
       {
-        id: 'llama-3.1-sonar-large-128k-online',
-        name: 'Llama 3.1 Sonar Large',
-        description: 'Online research and comprehensive article generation',
-        supportedContentTypes: ['article', 'blog-post', 'news'],
-        maxContextLength: 127072,
-        costPer1kTokens: 0.002,
-        isAvailable: true,
-      },
-      {
-        id: 'llama-3.1-sonar-huge-128k-online',
-        name: 'Llama 3.1 Sonar Huge',
-        description: 'Advanced online research for complex content',
-        supportedContentTypes: ['article', 'blog-post', 'news'],
-        maxContextLength: 127072,
-        costPer1kTokens: 0.004,
-        isAvailable: true,
-      },
-      {
         id: 'sonar-pro',
         name: 'Sonar Pro',
-        description: 'Enhanced model for more complex queries',
+        description: 'Enhanced online research with real-time web access',
         supportedContentTypes: ['article', 'blog-post', 'news'],
         maxContextLength: 127072,
         costPer1kTokens: 0.004,
@@ -685,6 +669,24 @@ export class PerplexityService implements AiService {
         supportedContentTypes: ['article', 'blog-post', 'news'],
         maxContextLength: 127072,
         costPer1kTokens: 0.002,
+        isAvailable: true,
+      },
+      {
+        id: 'llama-3.1-70b-instruct',
+        name: 'Llama 3.1 70B Instruct',
+        description: 'Large language model for complex text generation',
+        supportedContentTypes: ['article', 'blog-post', 'technical'],
+        maxContextLength: 131072,
+        costPer1kTokens: 0.001,
+        isAvailable: true,
+      },
+      {
+        id: 'llama-3.1-8b-instruct',
+        name: 'Llama 3.1 8B Instruct',
+        description: 'Efficient model for basic text generation',
+        supportedContentTypes: ['article', 'blog-post'],
+        maxContextLength: 131072,
+        costPer1kTokens: 0.0002,
         isAvailable: true,
       },
     ];

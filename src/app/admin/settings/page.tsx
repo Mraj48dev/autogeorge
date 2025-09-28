@@ -83,7 +83,7 @@ export default function SettingsPage() {
             imagePrompt: settings.prompts?.imagePrompt || 'Genera un\'immagine in evidenza per questo articolo'
           },
           modelSettings: {
-            model: settings.modelSettings?.model || 'llama-3.1-sonar-large-128k-online',
+            model: settings.modelSettings?.model || 'sonar-pro',
             temperature: settings.modelSettings?.temperature ?? 0.7,
             maxTokens: settings.modelSettings?.maxTokens || 2000
           },
@@ -721,18 +721,16 @@ export default function SettingsPage() {
                 Modello
               </label>
               <select
-                value={generationSettings.modelSettings?.model || 'llama-3.1-sonar-large-128k-online'}
+                value={generationSettings.modelSettings?.model || 'sonar-pro'}
                 onChange={(e) => updateGenerationSettings({
                   modelSettings: { ...generationSettings.modelSettings, model: e.target.value }
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="llama-3.1-sonar-large-128k-online">Llama 3.1 Sonar Large (Perplexity)</option>
-                <option value="llama-3.1-sonar-huge-128k-online">Llama 3.1 Sonar Huge (Perplexity)</option>
-                <option value="sonar-pro">Sonar Pro (Perplexity)</option>
-                <option value="gpt-4o">GPT-4o (OpenAI)</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo (OpenAI)</option>
-                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Anthropic)</option>
+                <option value="sonar-pro">Sonar Pro - Con ricerca web in tempo reale (Consigliato)</option>
+                <option value="sonar">Sonar - Veloce per query semplici</option>
+                <option value="llama-3.1-70b-instruct">Llama 3.1 70B - Modello grande per contenuti complessi</option>
+                <option value="llama-3.1-8b-instruct">Llama 3.1 8B - Efficiente per contenuti basic</option>
               </select>
             </div>
 

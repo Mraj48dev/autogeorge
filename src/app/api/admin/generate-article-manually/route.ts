@@ -140,54 +140,28 @@ export async function POST(request: NextRequest) {
     // Extract advanced data from the new structure
     const advancedData = result.rawResponse?.article || {};
 
-    // Create the article with generated content and ALL metadata
+    // ✅ SIMPLIFIED: Extract basic data from advanced structure
+    const finalTitle = advancedData.basic_data?.title || result.title;
+    const finalContent = advancedData.content || result.content;
+    const finalSlug = advancedData.basic_data?.slug || null;
+
+    // Create the article with generated content and basic metadata
     const article = await prisma.article.create({
       data: {
-        title: result.title,
-        content: result.content,
+        title: finalTitle,
+        content: finalContent,
         status: 'generated',
         sourceId: feedItem.sourceId,
 
-        // ✅ ENHANCED: Extract and save advanced article data
-        slug: advancedData.basic_data?.slug || null,
+        // ✅ SIMPLIFIED: Save only slug for now
+        slug: finalSlug,
 
-        // ✅ SAVE COMPLETE RAW RESPONSE WITH ADVANCED STRUCTURE
+        // ✅ SIMPLIFIED: Save raw response for future processing
         articleData: result.rawResponse || {
-          title: result.title,
-          content: result.content,
-          metaDescription: result.metaDescription,
-          seoTags: result.seoTags,
+          title: finalTitle,
+          content: finalContent,
+          slug: finalSlug,
           statistics: result.statistics
-        },
-
-        // ✅ ENHANCED: Extract advanced SEO data
-        yoastSeo: advancedData.seo_critical ? {
-          focus_keyword: advancedData.seo_critical.focus_keyword,
-          seo_title: advancedData.seo_critical.seo_title,
-          meta_description: advancedData.seo_critical.meta_description,
-          h1_tag: advancedData.seo_critical.h1_tag,
-          related_keywords: advancedData.internal_seo?.related_keywords || [],
-          entities: advancedData.internal_seo?.entities || [],
-          internal_links: advancedData.internal_seo?.internal_links || []
-        } : null,
-
-        // ✅ ENHANCED: Save advanced tags and categories
-        tags: advancedData.basic_data?.tags ? {
-          primary: advancedData.basic_data.tags,
-          related: advancedData.internal_seo?.related_keywords?.slice(0, 10) || []
-        } : null,
-
-        // ✅ ENHANCED: Custom fields for advanced data
-        customFields: {
-          category: advancedData.basic_data?.category,
-          reading_time: advancedData.user_engagement?.reading_time,
-          cta: advancedData.user_engagement?.cta,
-          key_takeaways: advancedData.user_engagement?.key_takeaways || [],
-          featured_image_prompt: advancedData.featured_image?.ai_prompt,
-          featured_image_alt: advancedData.featured_image?.alt_text,
-          featured_image_filename: advancedData.featured_image?.filename,
-          focus_keyword: advancedData.seo_critical?.focus_keyword,
-          structure_version: 'advanced_v1'
         },
 
         // AI generation metadata
@@ -258,33 +232,34 @@ export async function POST(request: NextRequest) {
           }
         );
 
-        // ✅ FIXED: Extract content from new advanced structure
+        // ✅ SIMPLIFIED: Extract only title, content, and slug from advanced structure
         const articleContent = advancedData.content || result.content;
         const articleTitle = advancedData.basic_data?.title || result.title;
         const articleSlug = advancedData.basic_data?.slug || null;
-        const articleTags = advancedData.basic_data?.tags || result.seoTags || [];
-        const articleMetaDescription = advancedData.seo_critical?.meta_description || result.metaDescription;
-        const articleCategory = advancedData.basic_data?.category || null;
+
+        console.log('📝 [Auto-Publishing] Extracted article data:', {
+          title: articleTitle?.substring(0, 50) + '...',
+          contentLength: articleContent?.length || 0,
+          slug: articleSlug,
+          hasAdvancedData: !!advancedData.basic_data
+        });
 
         // Prepare content for publishing
         const publishingContent = {
           title: articleTitle,
           content: articleContent,
-          excerpt: articleMetaDescription || articleTitle.substring(0, 150),
+          excerpt: articleTitle.substring(0, 150), // Simple excerpt from title
           slug: articleSlug
         };
 
-        // ✅ FIXED: WordPress expects tag names as strings, not IDs
-        // WordPress will create tags automatically if they don't exist
+        // ✅ SIMPLIFIED: Minimal metadata for WordPress
         const publishingMetadata = {
           title: articleTitle,
-          excerpt: articleMetaDescription,
+          excerpt: articleTitle.substring(0, 150),
           categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
-          tags: articleTags, // WordPress REST API accepts tag names as strings
+          tags: [], // ✅ EMPTY TAGS TO AVOID ERRORS
           author: wordpressSite.defaultAuthor,
-          featuredMediaId: result.featuredImageId,
-          slug: articleSlug,
-          category_name: articleCategory // Category as name, not ID
+          slug: articleSlug
         };
 
         // Attempt to publish
@@ -337,6 +312,7 @@ export async function POST(request: NextRequest) {
           id: article.id,
           title: article.title,
           content: article.content,
+          slug: article.slug,
           status: article.status,
           createdAt: article.createdAt.toISOString(),
           sourceId: article.sourceId

@@ -101,6 +101,7 @@ export async function GET(
           id: article.id,
           title: article.title,
           content: article.content,
+          slug: article.slug,
           status: article.status,
           sourceId: article.sourceId,
           createdAt: article.createdAt.toISOString(),

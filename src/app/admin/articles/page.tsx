@@ -297,13 +297,14 @@ export default function ArticlesBySourcePage() {
         content: {
           title: articleDetail?.article.title || article.title,
           content: articleDetail?.article.content || article.excerpt,
-          excerpt: article.excerpt
+          excerpt: article.excerpt,
+          slug: articleDetail?.article.slug
         },
         metadata: {
           categories: site.defaultCategory ? [site.defaultCategory] : [],
-          tags: articleDetail?.seo.tags || [],
+          tags: [], // ✅ SIMPLIFIED: Empty tags to avoid WordPress errors
           author: site.defaultAuthor,
-          seoKeywords: articleDetail?.seo.keywords || []
+          slug: articleDetail?.article.slug
         }
       };
 
@@ -715,6 +716,11 @@ export default function ArticlesBySourcePage() {
                   <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(selectedArticle.status)}`}>
                     {getStatusText(selectedArticle.status)}
                   </span>
+                  {articleDetail?.article.slug && (
+                    <span className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                      slug: {articleDetail.article.slug}
+                    </span>
+                  )}
                   {articleDetail?.metadata.generationType && (
                     <span className="px-3 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                       {articleDetail.metadata.generationType === '3-step-workflow' ? '3-Step AI' : 'Semplice'}

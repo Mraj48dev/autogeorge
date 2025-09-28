@@ -29,7 +29,7 @@ interface ImageSearchResult {
 }
 
 /**
- * GET /api/admin/article-image?articleId=<id>
+ * GET /api/admin/articleimage?articleId=<id>
  * Get the saved featured image for an article
  */
 export async function GET(request: NextRequest) {
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/article-image
+ * POST /api/admin/articleimage
  * Save the featured image search result for an article
  */
 export async function POST(request: NextRequest) {
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * DELETE /api/admin/article-image?articleId=<id>
+ * DELETE /api/admin/articleimage?articleId=<id>
  * Remove the saved featured image for an article
  */
 export async function DELETE(request: NextRequest) {

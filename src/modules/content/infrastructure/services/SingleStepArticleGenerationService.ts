@@ -40,6 +40,7 @@ export interface SingleStepGenerationResult {
   cost: number;
   generationTime: number;
   model: string;
+  rawResponse?: any; // ✅ For JSON viewer button
 }
 
 export interface SingleStepGenerationError {
@@ -83,10 +84,10 @@ export class SingleStepArticleGenerationService {
         tone: request.settings?.tone || 'professionale',
         style: request.settings?.style || 'giornalistico',
         targetAudience: request.settings?.targetAudience || 'generale',
-        targetWordCount: request.settings?.maxTokens ? Math.floor(request.settings.maxTokens * 0.75) : 800,
+        targetWordCount: request.settings?.maxTokens ? Math.floor(request.settings.maxTokens * 0.75) : 2000,
         parameters: {
           temperature: request.settings?.temperature || 0.7,
-          maxTokens: request.settings?.maxTokens || 2000,
+          maxTokens: request.settings?.maxTokens || 8000,
           model: request.settings?.model || 'sonar-pro'
         },
         metadata: {
@@ -157,7 +158,8 @@ export class SingleStepArticleGenerationService {
         },
         cost: generated.metadata?.cost || 0,
         generationTime,
-        model: generated.modelUsed || request.settings?.model || 'sonar-pro'
+        model: generated.modelUsed || request.settings?.model || 'sonar-pro',
+        rawResponse: generated.rawResponse || generated // ✅ Include raw response for JSON viewer
       };
 
       return Result.success(result);
@@ -213,7 +215,7 @@ PARAMETRI DI STILE:
 - Tono: ${settings.tone || 'professionale'}
 - Stile: ${settings.style || 'giornalistico'}
 - Target audience: ${settings.targetAudience || 'generale'}
-- Lunghezza target: ${settings.maxTokens ? Math.floor(settings.maxTokens * 0.75) : 800} parole
+- Lunghezza target: ${settings.maxTokens ? Math.floor(settings.maxTokens * 0.75) : 2000} parole
 
 REQUISITI TECNICI:
 - Rispondi SOLO con il JSON valido

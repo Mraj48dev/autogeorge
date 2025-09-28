@@ -23,7 +23,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </Link>
             </div>
             <div className="text-sm text-gray-500">
-              v1.0.0
+              <div>v1.0.0</div>
+              <div className="text-xs">
+                Deploy: {new Date().toLocaleString('it-IT', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
             </div>
           </div>
         </div>

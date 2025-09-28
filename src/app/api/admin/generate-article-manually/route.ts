@@ -137,13 +137,48 @@ export async function POST(request: NextRequest) {
     const result = generationResult.value;
     console.log('✅ Single-step generation completed successfully!');
 
-    // Create the article with generated content
+    // Create the article with generated content and ALL metadata
     const article = await prisma.article.create({
       data: {
         title: result.title,
         content: result.content,
         status: 'generated',
         sourceId: feedItem.sourceId,
+
+        // ✅ SAVE ALL GENERATION DATA INCLUDING RAW RESPONSE
+        articleData: result.rawResponse || {
+          title: result.title,
+          content: result.content,
+          metaDescription: result.metaDescription,
+          seoTags: result.seoTags,
+          statistics: result.statistics
+        },
+
+        // AI generation metadata
+        aiModel: result.model,
+        aiPrompts: {
+          titlePrompt,
+          contentPrompt,
+          seoPrompt,
+          feedItemContent: feedItem.content,
+          feedItemTitle: feedItem.title,
+          feedItemUrl: feedItem.url
+        },
+
+        // Generation configuration for reproducibility
+        generationConfig: {
+          model: body.settings?.model || settings.defaultModel,
+          temperature: body.settings?.temperature || settings.defaultTemperature,
+          maxTokens: body.settings?.maxTokens || settings.defaultMaxTokens,
+          language: body.settings?.language || settings.defaultLanguage,
+          tone: body.settings?.tone || settings.defaultTone,
+          style: body.settings?.style || settings.defaultStyle,
+          targetAudience: body.settings?.targetAudience || settings.defaultTargetAudience,
+          cost: result.cost,
+          generationTime: result.generationTime
+        },
+
+        // Featured image data
         featuredMediaId: result.featuredImageId || null,
         featuredMediaUrl: result.featuredImageUrl || null
       }

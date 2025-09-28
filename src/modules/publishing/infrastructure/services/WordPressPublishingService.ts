@@ -62,11 +62,49 @@ export class WordPressPublishingService implements PublishingService {
       );
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        // ✅ ENHANCED: Better error handling for HTML responses
+        let errorData: any = {};
+        let responseText = '';
+
+        try {
+          responseText = await response.text();
+
+          // Try to parse as JSON first
+          if (responseText.trim().startsWith('{')) {
+            errorData = JSON.parse(responseText);
+          } else {
+            // HTML response - extract useful info
+            console.error('🚨 [WordPress] Received HTML response instead of JSON:', {
+              status: response.status,
+              statusText: response.statusText,
+              url: response.url,
+              htmlPreview: responseText.substring(0, 200),
+              isHtml: responseText.includes('<!DOCTYPE') || responseText.includes('<html>')
+            });
+
+            errorData = {
+              message: `WordPress API returned HTML instead of JSON. Check URL and REST API availability.`,
+              htmlResponse: responseText.substring(0, 500),
+              possibleIssues: [
+                'WordPress REST API not enabled',
+                'Incorrect site URL format',
+                'Security plugin blocking requests',
+                'Invalid credentials redirecting to login page'
+              ]
+            };
+          }
+        } catch (parseError) {
+          errorData = {
+            message: 'Failed to parse WordPress response',
+            rawResponse: responseText.substring(0, 500),
+            parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+          };
+        }
+
         return Result.failure({
           code: this.mapHttpErrorCode(response.status),
           message: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
-          details: { httpStatus: response.status, errorData },
+          details: { httpStatus: response.status, errorData, responseText: responseText.substring(0, 500) },
           isRetryable: this.isRetryableHttpError(response.status),
           platform: target.getPlatform()
         });
@@ -496,23 +534,63 @@ export class WordPressPublishingService implements PublishingService {
     data: any,
     config: WordPressConfig
   ): Promise<Response> {
-    const url = `${siteUrl.replace(/\/$/, '')}${endpoint}`;
-    
+    // ✅ ENHANCED: Better URL validation and formatting
+    let baseUrl = siteUrl.trim();
+
+    // Ensure URL has protocol
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = 'https://' + baseUrl;
+    }
+
+    // Remove trailing slash and add endpoint
+    const url = `${baseUrl.replace(/\/$/, '')}${endpoint}`;
+
+    console.log('🌐 [WordPress] Making request:', {
+      url,
+      method,
+      endpoint,
+      hasAuth: !!config.username && !!config.password,
+      dataKeys: data ? Object.keys(data) : []
+    });
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'AutoGeorge/1.0 WordPress Publisher',
       'Authorization': `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}`
     };
 
     const requestOptions: RequestInit = {
       method,
-      headers
+      headers,
+      // ✅ Add timeout to prevent hanging requests
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     };
 
     if (data && method !== 'GET') {
       requestOptions.body = JSON.stringify(data);
     }
 
-    return fetch(url, requestOptions);
+    try {
+      const response = await fetch(url, requestOptions);
+
+      console.log('📡 [WordPress] Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        contentType: response.headers.get('content-type'),
+        isOk: response.ok
+      });
+
+      return response;
+    } catch (error) {
+      console.error('🚨 [WordPress] Request failed:', {
+        url,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      });
+      throw error;
+    }
   }
 
   /**

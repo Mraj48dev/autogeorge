@@ -107,6 +107,8 @@ export default function ArticlesBySourcePage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [testingWordPress, setTestingWordPress] = useState(false);
+  const [wordPressTestResult, setWordPressTestResult] = useState<any>(null);
   const [filters, setFilters] = useState({
     status: '',
     sourceId: '',
@@ -200,6 +202,59 @@ export default function ArticlesBySourcePage() {
     setSelectedArticle(article);
     setPublishError(null);
     await loadArticleDetail(article.id);
+  };
+
+  const handleTestWordPress = async () => {
+    try {
+      setTestingWordPress(true);
+      setWordPressTestResult(null);
+
+      // Get WordPress settings
+      const wpResponse = await fetch('/api/admin/wordpress-settings', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': 'demo-user'
+        }
+      });
+
+      if (!wpResponse.ok) {
+        throw new Error('Impossibile caricare le impostazioni WordPress');
+      }
+
+      const wpData = await wpResponse.json();
+      if (!wpData.success || !wpData.data.site) {
+        throw new Error('Nessun sito WordPress configurato. Configura prima le impostazioni WordPress.');
+      }
+
+      const site = wpData.data.site;
+
+      // Test WordPress connectivity
+      const testResponse = await fetch('/api/admin/test-wordpress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteUrl: site.url,
+          username: site.username,
+          password: site.password
+        })
+      });
+
+      if (!testResponse.ok) {
+        throw new Error('Test WordPress fallito');
+      }
+
+      const testResult = await testResponse.json();
+      setWordPressTestResult(testResult.data);
+
+    } catch (error) {
+      console.error('Error testing WordPress:', error);
+      setWordPressTestResult({
+        summary: { status: 'error', error: error instanceof Error ? error.message : 'Errore sconosciuto' },
+        tests: []
+      });
+    } finally {
+      setTestingWordPress(false);
+    }
   };
 
   const handlePublishToWordPress = async (article: ArticleSummary, articleDetail: ArticleDetail | null) => {
@@ -847,8 +902,62 @@ export default function ArticlesBySourcePage() {
                   </div>
                 )}
 
+                {/* JSON Viewer Button */}
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-yellow-900 mb-3 flex items-center">
+                    🔍 Debug & Analisi
+                  </h3>
+                  <button
+                    onClick={() => window.open(`/api/admin/articles/${selectedArticle.id}/raw-json`, '_blank')}
+                    className="w-full px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                    Visualizza JSON Originale
+                  </button>
+                  <p className="text-xs text-yellow-700 mt-2">
+                    Mostra la risposta JSON grezza dall'AI per debug e analisi
+                  </p>
+                </div>
+
               </div>
             </div>
+
+            {/* WordPress Test Results */}
+            {wordPressTestResult && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center mb-3">
+                  <svg className="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Test WordPress Completato</p>
+                    <p className="text-xs text-blue-600">
+                      {wordPressTestResult.summary?.readyForPublishing
+                        ? '✅ Pronto per la pubblicazione'
+                        : '⚠️ Potrebbero esserci problemi di connessione'
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {wordPressTestResult.tests?.map((test: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">{test.name}:</span>
+                      <span className={`px-2 py-1 rounded ${
+                        test.status === 'success' ? 'bg-green-100 text-green-800' :
+                        test.status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {test.status === 'success' ? '✅' : test.status === 'warning' ? '⚠️' : '❌'} {test.message}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Publish Error */}
             {publishError && (
@@ -876,10 +985,27 @@ export default function ArticlesBySourcePage() {
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => { setSelectedArticle(null); setArticleDetail(null); setPublishError(null); }}
+                  onClick={() => { setSelectedArticle(null); setArticleDetail(null); setPublishError(null); setWordPressTestResult(null); }}
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Chiudi
+                </button>
+                <button
+                  onClick={handleTestWordPress}
+                  disabled={testingWordPress}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:bg-yellow-400 disabled:cursor-not-allowed flex items-center"
+                >
+                  {testingWordPress ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Testando...
+                    </>
+                  ) : (
+                    <>🔧 Testa WordPress</>
+                  )}
                 </button>
                 <button
                   onClick={() => handlePublishToWordPress(selectedArticle!, articleDetail)}

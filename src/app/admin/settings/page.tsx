@@ -73,7 +73,28 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (result.success) {
-        setGenerationSettings(result.data.settings);
+        const settings = result.data.settings;
+        // Ensure all required fields are present
+        const completeSettings = {
+          prompts: {
+            titlePrompt: settings.prompts?.titlePrompt || 'Crea un titolo accattivante e SEO-friendly per questo articolo',
+            contentPrompt: settings.prompts?.contentPrompt || 'Scrivi un articolo completo e ben strutturato',
+            seoPrompt: settings.prompts?.seoPrompt || 'Includi meta description, tags e parole chiave SEO',
+            imagePrompt: settings.prompts?.imagePrompt || 'Genera un\'immagine in evidenza per questo articolo'
+          },
+          modelSettings: {
+            model: settings.modelSettings?.model || 'llama-3.1-sonar-large-128k-online',
+            temperature: settings.modelSettings?.temperature ?? 0.7,
+            maxTokens: settings.modelSettings?.maxTokens || 2000
+          },
+          languageSettings: {
+            language: settings.languageSettings?.language || 'it',
+            tone: settings.languageSettings?.tone || 'professionale',
+            style: settings.languageSettings?.style || 'giornalistico',
+            targetAudience: settings.languageSettings?.targetAudience || 'generale'
+          }
+        };
+        setGenerationSettings(completeSettings);
       } else {
         throw new Error(result.error || 'Errore sconosciuto');
       }
@@ -620,7 +641,7 @@ export default function SettingsPage() {
               </label>
               <textarea
                 rows={3}
-                value={generationSettings.prompts.titlePrompt}
+                value={generationSettings.prompts?.titlePrompt || ''}
                 onChange={(e) => updateGenerationSettings({
                   prompts: { ...generationSettings.prompts, titlePrompt: e.target.value }
                 })}
@@ -638,7 +659,7 @@ export default function SettingsPage() {
               </label>
               <textarea
                 rows={4}
-                value={generationSettings.prompts.contentPrompt}
+                value={generationSettings.prompts?.contentPrompt || ''}
                 onChange={(e) => updateGenerationSettings({
                   prompts: { ...generationSettings.prompts, contentPrompt: e.target.value }
                 })}
@@ -656,7 +677,7 @@ export default function SettingsPage() {
               </label>
               <textarea
                 rows={3}
-                value={generationSettings.prompts.seoPrompt}
+                value={generationSettings.prompts?.seoPrompt || ''}
                 onChange={(e) => updateGenerationSettings({
                   prompts: { ...generationSettings.prompts, seoPrompt: e.target.value }
                 })}
@@ -674,7 +695,7 @@ export default function SettingsPage() {
               </label>
               <textarea
                 rows={3}
-                value={generationSettings.prompts.imagePrompt}
+                value={generationSettings.prompts?.imagePrompt || ''}
                 onChange={(e) => updateGenerationSettings({
                   prompts: { ...generationSettings.prompts, imagePrompt: e.target.value }
                 })}
@@ -700,15 +721,18 @@ export default function SettingsPage() {
                 Modello
               </label>
               <select
-                value={generationSettings.modelSettings.model}
+                value={generationSettings.modelSettings?.model || 'llama-3.1-sonar-large-128k-online'}
                 onChange={(e) => updateGenerationSettings({
                   modelSettings: { ...generationSettings.modelSettings, model: e.target.value }
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="gpt-4">GPT-4</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="llama-3.1-sonar-large-128k-online">Llama 3.1 Sonar Large (Perplexity)</option>
+                <option value="llama-3.1-sonar-huge-128k-online">Llama 3.1 Sonar Huge (Perplexity)</option>
+                <option value="sonar-pro">Sonar Pro (Perplexity)</option>
+                <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo (OpenAI)</option>
+                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Anthropic)</option>
               </select>
             </div>
 
@@ -721,7 +745,7 @@ export default function SettingsPage() {
                 min="0"
                 max="2"
                 step="0.1"
-                value={generationSettings.modelSettings.temperature}
+                value={generationSettings.modelSettings?.temperature ?? 0.7}
                 onChange={(e) => updateGenerationSettings({
                   modelSettings: { ...generationSettings.modelSettings, temperature: parseFloat(e.target.value) }
                 })}
@@ -741,7 +765,7 @@ export default function SettingsPage() {
                 min="100"
                 max="8000"
                 step="100"
-                value={generationSettings.modelSettings.maxTokens}
+                value={generationSettings.modelSettings?.maxTokens || 2000}
                 onChange={(e) => updateGenerationSettings({
                   modelSettings: { ...generationSettings.modelSettings, maxTokens: parseInt(e.target.value) }
                 })}
@@ -766,7 +790,7 @@ export default function SettingsPage() {
                 Lingua
               </label>
               <select
-                value={generationSettings.languageSettings.language}
+                value={generationSettings.languageSettings?.language || 'it'}
                 onChange={(e) => updateGenerationSettings({
                   languageSettings: { ...generationSettings.languageSettings, language: e.target.value }
                 })}
@@ -785,7 +809,7 @@ export default function SettingsPage() {
                 Tono
               </label>
               <select
-                value={generationSettings.languageSettings.tone}
+                value={generationSettings.languageSettings?.tone || 'professionale'}
                 onChange={(e) => updateGenerationSettings({
                   languageSettings: { ...generationSettings.languageSettings, tone: e.target.value }
                 })}
@@ -805,7 +829,7 @@ export default function SettingsPage() {
                 Stile
               </label>
               <select
-                value={generationSettings.languageSettings.style}
+                value={generationSettings.languageSettings?.style || 'giornalistico'}
                 onChange={(e) => updateGenerationSettings({
                   languageSettings: { ...generationSettings.languageSettings, style: e.target.value }
                 })}
@@ -825,7 +849,7 @@ export default function SettingsPage() {
                 Target Audience
               </label>
               <select
-                value={generationSettings.languageSettings.targetAudience}
+                value={generationSettings.languageSettings?.targetAudience || 'generale'}
                 onChange={(e) => updateGenerationSettings({
                   languageSettings: { ...generationSettings.languageSettings, targetAudience: e.target.value }
                 })}
@@ -848,11 +872,11 @@ export default function SettingsPage() {
             Anteprima Configurazione
           </h3>
           <div className="text-sm text-blue-800 space-y-2">
-            <p><strong>Modello:</strong> {generationSettings.modelSettings.model}</p>
-            <p><strong>Creatività:</strong> {generationSettings.modelSettings.temperature} / 2.0</p>
-            <p><strong>Lingua:</strong> {generationSettings.languageSettings.language.toUpperCase()}</p>
-            <p><strong>Stile:</strong> {generationSettings.languageSettings.style} - {generationSettings.languageSettings.tone}</p>
-            <p><strong>Audience:</strong> {generationSettings.languageSettings.targetAudience}</p>
+            <p><strong>Modello:</strong> {generationSettings.modelSettings?.model || 'Non configurato'}</p>
+            <p><strong>Creatività:</strong> {generationSettings.modelSettings?.temperature ?? 0.7} / 2.0</p>
+            <p><strong>Lingua:</strong> {(generationSettings.languageSettings?.language || 'it').toUpperCase()}</p>
+            <p><strong>Stile:</strong> {generationSettings.languageSettings?.style || 'giornalistico'} - {generationSettings.languageSettings?.tone || 'professionale'}</p>
+            <p><strong>Audience:</strong> {generationSettings.languageSettings?.targetAudience || 'generale'}</p>
           </div>
         </div>
 

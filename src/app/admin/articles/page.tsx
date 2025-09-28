@@ -203,7 +203,24 @@ export default function ArticlesBySourcePage() {
   const handleViewArticle = async (article: ArticleSummary) => {
     setSelectedArticle(article);
     setPublishError(null);
+    setImageSearchResult(null); // Reset image search result
+
     await loadArticleDetail(article.id);
+
+    // 🔄 Load saved featured image if available
+    try {
+      const imageResponse = await fetch(`/api/admin/articles/${article.id}/image`);
+      if (imageResponse.ok) {
+        const imageResult = await imageResponse.json();
+        if (imageResult.success && imageResult.data) {
+          setImageSearchResult(imageResult.data);
+          console.log('🔄 [Frontend] Loaded saved featured image from database:', imageResult.data);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ [Frontend] Failed to load saved featured image:', error);
+      // Don't show error to user, it's not critical
+    }
   };
 
   const handleTestWordPress = async () => {
@@ -320,6 +337,19 @@ export default function ArticlesBySourcePage() {
         setImageSearchResult(result.data);
         console.log('✅ [Frontend] Image search successful:', result.data);
 
+        // 💾 Save image search result to database for persistence
+        try {
+          await fetch(`/api/admin/articles/${article.id}/image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(result.data)
+          });
+          console.log('💾 [Frontend] Image search result saved to database');
+        } catch (saveError) {
+          console.warn('⚠️ [Frontend] Failed to save image search result:', saveError);
+          // Don't show error to user, it's not critical
+        }
+
         // Enhanced success message with intelligent search details
         const imageData = result.data.image;
         const searchData = result.data.searchResults;
@@ -377,6 +407,23 @@ export default function ArticlesBySourcePage() {
 
       const site = wpData.data.site;
 
+      // 🔄 If no image in state, try to load saved image from database
+      let featuredImageData = imageSearchResult;
+      if (!featuredImageData) {
+        try {
+          const imageResponse = await fetch(`/api/admin/articles/${article.id}/image`);
+          if (imageResponse.ok) {
+            const imageResult = await imageResponse.json();
+            if (imageResult.success && imageResult.data) {
+              featuredImageData = imageResult.data;
+              console.log('🔄 [Publish] Using saved featured image from database');
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ [Publish] Failed to load saved featured image:', error);
+        }
+      }
+
       // Prepare publication data with featured image
       const publicationData = {
         articleId: article.id,
@@ -406,11 +453,11 @@ export default function ArticlesBySourcePage() {
           yoast_wpseo_metadesc: articleDetail?.article.metaDescription
         },
         // ✅ FEATURED IMAGE: Include featured image if available
-        featuredImage: imageSearchResult ? {
-          url: imageSearchResult.image.url,
-          filename: imageSearchResult.image.filename,
-          altText: imageSearchResult.image.altText,
-          title: imageSearchResult.image.altText
+        featuredImage: featuredImageData ? {
+          url: featuredImageData.image.url,
+          filename: featuredImageData.image.filename,
+          altText: featuredImageData.image.altText,
+          title: featuredImageData.image.altText
         } : undefined
       };
 

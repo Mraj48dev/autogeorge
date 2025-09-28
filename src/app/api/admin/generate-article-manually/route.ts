@@ -257,19 +257,19 @@ export async function POST(request: NextRequest) {
         const publishingContent = {
           title: articleTitle,
           content: articleContent,
-          excerpt: articleTitle.substring(0, 150), // Simple excerpt from title
+          excerpt: articleMetaDescription || articleTitle.substring(0, 150), // ✅ YOAST: Use meta description as excerpt
           slug: articleSlug
         };
 
         // ✅ SIMPLIFIED: Minimal metadata for WordPress with Yoast SEO
         const publishingMetadata = {
           title: articleTitle,
-          excerpt: articleTitle.substring(0, 150),
+          excerpt: articleMetaDescription || articleTitle.substring(0, 150), // ✅ YOAST: Consistent with content
           categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
           tags: [], // ✅ EMPTY TAGS TO AVOID ERRORS
           author: wordpressSite.defaultAuthor,
           slug: articleSlug,
-          // ✅ YOAST SEO: Meta description for Yoast plugin
+          // ✅ YOAST SEO: Meta description for Yoast plugin (fallback approach)
           yoast_wpseo_metadesc: articleMetaDescription
         };
 

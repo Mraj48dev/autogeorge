@@ -1,15 +1,24 @@
-# 🔧 Setup Yoast SEO per AutoGeorge
+# 🔧 Yoast SEO Meta Description con AutoGeorge
 
-Questa guida spiega come configurare WordPress e Yoast SEO per ricevere correttamente le meta description inviate da AutoGeorge via REST API.
+Questa guida spiega come funziona l'integrazione Yoast SEO di AutoGeorge **SENZA modifiche al sito WordPress**.
 
-## ⚠️ Problema
+## ✅ SOLUZIONE PRINCIPALE: WordPress Excerpt (NESSUNA MODIFICA RICHIESTA)
 
-Yoast SEO non riceve automaticamente i meta fields inviati tramite REST API perché:
-- Il REST API di Yoast è **read-only** (solo lettura)
-- I meta fields `_yoast_wpseo_metadesc` devono essere **registrati** in WordPress
-- Potrebbe servire un **save manuale** per attivare completamente Yoast
+**AutoGeorge funziona già senza modifiche al sito!**
 
-## ✅ Soluzione 1: Registrazione Meta Fields (CONSIGLIATA)
+Dalla documentazione ufficiale Yoast 2024:
+- **Yoast SEO usa automaticamente l'excerpt di WordPress** come meta description quando non è specificata manualmente
+- **AutoGeorge invia la meta description come excerpt** - nessuna configurazione richiesta
+- **Compatibile con tutti i siti WordPress** che hanno Yoast SEO
+
+## 🔍 Come Funziona
+
+1. **Perplexity genera** la meta description nella struttura `seo_critical.meta_description`
+2. **AutoGeorge estrae** la meta description e la invia come **excerpt di WordPress**
+3. **Yoast SEO rileva automaticamente** l'excerpt e lo usa come meta description
+4. **Nessuna modifica al sito richiesta!**
+
+## ⚠️ Soluzioni Alternative (Solo se l'Excerpt non Funziona)
 
 Aggiungi questo codice al file `functions.php` del tuo tema WordPress:
 

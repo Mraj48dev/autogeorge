@@ -297,7 +297,7 @@ export default function ArticlesBySourcePage() {
         content: {
           title: articleDetail?.article.title || article.title,
           content: articleDetail?.article.content || article.excerpt,
-          excerpt: article.excerpt,
+          excerpt: articleDetail?.article.metaDescription || article.excerpt,
           slug: articleDetail?.article.slug
         },
         metadata: {
@@ -305,7 +305,8 @@ export default function ArticlesBySourcePage() {
           tags: [], // ✅ SIMPLIFIED: Empty tags to avoid WordPress errors
           author: site.defaultAuthor,
           slug: articleDetail?.article.slug,
-          // ✅ YOAST SEO: Include meta description for Yoast plugin
+          excerpt: articleDetail?.article.metaDescription || article.excerpt, // ✅ YOAST: Consistent excerpt
+          // ✅ YOAST SEO: Include meta description for Yoast plugin (fallback approach)
           yoast_wpseo_metadesc: articleDetail?.article.metaDescription
         }
       };

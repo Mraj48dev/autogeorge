@@ -35,7 +35,18 @@ export async function GET(
     }
 
     // Extract prompt sent to Perplexity from aiPrompts
-    const perplexityPrompt = article.aiPrompts?.unifiedPromptSent || 'Prompt non disponibile';
+    // ✅ FIXED: Better extraction of Perplexity prompt with multiple fallbacks
+    let perplexityPrompt = 'Prompt non disponibile';
+
+    if (article.aiPrompts) {
+      // Try different possible field names and structures
+      perplexityPrompt =
+        article.aiPrompts.unifiedPromptSent ||
+        article.aiPrompts.promptSent ||
+        article.aiPrompts.prompt ||
+        (typeof article.aiPrompts === 'string' ? article.aiPrompts : null) ||
+        'Prompt non disponibile';
+    }
 
     // Build comprehensive debug data
     const debugData = {

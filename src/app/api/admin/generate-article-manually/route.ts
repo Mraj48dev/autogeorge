@@ -137,6 +137,9 @@ export async function POST(request: NextRequest) {
     const result = generationResult.value;
     console.log('✅ Single-step generation completed successfully!');
 
+    // Extract advanced data from the new structure
+    const advancedData = result.rawResponse?.article || {};
+
     // Create the article with generated content and ALL metadata
     const article = await prisma.article.create({
       data: {
@@ -145,13 +148,46 @@ export async function POST(request: NextRequest) {
         status: 'generated',
         sourceId: feedItem.sourceId,
 
-        // ✅ SAVE ALL GENERATION DATA INCLUDING RAW RESPONSE
+        // ✅ ENHANCED: Extract and save advanced article data
+        slug: advancedData.basic_data?.slug || null,
+
+        // ✅ SAVE COMPLETE RAW RESPONSE WITH ADVANCED STRUCTURE
         articleData: result.rawResponse || {
           title: result.title,
           content: result.content,
           metaDescription: result.metaDescription,
           seoTags: result.seoTags,
           statistics: result.statistics
+        },
+
+        // ✅ ENHANCED: Extract advanced SEO data
+        yoastSeo: advancedData.seo_critical ? {
+          focus_keyword: advancedData.seo_critical.focus_keyword,
+          seo_title: advancedData.seo_critical.seo_title,
+          meta_description: advancedData.seo_critical.meta_description,
+          h1_tag: advancedData.seo_critical.h1_tag,
+          related_keywords: advancedData.internal_seo?.related_keywords || [],
+          entities: advancedData.internal_seo?.entities || [],
+          internal_links: advancedData.internal_seo?.internal_links || []
+        } : null,
+
+        // ✅ ENHANCED: Save advanced tags and categories
+        tags: advancedData.basic_data?.tags ? {
+          primary: advancedData.basic_data.tags,
+          related: advancedData.internal_seo?.related_keywords?.slice(0, 10) || []
+        } : null,
+
+        // ✅ ENHANCED: Custom fields for advanced data
+        customFields: {
+          category: advancedData.basic_data?.category,
+          reading_time: advancedData.user_engagement?.reading_time,
+          cta: advancedData.user_engagement?.cta,
+          key_takeaways: advancedData.user_engagement?.key_takeaways || [],
+          featured_image_prompt: advancedData.featured_image?.ai_prompt,
+          featured_image_alt: advancedData.featured_image?.alt_text,
+          featured_image_filename: advancedData.featured_image?.filename,
+          focus_keyword: advancedData.seo_critical?.focus_keyword,
+          structure_version: 'advanced_v1'
         },
 
         // AI generation metadata

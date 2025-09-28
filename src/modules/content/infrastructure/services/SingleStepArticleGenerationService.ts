@@ -205,18 +205,7 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
       "h1_tag": ""
     },
 
-    "content": {
-      "introduction": "",
-      "sections": [
-        {
-          "h2_title": "",
-          "content": "",
-          "target_keywords": []
-        }
-      ],
-      "conclusion": "",
-      "word_count": 0
-    },
+    "content": "",
 
     "featured_image": {
       "ai_prompt": "",
@@ -260,13 +249,7 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
 - h1_tag: Tag H1 principale dell'articolo
 
 📝 CONTENT:
-- introduction: ${contentPrompt} - Paragrafo introduttivo coinvolgente (150-200 parole)
-- sections: Array di 3-5 sezioni con:
-  - h2_title: Titolo della sezione (ottimizzato SEO)
-  - content: Contenuto HTML della sezione (ben formattato)
-  - target_keywords: Parole chiave specifiche per la sezione
-- conclusion: Conclusione efficace che riassume e invita all'azione
-- word_count: Conteggio esatto delle parole dell'articolo completo
+- content: ${contentPrompt} - Articolo completo in HTML ben strutturato con almeno 3-4 sezioni H2, paragrafi, liste, formattazione semantica. Deve includere introduzione, sviluppo e conclusione in un unico campo HTML.
 
 🖼️ FEATURED_IMAGE:
 - ai_prompt: Prompt dettagliato per generare l'immagine in evidenza

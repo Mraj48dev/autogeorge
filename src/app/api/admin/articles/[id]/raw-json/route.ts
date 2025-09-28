@@ -34,6 +34,9 @@ export async function GET(
       );
     }
 
+    // Extract prompt sent to Perplexity from aiPrompts
+    const perplexityPrompt = article.aiPrompts?.unifiedPromptSent || 'Prompt non disponibile';
+
     // Build comprehensive debug data
     const debugData = {
       article: {
@@ -45,10 +48,12 @@ export async function GET(
       },
       rawResponse: article.articleData || null,
       prompts: article.aiPrompts || null,
+      perplexityPrompt: perplexityPrompt, // ✅ Dedicated field for Perplexity prompt
       generationConfig: article.generationConfig || null,
       metadata: {
         hasRawResponse: !!article.articleData,
         hasPrompts: !!article.aiPrompts,
+        hasPerplexityPrompt: !!perplexityPrompt && perplexityPrompt !== 'Prompt non disponibile',
         hasGenerationConfig: !!article.generationConfig,
         exportedAt: new Date().toISOString()
       }
@@ -221,7 +226,7 @@ export async function GET(
         <div class="json-container">
             <h3 style="color: #ffffff; margin-top: 0;">🤖 Prompt Inviato a Perplexity</h3>
             <div style="background-color: #1e1e1e; padding: 15px; border-radius: 5px; border-left: 4px solid #007acc; margin-bottom: 20px;">
-                <pre style="white-space: pre-wrap; font-family: 'Monaco', 'Menlo', monospace; color: #d4d4d4; margin: 0; font-size: 13px; line-height: 1.6;">${debugData.prompts?.unifiedPromptSent || 'Prompt non disponibile'}</pre>
+                <pre style="white-space: pre-wrap; font-family: 'Monaco', 'Menlo', monospace; color: #d4d4d4; margin: 0; font-size: 13px; line-height: 1.6;">${debugData.perplexityPrompt}</pre>
             </div>
             <p style="color: #cccccc; font-size: 12px; margin: 0;">
                 <strong>📝 Questo è il prompt esatto inviato a Perplexity</strong><br>

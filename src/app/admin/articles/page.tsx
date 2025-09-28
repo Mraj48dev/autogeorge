@@ -915,15 +915,26 @@ export default function ArticlesBySourcePage() {
                   <h3 className="font-semibold text-yellow-900 mb-3 flex items-center">
                     🔍 Debug & Analisi
                   </h3>
-                  <button
-                    onClick={() => window.open(`/api/admin/articles/${selectedArticle.id}/raw-json`, '_blank')}
-                    className="w-full px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium flex items-center justify-center"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                    Visualizza JSON Originale
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => window.open(`/api/admin/articles/${selectedArticle.id}/prompt`, '_blank')}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      🤖 Visualizza Prompt Perplexity
+                    </button>
+                    <button
+                      onClick={() => window.open(`/api/admin/articles/${selectedArticle.id}/raw-json`, '_blank')}
+                      className="w-full px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium flex items-center justify-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                      Visualizza JSON Originale
+                    </button>
+                  </div>
                   <p className="text-xs text-yellow-700 mt-2">
                     Mostra la risposta JSON grezza dall'AI per debug e analisi
                   </p>

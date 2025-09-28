@@ -122,6 +122,9 @@ export interface ArticleGenerationResult {
 
   /** Generation metadata and performance info */
   metadata: GenerationMetadata;
+
+  /** Raw response from AI service for debugging */
+  rawResponse?: any;
 }
 
 /**

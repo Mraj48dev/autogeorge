@@ -337,6 +337,7 @@ export class PrismaArticleRepository implements ArticleRepository {
       titlePrompt: (generationParams as any).titlePrompt,
       contentPrompt: (generationParams as any).contentPrompt,
       imagePrompt: (generationParams as any).imagePrompt,
+      rawResponse: (generationParams as any).rawResponse,
     } : null;
 
     // SAVE ALL AVAILABLE FIELDS INCLUDING NEW STRUCTURED DATA

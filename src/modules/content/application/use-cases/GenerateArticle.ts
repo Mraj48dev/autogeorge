@@ -104,16 +104,44 @@ export class GenerateArticle extends CommandUseCase<
         return Result.failure(contentResult.error);
       }
 
-      // Step 4: Parse the structured JSON response and extract article data
+      // Step 4: Extract article data from AI response
       let articleData = null;
-      try {
-        const jsonMatch = generatedContent.content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          articleData = JSON.parse(jsonMatch[0]);
+
+      // ✅ ENHANCED: Use rawResponse if available, fallback to parsing
+      if (generatedContent.rawResponse) {
+        articleData = {
+          articolo: {
+            metadati: {
+              titolo: generatedContent.rawResponse.title || generatedContent.title,
+              slug: "",
+              meta_descrizione: generatedContent.rawResponse.metaDescription || ""
+            },
+            seo: {
+              keyword_principale: "",
+              meta_title: generatedContent.rawResponse.title || generatedContent.title,
+              meta_description: generatedContent.rawResponse.metaDescription || ""
+            },
+            contenuto: generatedContent.content,
+            immagine_principale: {
+              comando_ai: generatedContent.rawResponse.imagePrompt || "",
+              alt_text: "",
+              caption: "",
+              nome_file: ""
+            },
+            link_interni: [],
+            perplexity_raw: generatedContent.rawResponse // ✅ Store for JSON viewer
+          }
+        };
+      } else {
+        // Fallback: try parsing JSON from content
+        try {
+          const jsonMatch = generatedContent.content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            articleData = JSON.parse(jsonMatch[0]);
+          }
+        } catch (e) {
+          console.warn('Failed to parse structured JSON response:', e);
         }
-      } catch (e) {
-        // If JSON parsing fails, we'll continue with basic structure
-        console.warn('Failed to parse structured JSON response:', e);
       }
 
       // Step 5: Create article entity with articleData
@@ -221,33 +249,19 @@ export class GenerateArticle extends CommandUseCase<
     const imagePrompt = input.imagePrompt || 'Genera un\'\'immagine in evidenza per questo articolo';
     const sourceContent = input.sourceContent || 'contenuto della fonte';
 
-    return `Compila questo JSON per un articolo su ${sourceContent}, per il titolo utilizza queste indicazioni {${titlePrompt}}, per il testo dell'articolo utilizza queste indicazioni {${articlePrompt}} e per la generazione dell'immagine in evidenza usa questo prompt {${imagePrompt}}
+    return `Genera un articolo completo basato su: ${sourceContent}
+
+Indicazioni per il titolo: ${titlePrompt}
+Indicazioni per il contenuto: ${articlePrompt}
+Indicazioni per l'immagine: ${imagePrompt}
+
+Rispondi SOLO con questo JSON (senza markdown code blocks):
 {
-  "articolo": {
-    "metadati": {
-      "titolo": "",
-      "slug": "",
-      "meta_descrizione": ""
-    },
-    "seo": {
-      "keyword_principale": "",
-      "meta_title": "",
-      "meta_description": ""
-    },
-    "contenuto": {},
-    "immagine_principale": {
-      "comando_ai": "",
-      "alt_text": "",
-      "caption": "",
-      "nome_file": ""
-    },
-    "link_interni": [
-      {
-        "anchor_text": "",
-        "url": ""
-      }
-    ]
-  }
+  "title": "[titolo ottimizzato SEO]",
+  "content": "[articolo completo in markdown con paragrafi, titoli e formattazione]",
+  "metaDescription": "[meta description 150-160 caratteri]",
+  "seoTags": ["tag1", "tag2", "tag3"],
+  "imagePrompt": "[prompt dettagliato per generare immagine in evidenza]"
 }`;
   }
 

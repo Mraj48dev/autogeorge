@@ -531,8 +531,25 @@ export class WordPressPublishingService implements PublishingService {
       postData.author = config.author;
     }
 
-    if (config.customFields && metadata.customFields) {
-      postData.meta = { ...config.customFields, ...metadata.customFields };
+    // ✅ YOAST SEO: Add meta fields support for Yoast plugin
+    const metaFields: any = {};
+
+    // Include custom fields from config and metadata
+    if (config.customFields) {
+      Object.assign(metaFields, config.customFields);
+    }
+    if (metadata.customFields) {
+      Object.assign(metaFields, metadata.customFields);
+    }
+
+    // ✅ YOAST SEO: Add Yoast meta description if provided
+    if (metadata.yoast_wpseo_metadesc) {
+      metaFields._yoast_wpseo_metadesc = metadata.yoast_wpseo_metadesc;
+    }
+
+    // Only add meta object if we have fields to add
+    if (Object.keys(metaFields).length > 0) {
+      postData.meta = metaFields;
     }
 
     // Immagine in evidenza
@@ -551,7 +568,12 @@ export class WordPressPublishingService implements PublishingService {
       categoriesCount: postData.categories?.length || 0,
       categories: postData.categories,
       hasSlug: !!postData.slug,
-      hasExcerpt: !!postData.excerpt
+      hasExcerpt: !!postData.excerpt,
+      // ✅ YOAST SEO: Debug info for meta fields
+      hasMetaFields: !!postData.meta,
+      metaFieldsCount: postData.meta ? Object.keys(postData.meta).length : 0,
+      hasYoastMetaDesc: !!(postData.meta && postData.meta._yoast_wpseo_metadesc),
+      yoastMetaDescLength: postData.meta?._yoast_wpseo_metadesc?.length || 0
     });
 
     return postData;

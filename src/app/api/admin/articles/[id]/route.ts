@@ -104,6 +104,7 @@ export async function GET(
           slug: article.slug,
           status: article.status,
           sourceId: article.sourceId,
+          metaDescription: article.yoastSeo ? (article.yoastSeo as any)?.meta_description : null,
           createdAt: article.createdAt.toISOString(),
           updatedAt: article.updatedAt.toISOString()
         },

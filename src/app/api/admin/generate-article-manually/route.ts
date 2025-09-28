@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
     const finalTitle = advancedData.basic_data?.title || result.title;
     const finalContent = advancedData.content || result.content;
     const finalSlug = advancedData.basic_data?.slug || null;
+    const finalMetaDescription = advancedData.seo_critical?.meta_description || null;
 
     // Create the article with generated content and basic metadata
     const article = await prisma.article.create({
@@ -156,11 +157,17 @@ export async function POST(request: NextRequest) {
         // ✅ SIMPLIFIED: Save only slug for now
         slug: finalSlug,
 
+        // ✅ YOAST SEO: Save meta description for WordPress Yoast plugin
+        yoastSeo: finalMetaDescription ? {
+          meta_description: finalMetaDescription
+        } : null,
+
         // ✅ SIMPLIFIED: Save raw response for future processing
         articleData: result.rawResponse || {
           title: finalTitle,
           content: finalContent,
           slug: finalSlug,
+          metaDescription: finalMetaDescription,
           statistics: result.statistics
         },
 
@@ -232,15 +239,17 @@ export async function POST(request: NextRequest) {
           }
         );
 
-        // ✅ SIMPLIFIED: Extract only title, content, and slug from advanced structure
+        // ✅ SIMPLIFIED: Extract title, content, slug, and meta description from advanced structure
         const articleContent = advancedData.content || result.content;
         const articleTitle = advancedData.basic_data?.title || result.title;
         const articleSlug = advancedData.basic_data?.slug || null;
+        const articleMetaDescription = advancedData.seo_critical?.meta_description || null;
 
         console.log('📝 [Auto-Publishing] Extracted article data:', {
           title: articleTitle?.substring(0, 50) + '...',
           contentLength: articleContent?.length || 0,
           slug: articleSlug,
+          metaDescription: articleMetaDescription?.substring(0, 50) + '...',
           hasAdvancedData: !!advancedData.basic_data
         });
 
@@ -252,14 +261,16 @@ export async function POST(request: NextRequest) {
           slug: articleSlug
         };
 
-        // ✅ SIMPLIFIED: Minimal metadata for WordPress
+        // ✅ SIMPLIFIED: Minimal metadata for WordPress with Yoast SEO
         const publishingMetadata = {
           title: articleTitle,
           excerpt: articleTitle.substring(0, 150),
           categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
           tags: [], // ✅ EMPTY TAGS TO AVOID ERRORS
           author: wordpressSite.defaultAuthor,
-          slug: articleSlug
+          slug: articleSlug,
+          // ✅ YOAST SEO: Meta description for Yoast plugin
+          yoast_wpseo_metadesc: articleMetaDescription
         };
 
         // Attempt to publish

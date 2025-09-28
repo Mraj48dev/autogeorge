@@ -304,7 +304,9 @@ export default function ArticlesBySourcePage() {
           categories: site.defaultCategory ? [site.defaultCategory] : [],
           tags: [], // ✅ SIMPLIFIED: Empty tags to avoid WordPress errors
           author: site.defaultAuthor,
-          slug: articleDetail?.article.slug
+          slug: articleDetail?.article.slug,
+          // ✅ YOAST SEO: Include meta description for Yoast plugin
+          yoast_wpseo_metadesc: articleDetail?.article.metaDescription
         }
       };
 
@@ -811,7 +813,20 @@ export default function ArticlesBySourcePage() {
                       🎯 SEO & Metadata
                     </h3>
                     <div className="space-y-3 text-sm">
-                      {articleDetail.seo.metaDescription && (
+                      {/* ✅ YOAST SEO: Meta Description from Yoast data */}
+                      {articleDetail?.article.metaDescription && (
+                        <div>
+                          <span className="text-gray-600 font-medium">Meta Description (Yoast):</span>
+                          <p className="text-gray-700 text-xs mt-1 bg-white rounded p-2 border">
+                            {articleDetail.article.metaDescription}
+                          </p>
+                          <span className="text-xs text-gray-500">
+                            {articleDetail.article.metaDescription.length}/160 caratteri
+                          </span>
+                        </div>
+                      )}
+                      {/* Fallback to extracted meta description if Yoast not available */}
+                      {!articleDetail?.article.metaDescription && articleDetail.seo.metaDescription && (
                         <div>
                           <span className="text-gray-600 font-medium">Meta Description:</span>
                           <p className="text-gray-700 text-xs mt-1 bg-white rounded p-2">

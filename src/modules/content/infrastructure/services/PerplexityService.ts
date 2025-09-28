@@ -35,7 +35,7 @@ import { Result } from '../../shared/domain/types/Result';
 export class PerplexityService implements AiService {
   private readonly baseUrl = 'https://api.perplexity.ai';
   private readonly apiKey: string;
-  private readonly defaultModel = 'sonar-pro';
+  private readonly defaultModel = 'llama-3.1-sonar-large-128k-online';
 
   constructor(apiKey: string) {
     if (!apiKey) {
@@ -51,9 +51,19 @@ export class PerplexityService implements AiService {
       // Build the prompt for article generation
       const prompt = this.buildArticlePrompt(request);
 
+      // ✅ SAFETY: Ensure valid Perplexity model
+      const model = this.validateAndFixModel(request.model || this.defaultModel);
+
+      console.log('🔧 [PerplexityService] Model validation:', {
+        requestedModel: request.model,
+        defaultModel: this.defaultModel,
+        finalModel: model,
+        isValidModel: this.isValidPerplexityModel(request.model || this.defaultModel)
+      });
+
       // Make the API call
       const response = await this.makeApiCall('/chat/completions', {
-        model: request.model || this.defaultModel,
+        model: model,
         messages: [
           {
             role: 'system',
@@ -97,7 +107,7 @@ export class PerplexityService implements AiService {
         tokensUsed: data.usage?.total_tokens || 0,
         cost: this.calculateCost(data.usage?.total_tokens || 0),
         provider: 'perplexity',
-        modelVersion: request.model || this.defaultModel,
+        modelVersion: model,
         timestamp: new Date(),
         requestId: request.metadata?.requestId || 'unknown',
       };
@@ -586,22 +596,81 @@ export class PerplexityService implements AiService {
   }
 
   /**
+   * Validates and fixes model names for Perplexity compatibility
+   */
+  private validateAndFixModel(model: string): string {
+    // List of valid Perplexity models
+    const validModels = [
+      'llama-3.1-sonar-large-128k-online',
+      'llama-3.1-sonar-huge-128k-online',
+      'sonar-pro',
+      'sonar'
+    ];
+
+    // If model is valid, return as-is
+    if (validModels.includes(model)) {
+      return model;
+    }
+
+    // 🚨 FIX: Map invalid models to valid ones
+    const modelMappings: Record<string, string> = {
+      'gpt-4': 'llama-3.1-sonar-large-128k-online',
+      'gpt-4-turbo': 'llama-3.1-sonar-huge-128k-online',
+      'gpt-3.5-turbo': 'sonar-pro',
+      'gpt-4o': 'llama-3.1-sonar-large-128k-online',
+      'claude-3-5-sonnet': 'llama-3.1-sonar-huge-128k-online'
+    };
+
+    const mappedModel = modelMappings[model];
+    if (mappedModel) {
+      console.warn(`🔧 [PerplexityService] Auto-mapped invalid model '${model}' to '${mappedModel}'`);
+      return mappedModel;
+    }
+
+    // Final fallback to default
+    console.warn(`🚨 [PerplexityService] Unknown model '${model}', using default '${this.defaultModel}'`);
+    return this.defaultModel;
+  }
+
+  /**
+   * Checks if a model is valid for Perplexity
+   */
+  private isValidPerplexityModel(model: string): boolean {
+    const validModels = [
+      'llama-3.1-sonar-large-128k-online',
+      'llama-3.1-sonar-huge-128k-online',
+      'sonar-pro',
+      'sonar'
+    ];
+    return validModels.includes(model);
+  }
+
+  /**
    * Gets available models from Perplexity
    */
   private async getAvailableModels(): Promise<any[]> {
     // Based on current Perplexity API documentation
     return [
       {
-        id: 'sonar',
-        name: 'Sonar',
-        description: 'Quick factual queries and topic summaries',
+        id: 'llama-3.1-sonar-large-128k-online',
+        name: 'Llama 3.1 Sonar Large',
+        description: 'Online research and comprehensive article generation',
         supportedContentTypes: ['article', 'blog-post', 'news'],
         maxContextLength: 127072,
         costPer1kTokens: 0.002,
         isAvailable: true,
       },
       {
-        id: 'sonar pro',
+        id: 'llama-3.1-sonar-huge-128k-online',
+        name: 'Llama 3.1 Sonar Huge',
+        description: 'Advanced online research for complex content',
+        supportedContentTypes: ['article', 'blog-post', 'news'],
+        maxContextLength: 127072,
+        costPer1kTokens: 0.004,
+        isAvailable: true,
+      },
+      {
+        id: 'sonar-pro',
         name: 'Sonar Pro',
         description: 'Enhanced model for more complex queries',
         supportedContentTypes: ['article', 'blog-post', 'news'],
@@ -610,30 +679,12 @@ export class PerplexityService implements AiService {
         isAvailable: true,
       },
       {
-        id: 'sonar reasoning',
-        name: 'Sonar Reasoning',
-        description: 'Complex multi-step tasks and problem-solving',
-        supportedContentTypes: ['article', 'blog-post', 'technical'],
+        id: 'sonar',
+        name: 'Sonar',
+        description: 'Quick factual queries and topic summaries',
+        supportedContentTypes: ['article', 'blog-post', 'news'],
         maxContextLength: 127072,
-        costPer1kTokens: 0.006,
-        isAvailable: true,
-      },
-      {
-        id: 'sonar reasoning pro',
-        name: 'Sonar Reasoning Pro',
-        description: 'Advanced reasoning for complex problems',
-        supportedContentTypes: ['article', 'blog-post', 'technical'],
-        maxContextLength: 127072,
-        costPer1kTokens: 0.008,
-        isAvailable: true,
-      },
-      {
-        id: 'sonar deep research',
-        name: 'Sonar Deep Research',
-        description: 'Comprehensive topic reports and in-depth analysis',
-        supportedContentTypes: ['article', 'research', 'report'],
-        maxContextLength: 127072,
-        costPer1kTokens: 0.010,
+        costPer1kTokens: 0.002,
         isAvailable: true,
       },
     ];

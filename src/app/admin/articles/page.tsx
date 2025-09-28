@@ -109,6 +109,8 @@ export default function ArticlesBySourcePage() {
   const [publishError, setPublishError] = useState<string | null>(null);
   const [testingWordPress, setTestingWordPress] = useState(false);
   const [wordPressTestResult, setWordPressTestResult] = useState<any>(null);
+  const [searchingImage, setSearchingImage] = useState(false);
+  const [imageSearchResult, setImageSearchResult] = useState<any>(null);
   const [filters, setFilters] = useState({
     status: '',
     sourceId: '',
@@ -254,6 +256,73 @@ export default function ArticlesBySourcePage() {
       });
     } finally {
       setTestingWordPress(false);
+    }
+  };
+
+  const handleSearchFeaturedImage = async (article: ArticleSummary, articleDetail: ArticleDetail | null) => {
+    try {
+      setSearchingImage(true);
+      setImageSearchResult(null);
+
+      // Extract featured image data from article content if available
+      let aiPrompt = '';
+      let filename = '';
+      let altText = '';
+
+      // Try to get featured image data from articleDetail
+      if (articleDetail?.article.articleData) {
+        const articleData = articleDetail.article.articleData as any;
+        if (articleData.featured_image) {
+          aiPrompt = articleData.featured_image.ai_prompt || '';
+          filename = articleData.featured_image.filename || '';
+          altText = articleData.featured_image.alt_text || '';
+        }
+      }
+
+      // Fallback: generate data from article title and content
+      if (!aiPrompt || !filename || !altText) {
+        aiPrompt = `Professional image representing: ${article.title}`;
+        filename = `featured-${article.id.substring(0, 8)}-${Date.now()}.jpg`;
+        altText = `Image related to ${article.title}`;
+      }
+
+      console.log('🖼️ [Frontend] Searching for featured image:', {
+        articleId: article.id,
+        aiPrompt,
+        filename,
+        altText
+      });
+
+      const response = await fetch('/api/admin/image/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          articleId: article.id,
+          aiPrompt,
+          filename,
+          altText,
+          forceRegenerate: false
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setImageSearchResult(result.data);
+        console.log('✅ [Frontend] Image search successful:', result.data);
+        alert(`Immagine trovata con successo!\nURL: ${result.data.image.url}\nFonte: ${result.data.metadata.provider}`);
+      } else {
+        console.error('❌ [Frontend] Image search failed:', result.error);
+        alert(`Errore nella ricerca immagine: ${result.error}`);
+      }
+
+    } catch (error) {
+      console.error('💥 [Frontend] Image search exception:', error);
+      alert('Errore durante la ricerca dell\'immagine');
+    } finally {
+      setSearchingImage(false);
     }
   };
 
@@ -974,6 +1043,73 @@ export default function ArticlesBySourcePage() {
               </div>
             </div>
 
+            {/* Image Search Results */}
+            {imageSearchResult && (
+              <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center mb-3">
+                  <svg className="w-5 h-5 text-purple-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-purple-800">Immagine in evidenza trovata</p>
+                    <p className="text-xs text-purple-600">
+                      {imageSearchResult.metadata.wasGenerated
+                        ? '🎨 Immagine generata con AI'
+                        : '📷 Immagine trovata su fonte libera'
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <img
+                      src={imageSearchResult.image.url}
+                      alt={imageSearchResult.image.altText}
+                      className="w-20 h-20 object-cover rounded-lg border"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik02IDZMMTQgMTQiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxwYXRoIGQ9Ik0xNCA2TDYgMTQiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPgo=';
+                      }}
+                    />
+                    <div className="flex-1">
+                      <div className="text-xs space-y-1">
+                        <div>
+                          <span className="font-medium text-gray-600">URL:</span>
+                          <a
+                            href={imageSearchResult.image.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-600 hover:text-purple-800 ml-1 break-all"
+                          >
+                            {imageSearchResult.image.url.substring(0, 60)}...
+                          </a>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Alt Text:</span>
+                          <span className="ml-1">{imageSearchResult.image.altText}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Filename:</span>
+                          <span className="ml-1">{imageSearchResult.image.filename}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Fonte:</span>
+                          <span className="ml-1 bg-purple-100 text-purple-800 px-1 rounded text-xs">
+                            {imageSearchResult.metadata.provider}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500">
+                    Ricerca completata in {imageSearchResult.metadata.totalTime}ms •
+                    {imageSearchResult.searchResults.totalFound} risultati trovati
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* WordPress Test Results */}
             {wordPressTestResult && (
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1035,10 +1171,27 @@ export default function ArticlesBySourcePage() {
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => { setSelectedArticle(null); setArticleDetail(null); setPublishError(null); setWordPressTestResult(null); }}
+                  onClick={() => { setSelectedArticle(null); setArticleDetail(null); setPublishError(null); setWordPressTestResult(null); setImageSearchResult(null); }}
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Chiudi
+                </button>
+                <button
+                  onClick={() => handleSearchFeaturedImage(selectedArticle!, articleDetail)}
+                  disabled={searchingImage}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center"
+                >
+                  {searchingImage ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Cercando...
+                    </>
+                  ) : (
+                    <>🖼️ Immagine in evidenza</>
+                  )}
                 </button>
                 <button
                   onClick={handleTestWordPress}

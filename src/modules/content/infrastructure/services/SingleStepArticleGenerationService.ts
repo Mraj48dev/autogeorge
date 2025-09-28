@@ -84,10 +84,10 @@ export class SingleStepArticleGenerationService {
         tone: request.settings?.tone || 'professionale',
         style: request.settings?.style || 'giornalistico',
         targetAudience: request.settings?.targetAudience || 'generale',
-        targetWordCount: request.settings?.maxTokens ? Math.floor(request.settings.maxTokens * 0.75) : 2000,
+        targetWordCount: request.settings?.maxTokens ? Math.floor(request.settings.maxTokens * 0.75) : 4000,
         parameters: {
           temperature: request.settings?.temperature || 0.7,
-          maxTokens: request.settings?.maxTokens || 8000,
+          maxTokens: request.settings?.maxTokens || 16000,
           model: request.settings?.model || 'sonar-pro'
         },
         metadata: {
@@ -215,7 +215,7 @@ PARAMETRI DI STILE:
 - Tono: ${settings.tone || 'professionale'}
 - Stile: ${settings.style || 'giornalistico'}
 - Target audience: ${settings.targetAudience || 'generale'}
-- Lunghezza target: ${settings.maxTokens ? Math.floor(settings.maxTokens * 0.75) : 2000} parole
+- Lunghezza target: ${settings.maxTokens ? Math.floor(settings.maxTokens * 0.75) : 4000} parole
 
 REQUISITI TECNICI:
 - Rispondi SOLO con il JSON valido

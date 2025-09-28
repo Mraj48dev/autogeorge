@@ -325,7 +325,7 @@ Provide ONLY direct image URLs, one per line:`;
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-    const candidates = parseImageCandidates(content, keywords);
+    const candidates = await parseImageCandidates(content, keywords);
 
     return { candidates, processingTime: Date.now() - startTime };
   } catch (error) {
@@ -389,7 +389,7 @@ Provide direct image URLs:`;
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-    const candidates = parseImageCandidates(content, keywords);
+    const candidates = await parseImageCandidates(content, keywords);
 
     return { candidates, processingTime: Date.now() - startTime };
   } catch (error) {
@@ -449,10 +449,64 @@ Respond with ONLY the image generation prompt, nothing else.`;
     const data = await response.json();
     const imagePrompt = data.choices?.[0]?.message?.content || '';
 
-    // For now, return a placeholder URL with the generated prompt
-    // In a real implementation, this would call DALL-E or similar
+    // Use Perplexity to generate a more detailed search and find relevant free images
+    // Based on the AI-generated prompt
+    console.log('🤖 [AI Generation] Generated prompt:', imagePrompt);
+
+    const enhancedSearchPrompt = `Using this AI-generated image description: "${imagePrompt}"
+
+Find me 3-5 free, copyright-free images that match this description from:
+- Unsplash.com
+- Pexels.com
+- Pixabay.com
+
+Provide ONLY direct image URLs that closely match the description, one per line:`;
+
+    const enhancedResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at finding free images that match detailed AI-generated descriptions with high precision.'
+          },
+          {
+            role: 'user',
+            content: enhancedSearchPrompt
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.2,
+        stream: false
+      }),
+    });
+
+    if (enhancedResponse.ok) {
+      const enhancedData = await enhancedResponse.json();
+      const enhancedContent = enhancedData.choices?.[0]?.message?.content || '';
+
+      // Parse and validate the enhanced search results
+      const enhancedCandidates = await parseImageCandidates(enhancedContent, keywords);
+
+      if (enhancedCandidates.length > 0) {
+        console.log('✅ [AI Generation] Found real image matching AI prompt');
+        return Result.success({
+          url: enhancedCandidates[0].url,
+          description: `${imagePrompt.substring(0, 150)}`
+        });
+      }
+    }
+
+    // Final fallback: Use a more sophisticated placeholder or stock image service
+    const fallbackImageUrl = await getFallbackImage(title, keywords);
+
     return Result.success({
-      url: `https://via.placeholder.com/800x600/4A90E2/FFFFFF?text=${encodeURIComponent(title.substring(0, 30))}`,
+      url: fallbackImageUrl,
       description: `Professional image representing: ${imagePrompt.substring(0, 100)}`
     });
 
@@ -507,9 +561,9 @@ function scoreImageCandidates(
 }
 
 /**
- * Parse image URLs from Perplexity response into candidates
+ * Parse image URLs from Perplexity response into candidates with validation
  */
-function parseImageCandidates(content: string, keywords: string[]): ImageCandidate[] {
+async function parseImageCandidates(content: string, keywords: string[]): Promise<ImageCandidate[]> {
   const candidates: ImageCandidate[] = [];
   const urlRegex = /https?:\/\/[^\s\)]+\.(jpg|jpeg|png|webp|gif)/gi;
   const urls = content.match(urlRegex) || [];
@@ -521,26 +575,123 @@ function parseImageCandidates(content: string, keywords: string[]): ImageCandida
     'img.freepik.com'
   ];
 
-  for (const url of urls) {
+  console.log(`🔍 [URL Validation] Found ${urls.length} potential image URLs`);
+
+  for (const url of urls.slice(0, 15)) { // Check more URLs but limit validation calls
     try {
       const urlObj = new URL(url);
       const isTrustedSource = trustedSources.some(source => urlObj.hostname.includes(source));
 
       if (isTrustedSource) {
-        candidates.push({
-          url: url,
-          source: urlObj.hostname,
-          description: `Image from ${urlObj.hostname}`,
-          relevanceScore: 0, // Will be calculated
-          keywords: keywords
-        });
+        // Validate URL accessibility
+        const isValid = await validateImageUrl(url);
+
+        if (isValid) {
+          console.log(`✅ [URL Validation] Valid image: ${url.substring(0, 60)}...`);
+          candidates.push({
+            url: url,
+            source: urlObj.hostname,
+            description: `Professional image from ${urlObj.hostname}`,
+            relevanceScore: 0, // Will be calculated
+            keywords: keywords
+          });
+        } else {
+          console.warn(`❌ [URL Validation] Invalid image (404): ${url.substring(0, 60)}...`);
+        }
       }
     } catch {
       continue;
     }
   }
 
+  console.log(`✅ [URL Validation] ${candidates.length} valid images found`);
   return candidates.slice(0, 10);
+}
+
+/**
+ * Get a high-quality fallback image when AI generation can't find real images
+ */
+async function getFallbackImage(title: string, keywords: string[]): Promise<string> {
+  // High-quality curated fallback images from Unsplash collections
+  const fallbackCollections = {
+    'technology': [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80', // Tech keyboard
+      'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80', // AI/Data
+      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80'  // Code screen
+    ],
+    'business': [
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80', // Business meeting
+      'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&q=80', // Office workspace
+      'https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=800&q=80'  // Team collaboration
+    ],
+    'health': [
+      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&q=80', // Medical/health
+      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80', // Medicine
+      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&q=80'  // Healthcare
+    ],
+    'education': [
+      'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&q=80', // Education/books
+      'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80', // Library
+      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80'  // Learning
+    ],
+    'generic': [
+      'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80', // Professional/business
+      'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=800&q=80', // Modern workspace
+      'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&q=80'  // Professional setting
+    ]
+  };
+
+  // Detect category based on keywords
+  let category = 'generic';
+  const lowerKeywords = keywords.map(k => k.toLowerCase()).join(' ');
+  const lowerTitle = title.toLowerCase();
+
+  if (lowerKeywords.includes('tecnologia') || lowerKeywords.includes('ai') || lowerKeywords.includes('tech') ||
+      lowerKeywords.includes('software') || lowerKeywords.includes('computer') || lowerTitle.includes('tech')) {
+    category = 'technology';
+  } else if (lowerKeywords.includes('business') || lowerKeywords.includes('azienda') || lowerKeywords.includes('mercato') ||
+             lowerKeywords.includes('economia') || lowerTitle.includes('business')) {
+    category = 'business';
+  } else if (lowerKeywords.includes('salute') || lowerKeywords.includes('medicina') || lowerKeywords.includes('medico') ||
+             lowerTitle.includes('salute') || lowerTitle.includes('health')) {
+    category = 'health';
+  } else if (lowerKeywords.includes('educazione') || lowerKeywords.includes('scuola') || lowerKeywords.includes('formazione') ||
+             lowerTitle.includes('educazione') || lowerTitle.includes('education')) {
+    category = 'education';
+  }
+
+  const images = fallbackCollections[category] || fallbackCollections.generic;
+  const randomImage = images[Math.floor(Math.random() * images.length)];
+
+  console.log(`🎯 [Fallback] Selected ${category} image:`, randomImage);
+  return randomImage;
+}
+
+/**
+ * Validate that an image URL is accessible and returns an image
+ */
+async function validateImageUrl(url: string): Promise<boolean> {
+  try {
+    // Quick HEAD request to check if image exists
+    const response = await fetch(url, {
+      method: 'HEAD',
+      timeout: 5000, // 5 second timeout
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    // Check if it's actually an image
+    const contentType = response.headers.get('content-type');
+    const isImage = contentType && contentType.startsWith('image/');
+
+    return !!isImage;
+
+  } catch (error) {
+    console.warn(`⚠️ [URL Validation] Error checking URL ${url.substring(0, 50)}:`, error instanceof Error ? error.message : error);
+    return false;
+  }
 }
 
 /**

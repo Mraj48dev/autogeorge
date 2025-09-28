@@ -35,7 +35,7 @@ export class PerplexityImageSearchService implements ImageSearchService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-large-128k-online',
+          model: 'sonar-pro', // ✅ FIXED: Use correct Perplexity model
           messages: [
             {
               role: 'system',
@@ -121,7 +121,7 @@ GENERATION PROMPT:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-large-128k-online',
+          model: 'sonar-pro', // ✅ FIXED: Use correct Perplexity model
           messages: [
             {
               role: 'system',
@@ -188,7 +188,7 @@ GENERATION PROMPT:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-large-128k-online',
+          model: 'sonar-pro', // ✅ FIXED: Use correct Perplexity model
           messages: [
             {
               role: 'user',

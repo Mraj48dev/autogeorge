@@ -147,7 +147,7 @@ Only include working, direct image URLs from free sources that are directly rele
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-large-128k-online',
+        model: 'sonar-pro', // ✅ FIXED: Use correct Perplexity model
         messages: [
           {
             role: 'system',

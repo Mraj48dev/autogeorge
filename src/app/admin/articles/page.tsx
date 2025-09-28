@@ -209,7 +209,7 @@ export default function ArticlesBySourcePage() {
 
     // 🔄 Load saved featured image if available
     try {
-      const imageResponse = await fetch(`/api/admin/articles/${article.id}/image`);
+      const imageResponse = await fetch(`/api/admin/article-image?articleId=${article.id}`);
       if (imageResponse.ok) {
         const imageResult = await imageResponse.json();
         if (imageResult.success && imageResult.data) {
@@ -339,10 +339,13 @@ export default function ArticlesBySourcePage() {
 
         // 💾 Save image search result to database for persistence
         try {
-          await fetch(`/api/admin/articles/${article.id}/image`, {
+          await fetch('/api/admin/article-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(result.data)
+            body: JSON.stringify({
+              articleId: article.id,
+              imageSearchResult: result.data
+            })
           });
           console.log('💾 [Frontend] Image search result saved to database');
         } catch (saveError) {
@@ -411,7 +414,7 @@ export default function ArticlesBySourcePage() {
       let featuredImageData = imageSearchResult;
       if (!featuredImageData) {
         try {
-          const imageResponse = await fetch(`/api/admin/articles/${article.id}/image`);
+          const imageResponse = await fetch(`/api/admin/article-image?articleId=${article.id}`);
           if (imageResponse.ok) {
             const imageResult = await imageResponse.json();
             if (imageResult.success && imageResult.data) {

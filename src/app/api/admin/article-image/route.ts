@@ -29,15 +29,20 @@ interface ImageSearchResult {
 }
 
 /**
- * GET /api/admin/articles/[id]/image
+ * GET /api/admin/article-image?articleId=<id>
  * Get the saved featured image for an article
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const articleId = params.id;
+    const { searchParams } = new URL(request.url);
+    const articleId = searchParams.get('articleId');
+
+    if (!articleId) {
+      return NextResponse.json(
+        { error: 'articleId parameter is required' },
+        { status: 400 }
+      );
+    }
 
     const article = await prisma.article.findUnique({
       where: { id: articleId },
@@ -65,6 +70,8 @@ export async function GET(
       });
     }
 
+    console.log('📖 [Article Image] Retrieved saved featured image for article:', articleId);
+
     return NextResponse.json({
       success: true,
       data: featuredImage
@@ -80,16 +87,20 @@ export async function GET(
 }
 
 /**
- * POST /api/admin/articles/[id]/image
+ * POST /api/admin/article-image
  * Save the featured image search result for an article
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest) {
   try {
-    const articleId = params.id;
-    const imageSearchResult: ImageSearchResult = await request.json();
+    const requestBody = await request.json();
+    const { articleId, imageSearchResult } = requestBody;
+
+    if (!articleId || !imageSearchResult) {
+      return NextResponse.json(
+        { error: 'articleId and imageSearchResult are required' },
+        { status: 400 }
+      );
+    }
 
     console.log('💾 [Article Image] Saving featured image for article:', articleId);
     console.log('🖼️ [Article Image] Image data:', {
@@ -154,15 +165,20 @@ export async function POST(
 }
 
 /**
- * DELETE /api/admin/articles/[id]/image
+ * DELETE /api/admin/article-image?articleId=<id>
  * Remove the saved featured image for an article
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
-    const articleId = params.id;
+    const { searchParams } = new URL(request.url);
+    const articleId = searchParams.get('articleId');
+
+    if (!articleId) {
+      return NextResponse.json(
+        { error: 'articleId parameter is required' },
+        { status: 400 }
+      );
+    }
 
     console.log('🗑️ [Article Image] Removing featured image for article:', articleId);
 

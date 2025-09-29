@@ -258,7 +258,7 @@ async function performEnhancedImageSearch(
     const scored = scoreImageCandidates(level1Result.candidates, title, content, keywords);
     const bestCandidate = scored[0];
 
-    if (bestCandidate.relevanceScore >= 85) {
+    if (bestCandidate.relevanceScore >= 95) {
       console.log(`✅ [Level 1] Found high-quality match (score: ${bestCandidate.relevanceScore})`);
       return createSuccessResponse(bestCandidate, 'ultra-specific', scored.length, level1Result.processingTime, keywords, false);
     }
@@ -272,7 +272,7 @@ async function performEnhancedImageSearch(
     const scored = scoreImageCandidates(level2Result.candidates, title, content, keywords);
     const bestCandidate = scored[0];
 
-    if (bestCandidate.relevanceScore >= 70) {
+    if (bestCandidate.relevanceScore >= 85) {
       console.log(`✅ [Level 2] Found adequate match (score: ${bestCandidate.relevanceScore})`);
       return createSuccessResponse(bestCandidate, 'thematic', scored.length, level2Result.processingTime, keywords, false);
     }
@@ -288,12 +288,12 @@ async function performEnhancedImageSearch(
     const allScored = scoreImageCandidates(allCandidates, title, content, keywords);
     const bestOverall = allScored[0];
 
-    // 🎯 Lower threshold for difficult topics (mafia, serious subjects)
+    // 🎯 HIGHER threshold for difficult topics (mafia, serious subjects) to avoid inappropriate imagery
     const isComplexTopic = title.toLowerCase().includes('mafia') ||
                           title.toLowerCase().includes('vittime') ||
                           title.toLowerCase().includes('legalità');
 
-    const fallbackThreshold = isComplexTopic ? 30 : 50;
+    const fallbackThreshold = isComplexTopic ? 75 : 70; // Much higher standards for serious topics
 
     if (bestOverall.relevanceScore >= fallbackThreshold) {
       console.log(`🔄 [Fallback] Using lower threshold match (score: ${bestOverall.relevanceScore})`);
@@ -786,10 +786,15 @@ function calculateContentMismatchPenalty(
 
   // Heavy penalties for obvious mismatches
   const mismatchPatterns = {
-    // Serious topics should not have light/fun imagery
+    // Serious topics should not have light/fun imagery or technical/scientific imagery
     serious_topics: {
-      triggers: ['mafia', 'vittime', 'morte', 'tragedia', 'guerra', 'crimine'],
-      inappropriate: ['party', 'celebration', 'happy', 'fun', 'beach', 'vacation', 'wedding']
+      triggers: ['mafia', 'vittime', 'morte', 'tragedia', 'guerra', 'crimine', 'legalità', 'giustizia', 'antimafia'],
+      inappropriate: [
+        'party', 'celebration', 'happy', 'fun', 'beach', 'vacation', 'wedding',
+        'laboratory', 'lab', 'scientific', 'science', 'research', 'experiment', 'chemistry',
+        'biology', 'medical', 'hospital', 'doctor', 'pharmaceutical', 'medicine', 'pills',
+        'industrial', 'factory', 'manufacturing', 'technology', 'computer', 'digital'
+      ]
     },
     // Technology topics should not have unrelated imagery
     technology: {
@@ -809,7 +814,7 @@ function calculateContentMismatchPenalty(
     if (isTopicMatched) {
       rules.inappropriate.forEach(inappropriate => {
         if (description.includes(inappropriate) || url.includes(inappropriate)) {
-          penalty += 40; // Heavy penalty for topic mismatch
+          penalty += 80; // SEVERE penalty for topic mismatch - laboratory images should never appear for serious topics
         }
       });
     }
@@ -822,7 +827,7 @@ function calculateContentMismatchPenalty(
   if (isGenericTopic) {
     genericInappropriate.forEach(generic => {
       if (description.includes(generic) || url.includes(generic)) {
-        penalty += 30;
+        penalty += 60; // Increased penalty for unrelated scientific/industrial content
       }
     });
   }
@@ -1002,8 +1007,8 @@ function buildSemanticSearchPrompt(title: string, keywords: string[]): string {
   // 🎯 TOPIC-SPECIFIC SEARCH GUIDANCE
   if (titleLower.includes('mafia') || titleLower.includes('vittime') || titleLower.includes('legalità')) {
     return `TOPIC: Legal/Justice/Anti-Mafia
-SEARCH FOR: courthouse, justice scales, Italian government buildings, memorial ceremonies, formal government settings, law enforcement, serious institutional imagery
-AVOID: technology, laboratories, industrial settings, casual scenes, celebrations`;
+SEARCH FOR: courthouse, justice scales, Italian government buildings, memorial ceremonies, formal government settings, law enforcement, serious institutional imagery, carabinieri, magistrates, courtrooms, memorial plaques
+ABSOLUTELY AVOID: laboratories, scientific equipment, industrial machinery, technology, medical equipment, chemical labs, research facilities, manufacturing, technical instruments, scientific experiments`;
   }
 
   if (titleLower.includes('tecnologia') || titleLower.includes('ai') || titleLower.includes('digitale')) {

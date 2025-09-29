@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const imageData = searchResult.data;
     const relevanceScore = imageData.image?.relevanceScore || 0;
 
-    if (relevanceScore < 50) {
+    if (relevanceScore < 85) {
       console.log('🔍 [Search Only] Low relevance score:', relevanceScore);
       return NextResponse.json({
         success: false,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         data: {
           searchAttempted: true,
           bestScore: relevanceScore,
-          reason: 'Relevance score too low for search-only mode'
+          reason: 'Relevance score too low for search-only mode (minimum 85 required)'
         }
       });
     }

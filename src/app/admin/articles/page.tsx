@@ -319,8 +319,39 @@ export default function ArticlesBySourcePage() {
       let finalResult = null;
       let searchMethod = '';
 
-      // 🔍 STEP 1: Try image search first (if enabled)
-      if (enableImageSearch) {
+      // 🎨 SPECIAL CASE: AI-only mode (skip search completely)
+      if (enableAIGeneration && !enableImageSearch) {
+        console.log('🎨 [AI Only] Skipping search, going directly to AI generation...');
+        try {
+          const aiResponse = await fetch('/api/admin/image/generate-only', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              articleId: article.id,
+              articleTitle,
+              articleContent,
+              aiPrompt,
+              filename,
+              altText
+            })
+          });
+
+          const aiData = await aiResponse.json();
+          if (aiData.success && aiData.data) {
+            finalResult = aiData.data;
+            searchMethod = 'Generazione AI';
+            console.log('✅ [AI Only] AI generation successful');
+          } else {
+            console.error('❌ [AI Only] AI generation failed:', aiData.error);
+            throw new Error(aiData.error || 'AI generation failed');
+          }
+        } catch (aiError) {
+          console.error('❌ [AI Only] AI generation error:', aiError);
+          throw aiError;
+        }
+      }
+      // 🔍 STEP 1: Try image search first (if enabled and not AI-only)
+      else if (enableImageSearch) {
         try {
           console.log('🔍 [Step 1] Attempting image search...');
           const searchResponse = await fetch('/api/admin/image/search-only', {
@@ -349,8 +380,8 @@ export default function ArticlesBySourcePage() {
         }
       }
 
-      // 🎨 STEP 2: Try AI generation (if no search result and AI enabled)
-      if (!finalResult && enableAIGeneration) {
+      // 🎨 STEP 2: Try AI generation (if no search result and AI enabled, but not AI-only)
+      if (!finalResult && enableAIGeneration && enableImageSearch) {
         try {
           console.log('🎨 [Step 2] Attempting AI generation...');
           const aiResponse = await fetch('/api/admin/image/generate-only', {
@@ -379,8 +410,8 @@ export default function ArticlesBySourcePage() {
         }
       }
 
-      // 🔄 STEP 3: Use original combined endpoint as final fallback
-      if (!finalResult) {
+      // 🔄 STEP 3: Use original combined endpoint as final fallback (only if both flags enabled)
+      if (!finalResult && enableImageSearch && enableAIGeneration) {
         console.log('🔄 [Step 3] Using original combined endpoint as fallback...');
         searchMethod = 'Fallback combinato';
 

@@ -493,9 +493,14 @@ async function generateCustomImage(
   apiKey: string
 ): Promise<Result<{ url: string; description: string }, Error>> {
   // Add randomness to prevent identical results
+  const timestamp = Date.now();
   const randomSeed = Math.random().toString(36).substring(2, 8);
-  const styleVariations = ['professional', 'modern', 'contemporary', 'clean', 'elegant'];
+  const styleVariations = ['professional', 'modern', 'contemporary', 'clean', 'elegant', 'artistic', 'minimal', 'dynamic'];
   const randomStyle = styleVariations[Math.floor(Math.random() * styleVariations.length)];
+
+  // Add perspective variations for more unique prompts
+  const perspectives = ['aerial view', 'close-up', 'wide angle', 'detailed shot', 'panoramic view'];
+  const randomPerspective = perspectives[Math.floor(Math.random() * perspectives.length)];
 
   const generationPrompt = `Create a detailed prompt for generating a ${randomStyle}, professional image that perfectly represents this article:
 
@@ -503,11 +508,14 @@ TITLE: "${title}"
 KEYWORDS: ${keywords.join(', ')}
 CONTENT SUMMARY: ${content.substring(0, 500)}...
 VARIATION_SEED: ${randomSeed}
+TIMESTAMP: ${timestamp}
+PERSPECTIVE: ${randomPerspective}
 
 Generate a concise but detailed image description that would create a professional, relevant image. Focus on visual elements that directly relate to the main topic.
 Ensure the description is unique and specific to avoid generic results.
 
-Style preference: ${randomStyle}, high-quality photography
+Style preference: ${randomStyle}, high-quality photography, ${randomPerspective}
+Include unique visual elements that distinguish this image from standard stock photos.
 Respond with ONLY the image generation prompt, nothing else.`;
 
   try {
@@ -545,16 +553,34 @@ Respond with ONLY the image generation prompt, nothing else.`;
     // Use Perplexity to generate a more detailed search and find relevant free images
     // Based on the AI-generated prompt
     console.log('🤖 [AI Generation] Generated prompt:', imagePrompt);
+    console.log('🤖 [AI Generation] Random seed used:', randomSeed);
+    console.log('🤖 [AI Generation] Style variation:', randomStyle);
+    console.log('🤖 [AI Generation] Perspective:', randomPerspective);
+    console.log('🤖 [AI Generation] Timestamp:', timestamp);
     console.log('🔄 [AI Generation] Attempting enhanced search with AI-generated prompt...');
+
+    // Add more variety to search to avoid repetition
+    const searchVariations = [
+      'Find me unique, diverse images',
+      'Search for creative, varied images',
+      'Locate distinctive, high-quality images',
+      'Discover fresh, professional images',
+      'Get me alternative, original images'
+    ];
+    const randomSearchPhrase = searchVariations[Math.floor(Math.random() * searchVariations.length)];
 
     const enhancedSearchPrompt = `Using this AI-generated image description: "${imagePrompt}"
 
-Find me 3-5 free, copyright-free images that match this description from:
+${randomSearchPhrase} that match this description from:
 - Unsplash.com
 - Pexels.com
 - Pixabay.com
 
-Provide ONLY direct image URLs that closely match the description, one per line:`;
+VARIETY REQUIREMENT: Search for ${3 + Math.floor(Math.random() * 3)} different images to ensure diversity.
+SEARCH_SEED: ${randomSeed}
+
+Provide ONLY direct image URLs that closely match the description, one per line.
+Ensure URLs are valid and accessible:`;
 
     const enhancedResponse = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -575,7 +601,7 @@ Provide ONLY direct image URLs that closely match the description, one per line:
           }
         ],
         max_tokens: 500,
-        temperature: 0.2,
+        temperature: 0.9,  // High temperature for variety in image search
         stream: false
       }),
     });
@@ -983,10 +1009,19 @@ async function getFallbackImage(title: string, keywords: string[]): Promise<stri
  */
 async function validateImageUrl(url: string): Promise<boolean> {
   try {
-    // Quick HEAD request to check if image exists
+    // More lenient validation - trust well-known domains
+    const urlObj = new URL(url);
+    const trustedDomains = ['unsplash.com', 'pexels.com', 'pixabay.com'];
+
+    if (trustedDomains.some(domain => urlObj.hostname.includes(domain))) {
+      // For trusted domains, just check basic URL format
+      return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url);
+    }
+
+    // For other domains, do a quick HEAD request with shorter timeout
     const response = await fetch(url, {
       method: 'HEAD',
-      timeout: 5000, // 5 second timeout
+      signal: AbortSignal.timeout(3000), // 3 second timeout
     });
 
     if (!response.ok) {

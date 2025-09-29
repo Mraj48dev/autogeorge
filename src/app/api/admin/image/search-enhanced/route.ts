@@ -229,6 +229,29 @@ async function performEnhancedImageSearch(
     }
   }
 
+  // 🔍 FALLBACK: Check if we have any candidates with lower threshold for specific topics
+  const allCandidates = [
+    ...(level1Result?.candidates || []),
+    ...(level2Result?.candidates || [])
+  ];
+
+  if (allCandidates.length > 0) {
+    const allScored = scoreImageCandidates(allCandidates, title, content, keywords);
+    const bestOverall = allScored[0];
+
+    // 🎯 Lower threshold for difficult topics (mafia, serious subjects)
+    const isComplexTopic = title.toLowerCase().includes('mafia') ||
+                          title.toLowerCase().includes('vittime') ||
+                          title.toLowerCase().includes('legalità');
+
+    const fallbackThreshold = isComplexTopic ? 30 : 50;
+
+    if (bestOverall.relevanceScore >= fallbackThreshold) {
+      console.log(`🔄 [Fallback] Using lower threshold match (score: ${bestOverall.relevanceScore})`);
+      return createSuccessResponse(bestOverall, 'thematic', allScored.length, level2Result?.processingTime || 0, keywords, false);
+    }
+  }
+
   // LEVEL 3: AI Generation
   console.log('🎯 [Level 3] AI generation...');
   const level3Result = await generateCustomImage(title, content, keywords, perplexityApiKey);
@@ -271,7 +294,7 @@ async function performEnhancedImageSearch(
 }
 
 /**
- * Level 1: Ultra-specific search with exact keywords
+ * Level 1: Ultra-specific search with semantic context awareness
  */
 async function searchImagesLevel1(
   title: string,
@@ -280,16 +303,20 @@ async function searchImagesLevel1(
 ): Promise<{ candidates: ImageCandidate[]; processingTime: number }> {
   const startTime = Date.now();
 
+  // 🎯 ENHANCED SEMANTIC SEARCH PROMPT
+  const contextualPrompt = buildSemanticSearchPrompt(title, keywords);
+
   const searchPrompt = `Find me 5-7 ultra-specific, free images for this exact topic: "${title}"
 
+${contextualPrompt}
+
 CRITICAL REQUIREMENTS:
-- Images must be DIRECTLY and SPECIFICALLY related to: ${keywords.slice(0, 5).join(', ')}
-- Must contain visual elements that clearly represent the main subject
+- Images must be DIRECTLY and SEMANTICALLY related to the topic
+- Must reflect the appropriate tone and context for the subject matter
 - Only professional, high-quality images from free sources
 - From Unsplash, Pixabay, Pexels with exact URLs ending in .jpg/.png/.webp
 
-SPECIFICITY LEVEL: MAXIMUM
-Search for images that someone would immediately recognize as being about "${title}" specifically.
+SPECIFICITY LEVEL: MAXIMUM - Only images that are unmistakably relevant to this specific topic.
 
 Provide ONLY direct image URLs, one per line:`;
 
@@ -521,7 +548,7 @@ Provide ONLY direct image URLs that closely match the description, one per line:
 }
 
 /**
- * Score image candidates based on relevance to content
+ * Score image candidates based on semantic relevance to content
  */
 function scoreImageCandidates(
   candidates: ImageCandidate[],
@@ -533,36 +560,216 @@ function scoreImageCandidates(
     let score = 0;
     const description = candidate.description?.toLowerCase() || '';
     const url = candidate.url.toLowerCase();
+    const titleLower = title.toLowerCase();
+    const contentLower = content.toLowerCase();
 
-    // Score based on keyword matches in description/URL
-    keywords.forEach(keyword => {
-      if (description.includes(keyword.toLowerCase())) score += 15;
-      if (url.includes(keyword.toLowerCase())) score += 10;
-    });
+    // 🎯 SEMANTIC CONTEXT ANALYSIS
+    const contextScore = calculateSemanticRelevance(candidate, titleLower, contentLower, keywords);
+    score += contextScore;
 
-    // Score based on title word matches
-    const titleWords = title.toLowerCase().split(' ');
-    titleWords.forEach(word => {
-      if (word.length > 3) {
-        if (description.includes(word)) score += 20;
-        if (url.includes(word)) score += 15;
-      }
-    });
+    // 🔍 KEYWORD PRECISION MATCHING
+    const keywordScore = calculateKeywordRelevance(candidate, keywords, titleLower);
+    score += keywordScore;
 
-    // Bonus for trusted sources
-    if (candidate.source.includes('unsplash.com')) score += 10;
-    if (candidate.source.includes('pexels.com')) score += 8;
-    if (candidate.source.includes('pixabay.com')) score += 6;
+    // ⚖️ CONTEXTUAL APPROPRIATENESS
+    const appropriatenessScore = calculateAppropriatenessScore(candidate, titleLower, contentLower);
+    score += appropriatenessScore;
 
-    // Penalty for generic terms
-    const genericTerms = ['business', 'people', 'background', 'abstract', 'concept'];
-    genericTerms.forEach(term => {
-      if (description.includes(term)) score -= 5;
-    });
+    // 🚫 NEGATIVE SCORING FOR MISMATCHED CONTENT
+    const penaltyScore = calculateContentMismatchPenalty(candidate, titleLower, contentLower);
+    score -= penaltyScore;
 
-    candidate.relevanceScore = Math.min(100, Math.max(0, score));
+    // 🏆 SOURCE QUALITY BONUS
+    if (candidate.source.includes('unsplash.com')) score += 5;
+    if (candidate.source.includes('pexels.com')) score += 4;
+    if (candidate.source.includes('pixabay.com')) score += 3;
+
+    candidate.relevanceScore = Math.min(100, Math.max(0, Math.round(score)));
     return candidate;
   }).sort((a, b) => b.relevanceScore - a.relevanceScore);
+}
+
+/**
+ * Calculate semantic relevance between image and content
+ */
+function calculateSemanticRelevance(
+  candidate: ImageCandidate,
+  title: string,
+  content: string,
+  keywords: string[]
+): number {
+  const description = candidate.description?.toLowerCase() || '';
+  const url = candidate.url.toLowerCase();
+  let score = 0;
+
+  // Define semantic categories with their keywords
+  const semanticCategories = {
+    'mafia_legalita': ['mafia', 'legalità', 'giustizia', 'vittime', 'criminalità', 'antimafia', 'commemorazione', 'memoria', 'magistrati', 'carabinieri'],
+    'politica': ['governo', 'ministro', 'parlamento', 'elezioni', 'politica', 'stato', 'istituzione', 'sindaco', 'presidente'],
+    'tecnologia': ['tech', 'computer', 'software', 'ai', 'intelligenza', 'algoritmo', 'digitale', 'innovazione'],
+    'salute': ['salute', 'medicina', 'medico', 'ospedale', 'cura', 'terapia', 'paziente', 'sanità'],
+    'ambiente': ['ambiente', 'natura', 'clima', 'energia', 'sostenibile', 'verde', 'ecologia'],
+    'economia': ['economia', 'mercato', 'finanza', 'banca', 'investimenti', 'borsa', 'trading'],
+    'sport': ['sport', 'calcio', 'tennis', 'olimpiadi', 'atleta', 'squadra', 'campionato'],
+    'cultura': ['arte', 'museo', 'cultura', 'libro', 'cinema', 'teatro', 'musica', 'festival']
+  };
+
+  // Detect main category from title and content
+  let mainCategory = '';
+  let maxCategoryMatches = 0;
+
+  for (const [category, categoryKeywords] of Object.entries(semanticCategories)) {
+    let matches = 0;
+    categoryKeywords.forEach(keyword => {
+      if (title.includes(keyword) || content.includes(keyword)) {
+        matches++;
+      }
+    });
+    if (matches > maxCategoryMatches) {
+      maxCategoryMatches = matches;
+      mainCategory = category;
+    }
+  }
+
+  // Score based on category alignment
+  if (mainCategory && semanticCategories[mainCategory]) {
+    const categoryKeywords = semanticCategories[mainCategory];
+    categoryKeywords.forEach(keyword => {
+      if (description.includes(keyword) || url.includes(keyword)) {
+        score += 25; // High bonus for semantic category match
+      }
+    });
+  }
+
+  return score;
+}
+
+/**
+ * Calculate keyword relevance with precision
+ */
+function calculateKeywordRelevance(
+  candidate: ImageCandidate,
+  keywords: string[],
+  title: string
+): number {
+  const description = candidate.description?.toLowerCase() || '';
+  const url = candidate.url.toLowerCase();
+  let score = 0;
+
+  // Prioritize title words (most important)
+  const titleWords = title.split(' ').filter(word => word.length > 3);
+  titleWords.forEach(word => {
+    const wordLower = word.toLowerCase();
+    if (description.includes(wordLower)) score += 30;
+    if (url.includes(wordLower)) score += 20;
+  });
+
+  // Secondary keywords
+  keywords.slice(0, 5).forEach((keyword, index) => {
+    const weight = 15 - (index * 2); // Decreasing weight
+    if (description.includes(keyword.toLowerCase())) score += weight;
+    if (url.includes(keyword.toLowerCase())) score += weight * 0.7;
+  });
+
+  return score;
+}
+
+/**
+ * Calculate appropriateness score for content type
+ */
+function calculateAppropriatenessScore(
+  candidate: ImageCandidate,
+  title: string,
+  content: string
+): number {
+  const description = candidate.description?.toLowerCase() || '';
+  const url = candidate.url.toLowerCase();
+  let score = 0;
+
+  // Appropriate imagery types for serious topics
+  const seriousTopics = ['mafia', 'vittime', 'tragedia', 'morte', 'crimine', 'guerra', 'attacco'];
+  const appropriateForSerious = ['memorial', 'ceremony', 'flag', 'building', 'courthouse', 'government', 'serious', 'formal'];
+
+  const isSeriousTopic = seriousTopics.some(topic => title.includes(topic) || content.includes(topic));
+
+  if (isSeriousTopic) {
+    // Bonus for appropriate serious imagery
+    appropriateForSerious.forEach(appropriate => {
+      if (description.includes(appropriate) || url.includes(appropriate)) {
+        score += 20;
+      }
+    });
+  }
+
+  // Technology topics
+  if (title.includes('tecnologia') || title.includes('ai') || title.includes('digitale')) {
+    const techAppropriate = ['technology', 'computer', 'digital', 'innovation', 'tech', 'data'];
+    techAppropriate.forEach(tech => {
+      if (description.includes(tech) || url.includes(tech)) {
+        score += 15;
+      }
+    });
+  }
+
+  return score;
+}
+
+/**
+ * Calculate penalty for content mismatch
+ */
+function calculateContentMismatchPenalty(
+  candidate: ImageCandidate,
+  title: string,
+  content: string
+): number {
+  const description = candidate.description?.toLowerCase() || '';
+  const url = candidate.url.toLowerCase();
+  let penalty = 0;
+
+  // Heavy penalties for obvious mismatches
+  const mismatchPatterns = {
+    // Serious topics should not have light/fun imagery
+    serious_topics: {
+      triggers: ['mafia', 'vittime', 'morte', 'tragedia', 'guerra', 'crimine'],
+      inappropriate: ['party', 'celebration', 'happy', 'fun', 'beach', 'vacation', 'wedding']
+    },
+    // Technology topics should not have unrelated imagery
+    technology: {
+      triggers: ['tecnologia', 'ai', 'computer', 'digitale'],
+      inappropriate: ['food', 'cooking', 'restaurant', 'kitchen', 'nature', 'landscape']
+    },
+    // Political topics need appropriate imagery
+    politics: {
+      triggers: ['politica', 'governo', 'ministro', 'elezioni'],
+      inappropriate: ['technology', 'laboratory', 'science', 'medical', 'food']
+    }
+  };
+
+  for (const [category, rules] of Object.entries(mismatchPatterns)) {
+    const isTopicMatched = rules.triggers.some(trigger => title.includes(trigger) || content.includes(trigger));
+
+    if (isTopicMatched) {
+      rules.inappropriate.forEach(inappropriate => {
+        if (description.includes(inappropriate) || url.includes(inappropriate)) {
+          penalty += 40; // Heavy penalty for topic mismatch
+        }
+      });
+    }
+  }
+
+  // Generic penalties for clearly unrelated content
+  const genericInappropriate = ['laboratory', 'industrial', 'factory', 'manufacturing', 'scientific'];
+  const isGenericTopic = !title.includes('tecnologia') && !title.includes('industria') && !title.includes('scienza');
+
+  if (isGenericTopic) {
+    genericInappropriate.forEach(generic => {
+      if (description.includes(generic) || url.includes(generic)) {
+        penalty += 30;
+      }
+    });
+  }
+
+  return penalty;
 }
 
 /**
@@ -619,6 +826,16 @@ async function parseImageCandidates(content: string, keywords: string[]): Promis
 async function getFallbackImage(title: string, keywords: string[]): Promise<string> {
   // High-quality curated fallback images from Unsplash collections
   const fallbackCollections = {
+    'mafia_legalita': [
+      'https://images.unsplash.com/photo-1589994965851-a8f479c573a9?w=800&q=80', // Courthouse/justice
+      'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=800&q=80', // Government building
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80'  // Italian institutional
+    ],
+    'politics': [
+      'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&q=80', // Government/politics
+      'https://images.unsplash.com/photo-1586096135146-bb83d1808a95?w=800&q=80', // Political setting
+      'https://images.unsplash.com/photo-1573164713347-6eb4b0bb1148?w=800&q=80'  // Official building
+    ],
     'technology': [
       'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80', // Tech keyboard
       'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80', // AI/Data
@@ -646,22 +863,40 @@ async function getFallbackImage(title: string, keywords: string[]): Promise<stri
     ]
   };
 
-  // Detect category based on keywords
+  // Detect category based on keywords and title with priority order
   let category = 'generic';
   const lowerKeywords = keywords.map(k => k.toLowerCase()).join(' ');
   const lowerTitle = title.toLowerCase();
 
-  if (lowerKeywords.includes('tecnologia') || lowerKeywords.includes('ai') || lowerKeywords.includes('tech') ||
-      lowerKeywords.includes('software') || lowerKeywords.includes('computer') || lowerTitle.includes('tech')) {
+  // 🎯 PRIORITY 1: Mafia/Legal topics (most specific detection)
+  if (lowerTitle.includes('mafia') || lowerTitle.includes('vittime') || lowerTitle.includes('legalità') ||
+      lowerTitle.includes('giustizia') || lowerTitle.includes('antimafia') || lowerTitle.includes('criminalità') ||
+      lowerKeywords.includes('mafia') || lowerKeywords.includes('legalità') || lowerKeywords.includes('giustizia')) {
+    category = 'mafia_legalita';
+  }
+  // 🎯 PRIORITY 2: Politics/Government
+  else if (lowerTitle.includes('politica') || lowerTitle.includes('governo') || lowerTitle.includes('ministro') ||
+           lowerTitle.includes('elezioni') || lowerKeywords.includes('politica') || lowerKeywords.includes('governo')) {
+    category = 'politics';
+  }
+  // 🎯 PRIORITY 3: Technology
+  else if (lowerKeywords.includes('tecnologia') || lowerKeywords.includes('ai') || lowerKeywords.includes('tech') ||
+           lowerKeywords.includes('software') || lowerKeywords.includes('computer') || lowerTitle.includes('tech')) {
     category = 'technology';
-  } else if (lowerKeywords.includes('business') || lowerKeywords.includes('azienda') || lowerKeywords.includes('mercato') ||
-             lowerKeywords.includes('economia') || lowerTitle.includes('business')) {
+  }
+  // 🎯 PRIORITY 4: Business/Economics
+  else if (lowerKeywords.includes('business') || lowerKeywords.includes('azienda') || lowerKeywords.includes('mercato') ||
+           lowerKeywords.includes('economia') || lowerTitle.includes('business')) {
     category = 'business';
-  } else if (lowerKeywords.includes('salute') || lowerKeywords.includes('medicina') || lowerKeywords.includes('medico') ||
-             lowerTitle.includes('salute') || lowerTitle.includes('health')) {
+  }
+  // 🎯 PRIORITY 5: Health/Medical
+  else if (lowerKeywords.includes('salute') || lowerKeywords.includes('medicina') || lowerKeywords.includes('medico') ||
+           lowerTitle.includes('salute') || lowerTitle.includes('health')) {
     category = 'health';
-  } else if (lowerKeywords.includes('educazione') || lowerKeywords.includes('scuola') || lowerKeywords.includes('formazione') ||
-             lowerTitle.includes('educazione') || lowerTitle.includes('education')) {
+  }
+  // 🎯 PRIORITY 6: Education
+  else if (lowerKeywords.includes('educazione') || lowerKeywords.includes('scuola') || lowerKeywords.includes('formazione') ||
+           lowerTitle.includes('educazione') || lowerTitle.includes('education')) {
     category = 'education';
   }
 
@@ -697,6 +932,56 @@ async function validateImageUrl(url: string): Promise<boolean> {
     console.warn(`⚠️ [URL Validation] Error checking URL ${url.substring(0, 50)}:`, error instanceof Error ? error.message : error);
     return false;
   }
+}
+
+/**
+ * Build semantic search prompt based on topic analysis
+ */
+function buildSemanticSearchPrompt(title: string, keywords: string[]): string {
+  const titleLower = title.toLowerCase();
+  const keywordsLower = keywords.map(k => k.toLowerCase());
+
+  // 🎯 TOPIC-SPECIFIC SEARCH GUIDANCE
+  if (titleLower.includes('mafia') || titleLower.includes('vittime') || titleLower.includes('legalità')) {
+    return `TOPIC: Legal/Justice/Anti-Mafia
+SEARCH FOR: courthouse, justice scales, Italian government buildings, memorial ceremonies, formal government settings, law enforcement, serious institutional imagery
+AVOID: technology, laboratories, industrial settings, casual scenes, celebrations`;
+  }
+
+  if (titleLower.includes('tecnologia') || titleLower.includes('ai') || titleLower.includes('digitale')) {
+    return `TOPIC: Technology/AI/Digital
+SEARCH FOR: modern technology, computers, digital interfaces, artificial intelligence concepts, innovation labs, tech workspaces
+AVOID: unrelated industrial processes, medical labs, food preparation`;
+  }
+
+  if (titleLower.includes('politica') || titleLower.includes('governo') || titleLower.includes('elezioni')) {
+    return `TOPIC: Politics/Government
+SEARCH FOR: government buildings, political meetings, voting, institutional settings, flags, official ceremonies
+AVOID: technology labs, industrial settings, medical environments`;
+  }
+
+  if (titleLower.includes('salute') || titleLower.includes('medicina') || titleLower.includes('medico')) {
+    return `TOPIC: Health/Medical
+SEARCH FOR: healthcare settings, medical professionals, hospitals, health concepts, medical equipment
+AVOID: technology labs, industrial manufacturing, food preparation`;
+  }
+
+  if (titleLower.includes('economia') || titleLower.includes('finanza') || titleLower.includes('mercato')) {
+    return `TOPIC: Economics/Finance
+SEARCH FOR: business settings, financial districts, trading floors, economic graphs, professional business environments
+AVOID: technology labs, medical settings, industrial manufacturing`;
+  }
+
+  if (titleLower.includes('ambiente') || titleLower.includes('clima') || titleLower.includes('natura')) {
+    return `TOPIC: Environment/Climate
+SEARCH FOR: natural landscapes, environmental conservation, renewable energy, green technology, climate-related imagery
+AVOID: industrial labs, medical settings, unrelated technology`;
+  }
+
+  // Default for general topics
+  return `TOPIC: General/News
+SEARCH FOR: professional imagery that directly relates to the main subject matter mentioned in the title
+AVOID: generic industrial/laboratory/technology images unless specifically relevant to the topic`;
 }
 
 /**

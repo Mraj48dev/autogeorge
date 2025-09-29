@@ -1315,7 +1315,7 @@ export default function ArticlesBySourcePage() {
 
             {/* Image Search Configuration */}
             <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <h4 className="text-sm font-medium text-purple-800 mb-3">🖼️ Configurazione Ricerca Immagini</h4>
+              <h4 className="text-sm font-medium text-purple-800 mb-3">🖼️ Configurazione Ricerca Immagini (v2)</h4>
               <div className="flex flex-col space-y-2">
                 <label className="flex items-center">
                   <input

@@ -492,14 +492,22 @@ async function generateCustomImage(
   keywords: string[],
   apiKey: string
 ): Promise<Result<{ url: string; description: string }, Error>> {
-  const generationPrompt = `Create a detailed prompt for generating a professional image that perfectly represents this article:
+  // Add randomness to prevent identical results
+  const randomSeed = Math.random().toString(36).substring(2, 8);
+  const styleVariations = ['professional', 'modern', 'contemporary', 'clean', 'elegant'];
+  const randomStyle = styleVariations[Math.floor(Math.random() * styleVariations.length)];
+
+  const generationPrompt = `Create a detailed prompt for generating a ${randomStyle}, professional image that perfectly represents this article:
 
 TITLE: "${title}"
 KEYWORDS: ${keywords.join(', ')}
 CONTENT SUMMARY: ${content.substring(0, 500)}...
+VARIATION_SEED: ${randomSeed}
 
 Generate a concise but detailed image description that would create a professional, relevant image. Focus on visual elements that directly relate to the main topic.
+Ensure the description is unique and specific to avoid generic results.
 
+Style preference: ${randomStyle}, high-quality photography
 Respond with ONLY the image generation prompt, nothing else.`;
 
   try {
@@ -522,7 +530,7 @@ Respond with ONLY the image generation prompt, nothing else.`;
           }
         ],
         max_tokens: 200,
-        temperature: 0.4,
+        temperature: 0.8,  // Higher temperature for more variety
         stream: false
       }),
     });

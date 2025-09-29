@@ -484,158 +484,104 @@ Provide direct image URLs:`;
 }
 
 /**
- * Level 3: Generate custom image with AI
+ * Create optimized DALL-E prompt based on article content
+ */
+function createDallePrompt(title: string, content: string, keywords: string[]): string {
+  const titleLower = title.toLowerCase();
+
+  // Detect topic and create appropriate prompt
+  if (titleLower.includes('mafia') || titleLower.includes('vittime') || titleLower.includes('legalità')) {
+    return `A professional, respectful image representing justice and law enforcement in Italy.
+    Show scales of justice, courthouse architecture, or Italian institutional buildings.
+    Professional photography style, serious tone, symbolic representation of law and order.
+    Avoid any criminal imagery or violence. Focus on dignity, justice, and institutional authority.`;
+  }
+
+  if (titleLower.includes('tecnologia') || titleLower.includes('ai') || titleLower.includes('digitale')) {
+    return `A modern, professional technology concept image. Clean design with computers,
+    digital interfaces, or abstract technological elements. Minimalist style, blue and white colors,
+    representing innovation and progress. High-quality professional photography.`;
+  }
+
+  if (titleLower.includes('politica') || titleLower.includes('governo') || titleLower.includes('elezioni')) {
+    return `A professional image representing government and political institutions.
+    Show Italian government buildings, flags, or formal political settings.
+    Dignified, institutional style with official architecture or ceremonial elements.`;
+  }
+
+  // Generic professional prompt based on content
+  const keywordPhrase = keywords.slice(0, 3).join(', ');
+  return `A professional, high-quality image representing: ${title}.
+  Include visual elements related to: ${keywordPhrase}.
+  Style: professional photography, clean composition, modern aesthetic,
+  appropriate for news or editorial use. Avoid generic stock photo appearance.`;
+}
+
+/**
+ * Level 3: Generate custom image with REAL AI (DALL-E)
  */
 async function generateCustomImage(
   title: string,
   content: string,
   keywords: string[],
-  apiKey: string
+  perplexityApiKey: string
 ): Promise<Result<{ url: string; description: string }, Error>> {
-  // Add randomness to prevent identical results
-  const timestamp = Date.now();
-  const randomSeed = Math.random().toString(36).substring(2, 8);
-  const styleVariations = ['professional', 'modern', 'contemporary', 'clean', 'elegant', 'artistic', 'minimal', 'dynamic'];
-  const randomStyle = styleVariations[Math.floor(Math.random() * styleVariations.length)];
+  console.log('🎨 [DALL-E] Starting REAL image generation for:', title);
 
-  // Add perspective variations for more unique prompts
-  const perspectives = ['aerial view', 'close-up', 'wide angle', 'detailed shot', 'panoramic view'];
-  const randomPerspective = perspectives[Math.floor(Math.random() * perspectives.length)];
+  // Get OpenAI API key from environment
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    console.error('❌ [DALL-E] OpenAI API key not configured');
+    return Result.failure(new Error('OpenAI API key not configured'));
+  }
 
-  const generationPrompt = `Create a detailed prompt for generating a ${randomStyle}, professional image that perfectly represents this article:
-
-TITLE: "${title}"
-KEYWORDS: ${keywords.join(', ')}
-CONTENT SUMMARY: ${content.substring(0, 500)}...
-VARIATION_SEED: ${randomSeed}
-TIMESTAMP: ${timestamp}
-PERSPECTIVE: ${randomPerspective}
-
-Generate a concise but detailed image description that would create a professional, relevant image. Focus on visual elements that directly relate to the main topic.
-Ensure the description is unique and specific to avoid generic results.
-
-Style preference: ${randomStyle}, high-quality photography, ${randomPerspective}
-Include unique visual elements that distinguish this image from standard stock photos.
-Respond with ONLY the image generation prompt, nothing else.`;
+  // Create DALL-E optimized prompt
+  const dallePrompt = createDallePrompt(title, content, keywords);
+  console.log('🎨 [DALL-E] Generated prompt:', dallePrompt);
 
   try {
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    // Call OpenAI DALL-E API for REAL image generation
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar-pro',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at creating detailed prompts for AI image generation that result in professional, relevant images.'
-          },
-          {
-            role: 'user',
-            content: generationPrompt
-          }
-        ],
-        max_tokens: 200,
-        temperature: 0.8,  // Higher temperature for more variety
-        stream: false
+        model: 'dall-e-3',
+        prompt: dallePrompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard',
+        response_format: 'url'
       }),
     });
 
     if (!response.ok) {
-      return Result.failure(new Error(`AI generation failed: ${response.status}`));
+      const errorData = await response.json();
+      console.error('❌ [DALL-E] Generation failed:', errorData);
+      return Result.failure(new Error(`DALL-E generation failed: ${errorData.error?.message || response.status}`));
     }
 
     const data = await response.json();
-    const imagePrompt = data.choices?.[0]?.message?.content || '';
+    const imageUrl = data.data?.[0]?.url;
 
-    // Use Perplexity to generate a more detailed search and find relevant free images
-    // Based on the AI-generated prompt
-    console.log('🤖 [AI Generation] Generated prompt:', imagePrompt);
-    console.log('🤖 [AI Generation] Random seed used:', randomSeed);
-    console.log('🤖 [AI Generation] Style variation:', randomStyle);
-    console.log('🤖 [AI Generation] Perspective:', randomPerspective);
-    console.log('🤖 [AI Generation] Timestamp:', timestamp);
-    console.log('🔄 [AI Generation] Attempting enhanced search with AI-generated prompt...');
-
-    // Add more variety to search to avoid repetition
-    const searchVariations = [
-      'Find me unique, diverse images',
-      'Search for creative, varied images',
-      'Locate distinctive, high-quality images',
-      'Discover fresh, professional images',
-      'Get me alternative, original images'
-    ];
-    const randomSearchPhrase = searchVariations[Math.floor(Math.random() * searchVariations.length)];
-
-    const enhancedSearchPrompt = `Using this AI-generated image description: "${imagePrompt}"
-
-${randomSearchPhrase} that match this description from:
-- Unsplash.com
-- Pexels.com
-- Pixabay.com
-
-VARIETY REQUIREMENT: Search for ${3 + Math.floor(Math.random() * 3)} different images to ensure diversity.
-SEARCH_SEED: ${randomSeed}
-
-Provide ONLY direct image URLs that closely match the description, one per line.
-Ensure URLs are valid and accessible:`;
-
-    const enhancedResponse = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'sonar-pro',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at finding free images that match detailed AI-generated descriptions with high precision.'
-          },
-          {
-            role: 'user',
-            content: enhancedSearchPrompt
-          }
-        ],
-        max_tokens: 500,
-        temperature: 0.9,  // High temperature for variety in image search
-        stream: false
-      }),
-    });
-
-    if (enhancedResponse.ok) {
-      const enhancedData = await enhancedResponse.json();
-      const enhancedContent = enhancedData.choices?.[0]?.message?.content || '';
-
-      // Parse and validate the enhanced search results
-      const enhancedCandidates = await parseImageCandidates(enhancedContent, keywords);
-
-      if (enhancedCandidates.length > 0) {
-        console.log('✅ [AI Generation] Found real image matching AI prompt');
-        return Result.success({
-          url: enhancedCandidates[0].url,
-          description: `${imagePrompt.substring(0, 150)}`
-        });
-      } else {
-        console.log('⚠️ [AI Generation] Enhanced search found no valid images, proceeding to fallback');
-      }
-    } else {
-      console.log('⚠️ [AI Generation] Enhanced search API call failed, proceeding to fallback');
+    if (!imageUrl) {
+      console.error('❌ [DALL-E] No image URL in response');
+      return Result.failure(new Error('DALL-E did not return an image URL'));
     }
 
-    // Final fallback: Use a more sophisticated placeholder or stock image service
-    const fallbackImageUrl = await getFallbackImage(title, keywords);
+    console.log('✅ [DALL-E] Successfully generated image!');
+    console.log('🎨 [DALL-E] Image URL:', imageUrl.substring(0, 60) + '...');
 
     return Result.success({
-      url: fallbackImageUrl,
-      description: `Professional image representing: ${imagePrompt.substring(0, 100)}`
+      url: imageUrl,
+      description: dallePrompt
     });
 
   } catch (error) {
-    return Result.failure(error instanceof Error ? error : new Error('AI generation failed'));
+    console.error('❌ [DALL-E] Error:', error);
+    return Result.failure(error instanceof Error ? error : new Error('DALL-E generation failed'));
   }
 }
 

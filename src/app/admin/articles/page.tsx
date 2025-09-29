@@ -111,6 +111,8 @@ export default function ArticlesBySourcePage() {
   const [wordPressTestResult, setWordPressTestResult] = useState<any>(null);
   const [searchingImage, setSearchingImage] = useState(false);
   const [imageSearchResult, setImageSearchResult] = useState<any>(null);
+  const [enableImageSearch, setEnableImageSearch] = useState(true);
+  const [enableAIGeneration, setEnableAIGeneration] = useState(true);
   const [filters, setFilters] = useState({
     status: '',
     sourceId: '',
@@ -307,35 +309,103 @@ export default function ArticlesBySourcePage() {
         altText = `Image related to ${articleTitle}`;
       }
 
-      console.log('🎯 [Frontend Enhanced] Starting intelligent image search:', {
+      console.log('🎯 [Frontend Enhanced] Starting conditional image search:', {
         articleId: article.id,
-        titleLength: articleTitle.length,
-        contentLength: articleContent.length,
+        enableImageSearch,
+        enableAIGeneration,
         aiPrompt
       });
 
-      // Use enhanced search endpoint with article content analysis
-      const response = await fetch('/api/admin/image/search-enhanced', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          articleId: article.id,
-          articleTitle,
-          articleContent,
-          aiPrompt,
-          filename,
-          altText,
-          forceRegenerate: false
-        }),
-      });
+      let finalResult = null;
+      let searchMethod = '';
 
-      const result = await response.json();
+      // 🔍 STEP 1: Try image search first (if enabled)
+      if (enableImageSearch) {
+        try {
+          console.log('🔍 [Step 1] Attempting image search...');
+          const searchResponse = await fetch('/api/admin/image/search-only', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              articleId: article.id,
+              articleTitle,
+              articleContent,
+              aiPrompt,
+              filename,
+              altText
+            })
+          });
 
-      if (result.success) {
-        setImageSearchResult(result.data);
-        console.log('✅ [Frontend] Image search successful:', result.data);
+          const searchData = await searchResponse.json();
+          if (searchData.success && searchData.data) {
+            finalResult = searchData.data;
+            searchMethod = 'Ricerca immagini';
+            console.log('✅ [Step 1] Image search successful');
+          } else {
+            console.log('⚠️ [Step 1] Image search found no suitable results');
+          }
+        } catch (searchError) {
+          console.warn('⚠️ [Step 1] Image search failed:', searchError);
+        }
+      }
+
+      // 🎨 STEP 2: Try AI generation (if no search result and AI enabled)
+      if (!finalResult && enableAIGeneration) {
+        try {
+          console.log('🎨 [Step 2] Attempting AI generation...');
+          const aiResponse = await fetch('/api/admin/image/generate-only', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              articleId: article.id,
+              articleTitle,
+              articleContent,
+              aiPrompt,
+              filename,
+              altText
+            })
+          });
+
+          const aiData = await aiResponse.json();
+          if (aiData.success && aiData.data) {
+            finalResult = aiData.data;
+            searchMethod = 'Generazione AI';
+            console.log('✅ [Step 2] AI generation successful');
+          } else {
+            console.log('⚠️ [Step 2] AI generation failed');
+          }
+        } catch (aiError) {
+          console.warn('⚠️ [Step 2] AI generation failed:', aiError);
+        }
+      }
+
+      // 🔄 STEP 3: Use original combined endpoint as final fallback
+      if (!finalResult) {
+        console.log('🔄 [Step 3] Using original combined endpoint as fallback...');
+        searchMethod = 'Fallback combinato';
+
+        const response = await fetch('/api/admin/image/search-enhanced', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            articleId: article.id,
+            articleTitle,
+            articleContent,
+            aiPrompt,
+            filename,
+            altText,
+            forceRegenerate: false
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          finalResult = result.data;
+        }
+      }
+
+      if (finalResult) {
+        setImageSearchResult(finalResult);
 
         // 💾 Save image search result to database for persistence
         try {
@@ -344,38 +414,37 @@ export default function ArticlesBySourcePage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               articleId: article.id,
-              imageSearchResult: result.data
+              imageSearchResult: finalResult
             })
           });
           console.log('💾 [Frontend] Image search result saved to database');
         } catch (saveError) {
           console.warn('⚠️ [Frontend] Failed to save image search result:', saveError);
-          // Don't show error to user, it's not critical
         }
 
-        // Enhanced success message with intelligent search details
-        const imageData = result.data.image;
-        const searchData = result.data.searchResults;
-        const metadata = result.data.metadata;
+        // Enhanced success message
+        const imageData = finalResult.image;
+        const metadata = finalResult.metadata;
 
         const searchLevelText = {
           'ultra-specific': '🎯 Ultra-specifica (massima pertinenza)',
           'thematic': '🔍 Tematica (buona pertinenza)',
-          'ai-generated': '🎨 Generata con AI (pertinenza garantita)'
+          'ai-generated': '🎨 Generata con AI (pertinenza garantita)',
+          'search-only': '🔍 Solo ricerca (validata)',
+          'ai-only': '🎨 Solo AI (personalizzata)'
         }[imageData.searchLevel] || imageData.searchLevel;
 
-        alert(`🖼️ Immagine intelligente trovata!\n\n` +
+        alert(`🖼️ Immagine trovata con ${searchMethod}!\n\n` +
               `${searchLevelText}\n` +
-              `📊 Score di pertinenza: ${imageData.relevanceScore}/100\n` +
-              `🔍 Livello ricerca: ${imageData.searchLevel}\n` +
-              `📋 Keywords analizzate: ${metadata.keywords?.slice(0, 3).join(', ') || 'N/A'}\n` +
-              `⏱️ Tempo elaborazione: ${metadata.searchTime}ms\n\n` +
+              `📊 Score: ${imageData.relevanceScore}/100\n` +
+              `🔍 Modalità: ${enableImageSearch ? '✅' : '❌'} Ricerca / ${enableAIGeneration ? '✅' : '❌'} AI\n` +
+              `📋 Keywords: ${metadata.keywords?.slice(0, 3).join(', ') || 'N/A'}\n` +
+              `⏱️ Tempo: ${metadata.searchTime}ms\n\n` +
               `${metadata.wasGenerated ? '🎨 Generata con AI' : '📷 Fonte libera'}\n` +
               `URL: ${imageData.url.substring(0, 40)}...\n\n` +
               `✅ Pronta per caricamento automatico su WordPress!`);
       } else {
-        console.error('❌ [Frontend] Image search failed:', result.error);
-        alert(`❌ Errore nella ricerca immagine:\n${result.error}`);
+        alert('❌ Nessuna immagine trovata con i metodi selezionati');
       }
 
     } catch (error) {
@@ -1244,6 +1313,45 @@ export default function ArticlesBySourcePage() {
               </div>
             )}
 
+            {/* Image Search Configuration */}
+            <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <h4 className="text-sm font-medium text-purple-800 mb-3">🖼️ Configurazione Ricerca Immagini</h4>
+              <div className="flex flex-col space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={enableImageSearch}
+                    onChange={(e) => setEnableImageSearch(e.target.checked)}
+                    className="mr-2 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-sm text-purple-700">
+                    🔍 <strong>Cerca immagine</strong> - Ricerca web semantica avanzata
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={enableAIGeneration}
+                    onChange={(e) => setEnableAIGeneration(e.target.checked)}
+                    className="mr-2 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-sm text-purple-700">
+                    🎨 <strong>Crea immagine con AI</strong> - Generazione personalizzata Perplexity
+                  </span>
+                </label>
+              </div>
+              <div className="mt-2 text-xs text-purple-600">
+                {enableImageSearch && enableAIGeneration ?
+                  "🔄 Modalità combinata: prima ricerca, poi AI se necessario" :
+                  enableImageSearch ?
+                    "🔍 Solo ricerca web" :
+                    enableAIGeneration ?
+                      "🎨 Solo generazione AI" :
+                      "⚠️ Nessuna modalità selezionata"
+                }
+              </div>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex justify-between items-center mt-6 pt-4 border-t">
               <div className="text-sm text-gray-500">
@@ -1262,7 +1370,7 @@ export default function ArticlesBySourcePage() {
                 </button>
                 <button
                   onClick={() => handleSearchFeaturedImage(selectedArticle!, articleDetail)}
-                  disabled={searchingImage}
+                  disabled={searchingImage || (!enableImageSearch && !enableAIGeneration)}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center"
                 >
                   {searchingImage ? (

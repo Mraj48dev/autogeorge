@@ -10,6 +10,8 @@ interface EnhancedImageSearchRequest {
   filename: string;
   altText: string;
   forceRegenerate?: boolean;
+  searchOnly?: boolean;  // Only perform web search, no AI generation
+  aiOnly?: boolean;      // Only perform AI generation, no web search
 }
 
 interface ImageCandidate {
@@ -83,7 +85,9 @@ export async function POST(request: NextRequest) {
       body.articleTitle,
       body.articleContent,
       keywords,
-      body.aiPrompt
+      body.aiPrompt,
+      body.searchOnly,
+      body.aiOnly
     );
 
     if (searchResult.isFailure()) {
@@ -189,7 +193,9 @@ async function performEnhancedImageSearch(
   title: string,
   content: string,
   keywords: string[],
-  originalPrompt: string
+  originalPrompt: string,
+  searchOnly?: boolean,
+  aiOnly?: boolean
 ): Promise<Result<EnhancedImageSearchResponse, { code: string; message: string }>> {
   const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
   if (!perplexityApiKey) {
@@ -200,6 +206,49 @@ async function performEnhancedImageSearch(
   }
 
   const startTime = Date.now();
+
+  console.log('🎯 [Enhanced Search] Mode:', { searchOnly, aiOnly });
+
+  // Skip search levels if AI-only mode
+  if (aiOnly) {
+    console.log('🎨 [AI Only Mode] Skipping web search, going directly to AI generation...');
+    const level3Result = await generateCustomImage(title, content, keywords, perplexityApiKey);
+
+    if (level3Result.isSuccess()) {
+      console.log('✅ [AI Only] Generated custom image');
+      return Result.success({
+        image: {
+          id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          articleId: 'enhanced-search',
+          url: level3Result.value.url,
+          filename: `ai-generated-${title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}.jpg`,
+          altText: level3Result.value.description,
+          status: 'found',
+          relevanceScore: 95,
+          searchLevel: 'ai-generated' as const
+        },
+        searchResults: {
+          totalFound: 1,
+          candidatesEvaluated: 1,
+          bestScore: 95,
+          searchLevel: 'ai-generated',
+          processingTime: Date.now() - startTime
+        },
+        metadata: {
+          wasGenerated: true,
+          provider: 'perplexity-ai-generation',
+          searchTime: Date.now() - startTime,
+          totalTime: Date.now() - startTime,
+          keywords
+        }
+      });
+    } else {
+      return Result.failure({
+        code: 'AI_GENERATION_FAILED',
+        message: 'AI image generation failed'
+      });
+    }
+  }
 
   // LEVEL 1: Ultra-specific search
   console.log('🎯 [Level 1] Ultra-specific search...');
@@ -250,6 +299,15 @@ async function performEnhancedImageSearch(
       console.log(`🔄 [Fallback] Using lower threshold match (score: ${bestOverall.relevanceScore})`);
       return createSuccessResponse(bestOverall, 'thematic', allScored.length, level2Result?.processingTime || 0, keywords, false);
     }
+  }
+
+  // Skip AI generation if search-only mode
+  if (searchOnly) {
+    console.log('🔍 [Search Only Mode] Skipping AI generation as requested');
+    return Result.failure({
+      code: 'NO_SUITABLE_IMAGES_FOUND',
+      message: 'No suitable images found in search-only mode'
+    });
   }
 
   // LEVEL 3: AI Generation

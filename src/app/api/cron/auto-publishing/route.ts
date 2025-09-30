@@ -106,8 +106,8 @@ export async function GET(request: NextRequest) {
         });
 
         const publicationTarget = PublicationTarget.wordpress(
-          wordpressSite.url,    // siteUrl first
-          wordpressSite.id,     // siteId second
+          wordpressSite.id,     // siteId first (CORRECT ORDER)
+          wordpressSite.url,    // siteUrl second (CORRECT ORDER)
           config
         );
 

@@ -351,8 +351,8 @@ Genera l'articolo ora:`;
 
       // Create proper publication target using WordPress factory method (FIXED: correct parameter order)
       const publicationTarget = PublicationTarget.wordpress(
-        wordpressSite.url,    // siteUrl first (like manual publishing)
-        wordpressSite.id,     // siteId second (like manual publishing)
+        wordpressSite.id,     // siteId first (CORRECT ORDER)
+        wordpressSite.url,    // siteUrl second (CORRECT ORDER)
         {
           username: wordpressSite.username,
           password: wordpressSite.password,

@@ -1,4 +1,4 @@
-import { Entity } from '../../../shared/domain/base/Entity';
+import { Entity } from '../../../../shared/domain/base/Entity';
 import { ImageId } from '../value-objects/ImageId';
 import { ImageUrl } from '../value-objects/ImageUrl';
 import { ImageFilename } from '../value-objects/ImageFilename';

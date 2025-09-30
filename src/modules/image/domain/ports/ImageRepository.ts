@@ -1,4 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
+import { Result } from '../../../../shared/domain/types/Result';
 import { FeaturedImage } from '../entities/FeaturedImage';
 import { ImageId } from '../value-objects/ImageId';
 

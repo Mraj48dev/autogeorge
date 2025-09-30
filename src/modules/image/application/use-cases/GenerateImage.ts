@@ -1,5 +1,4 @@
-import { Result } from '../../../shared/domain/types/Result';
-import { BaseUseCase } from '../../../shared/application/base/UseCase';
+import { Result } from '../../../../shared/domain/types/Result';
 import { FeaturedImage } from '../../domain/entities/FeaturedImage';
 import { ImageRepository } from '../../domain/ports/ImageRepository';
 import { ImageGenerationService, ImageGenerationRequest } from '../../domain/ports/ImageGenerationService';
@@ -33,7 +32,7 @@ export interface GenerateImageOutput {
  * 3. Updates the entity with the result
  * 4. Persists the final state
  */
-export class GenerateImage extends BaseUseCase<GenerateImageInput, GenerateImageOutput> {
+export class GenerateImage {
   constructor(
     private readonly imageRepository: ImageRepository,
     private readonly imageGenerationService: ImageGenerationService

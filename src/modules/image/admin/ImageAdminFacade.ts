@@ -1,5 +1,4 @@
-import { Result } from '../../shared/domain/types/Result';
-import { AdminFacade } from '../../shared/application/base/AdminFacade';
+import { Result } from '../../../shared/domain/types/Result';
 import { GenerateImage, GenerateImageInput, GenerateImageOutput } from '../application/use-cases/GenerateImage';
 
 /**
@@ -7,12 +6,10 @@ import { GenerateImage, GenerateImageInput, GenerateImageOutput } from '../appli
  *
  * Provides administrative interface for image generation operations
  */
-export class ImageAdminFacade extends AdminFacade {
+export class ImageAdminFacade {
   constructor(
     private readonly generateImageUseCase: GenerateImage
-  ) {
-    super('image');
-  }
+  ) {}
 
   /**
    * List available use cases for this module

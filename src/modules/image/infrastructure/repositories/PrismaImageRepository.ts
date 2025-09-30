@@ -1,5 +1,5 @@
-import { Result } from '../../../shared/domain/types/Result';
-import { prisma } from '../../../shared/database/prisma';
+import { Result } from '../../../../shared/domain/types/Result';
+import { prisma } from '../../../../shared/database/prisma';
 import { ImageRepository } from '../../domain/ports/ImageRepository';
 import { FeaturedImage } from '../../domain/entities/FeaturedImage';
 import { ImageId } from '../../domain/value-objects/ImageId';

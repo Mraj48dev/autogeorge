@@ -3,7 +3,8 @@ import { Result } from '../../shared/domain/types/Result';
 import {
   FeedItemRepository,
   FeedItemForSave,
-  SavedFeedItem
+  SavedFeedItem,
+  FeedItemStatus
 } from '../../domain/ports/FeedItemRepository';
 
 /**
@@ -15,7 +16,7 @@ export class PrismaFeedItemRepository implements FeedItemRepository {
 
   async save(feedItem: FeedItemForSave): Promise<Result<SavedFeedItem, Error>> {
     try {
-      // Salva il feed item
+      // Sources Module sets status based on auto-generation settings
       const savedItem = await this.prisma.feedItem.create({
         data: {
           sourceId: feedItem.sourceId,
@@ -25,12 +26,11 @@ export class PrismaFeedItemRepository implements FeedItemRepository {
           url: feedItem.url,
           publishedAt: feedItem.publishedAt,
           fetchedAt: feedItem.fetchedAt,
-          processed: false,
+          status: feedItem.status, // New 3-state system
         }
       });
 
-      // Sources Module ora è completamente disaccoppiato - solo salva feed items
-      console.log(`💾 Feed item saved successfully: ${savedItem.id} - ${savedItem.title}`);
+      console.log(`💾 Feed item saved with status "${feedItem.status}": ${savedItem.id} - ${savedItem.title}`);
 
       return Result.success({
         id: savedItem.id,
@@ -41,7 +41,7 @@ export class PrismaFeedItemRepository implements FeedItemRepository {
         url: savedItem.url || undefined,
         publishedAt: savedItem.publishedAt,
         fetchedAt: savedItem.fetchedAt,
-        processed: savedItem.processed,
+        status: savedItem.status as FeedItemStatus,
         articleId: savedItem.articleId || undefined,
       });
     } catch (error) {
@@ -76,7 +76,7 @@ export class PrismaFeedItemRepository implements FeedItemRepository {
         url: existingItem.url || undefined,
         publishedAt: existingItem.publishedAt,
         fetchedAt: existingItem.fetchedAt,
-        processed: existingItem.processed,
+        status: existingItem.status as FeedItemStatus,
         articleId: existingItem.articleId || undefined,
       };
 
@@ -88,37 +88,38 @@ export class PrismaFeedItemRepository implements FeedItemRepository {
     }
   }
 
-  async markAsProcessed(feedItemId: string, articleId?: string): Promise<Result<void, Error>> {
+  async updateStatus(feedItemId: string, status: FeedItemStatus, articleId?: string): Promise<Result<void, Error>> {
     try {
       await this.prisma.feedItem.update({
         where: { id: feedItemId },
         data: {
-          processed: true,
+          status: status,
           articleId: articleId
         }
       });
 
+      console.log(`🔄 Feed item ${feedItemId} status updated to: ${status}${articleId ? ` (article: ${articleId})` : ''}`);
       return Result.success(undefined);
     } catch (error) {
       return Result.failure(
-        error instanceof Error ? error : new Error('Failed to mark feed item as processed')
+        error instanceof Error ? error : new Error('Failed to update feed item status')
       );
     }
   }
 
-  async getUnprocessedForSource(sourceId: string): Promise<Result<SavedFeedItem[], Error>> {
+  async getReadyForProcessing(sourceId: string): Promise<Result<SavedFeedItem[], Error>> {
     try {
-      const unprocessedItems = await this.prisma.feedItem.findMany({
+      const readyItems = await this.prisma.feedItem.findMany({
         where: {
           sourceId,
-          processed: false
+          status: 'draft' // Only items marked for processing
         },
         orderBy: {
           publishedAt: 'desc'
         }
       });
 
-      const savedItems: SavedFeedItem[] = unprocessedItems.map(item => ({
+      const savedItems: SavedFeedItem[] = readyItems.map(item => ({
         id: item.id,
         sourceId: item.sourceId,
         guid: item.guid,
@@ -127,14 +128,14 @@ export class PrismaFeedItemRepository implements FeedItemRepository {
         url: item.url || undefined,
         publishedAt: item.publishedAt,
         fetchedAt: item.fetchedAt,
-        processed: item.processed,
+        status: item.status as FeedItemStatus,
         articleId: item.articleId || undefined,
       }));
 
       return Result.success(savedItems);
     } catch (error) {
       return Result.failure(
-        error instanceof Error ? error : new Error('Failed to get unprocessed feed items')
+        error instanceof Error ? error : new Error('Failed to get items ready for processing')
       );
     }
   }

@@ -38,7 +38,7 @@ interface ArticleDetail {
     title: string;
     url?: string;
     publishedAt: string;
-    processed: boolean;
+    status: 'pending' | 'draft' | 'processed';
   };
   statistics: {
     characterCount: number;

@@ -1,10 +1,11 @@
 import { Result } from '../../shared/domain/types/Result';
 import { BaseUseCase } from '../../shared/application/base/UseCase';
 import { SourceRepository } from '../../domain/ports/SourceRepository';
-import { FeedItemRepository, FeedItemForSave, SavedFeedItem } from '../../domain/ports/FeedItemRepository';
+import { FeedItemRepository, FeedItemForSave, SavedFeedItem, FeedItemStatus } from '../../domain/ports/FeedItemRepository';
 import { SourceFetchService, FetchResult, FetchedItem } from '../../domain/ports/SourceFetchService';
 import { ArticleAutoGenerator, FeedItemForGeneration } from '../../domain/ports/ArticleAutoGenerator';
 import { SourceId } from '../../domain/value-objects/SourceId';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * Use case for fetching content from a specific source
@@ -85,17 +86,18 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           return Result.failure(saveResult.error);
         }
 
-        // Trigger auto-generation if enabled globally - check for new items OR existing unprocessed items
+        // Trigger auto-generation if enabled globally - check for new items OR existing draft items
         let generatedArticles = 0;
         const shouldAutoGenerate = request.autoGenerate !== undefined ? request.autoGenerate : source.shouldAutoGenerate();
         if (shouldAutoGenerate && this.articleAutoGenerator) {
-          // Get all unprocessed items for this source
-          const unprocessedResult = await this.feedItemRepository.getUnprocessedForSource(request.sourceId);
+          // Get all items ready for processing (status = 'draft')
+          const readyResult = await this.feedItemRepository.getReadyForProcessing(request.sourceId);
           let itemsToProcess: FeedItemForGeneration[] = [];
 
           if (savedFeedItems.length > 0) {
-            // Process new items
-            itemsToProcess = savedFeedItems.map(item => ({
+            // Process new items (only if they have status = 'draft')
+            const newDraftItems = savedFeedItems.filter(item => item.status === 'draft');
+            itemsToProcess = newDraftItems.map(item => ({
               id: item.id,
               guid: item.guid,
               title: item.title,
@@ -103,11 +105,11 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
               url: item.url,
               publishedAt: item.publishedAt
             }));
-            console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${savedFeedItems.length} new items...`);
-          } else if (unprocessedResult.isSuccess() && unprocessedResult.value.length > 0) {
-            // Process existing unprocessed items
-            const unprocessedItems = unprocessedResult.value;
-            itemsToProcess = unprocessedItems.map(item => ({
+            console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, triggering for ${newDraftItems.length} new draft items...`);
+          } else if (readyResult.isSuccess() && readyResult.value.length > 0) {
+            // Process existing draft items
+            const readyItems = readyResult.value;
+            itemsToProcess = readyItems.map(item => ({
               id: item.id,
               guid: item.guid || item.id,
               title: item.title,
@@ -115,7 +117,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
               url: item.url,
               publishedAt: item.publishedAt
             }));
-            console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, processing ${unprocessedItems.length} existing unprocessed items...`);
+            console.log(`🤖 Auto-generation enabled for source ${source.name.getValue()}, processing ${readyItems.length} existing draft items...`);
           }
 
           if (itemsToProcess.length > 0) {
@@ -136,7 +138,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
                 // The ArticleAutoGenerator already saves articles as drafts in /admin/articles
                 for (const result of genResult.generatedArticles) {
                   if (result.success && result.articleId) {
-                    await this.feedItemRepository.markAsProcessed(result.feedItemId, result.articleId);
+                    await this.feedItemRepository.updateStatus(result.feedItemId, 'processed', result.articleId);
                     console.log(`📝 Article draft created and saved in /admin/articles with ID: ${result.articleId}`);
                   }
                 }
@@ -220,6 +222,9 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         const existingItem = existingResult.value;
 
         if (!existingItem) {
+          // Determine status based on auto-generation settings
+          const initialStatus = await this.determineInitialStatus();
+
           // Create new FeedItem using Domain entities
           const feedItemForSave: FeedItemForSave = {
             sourceId,
@@ -229,6 +234,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
             url: item.url,
             publishedAt: item.publishedAt ? new Date(item.publishedAt) : new Date(),
             fetchedAt: new Date(),
+            status: initialStatus, // New: Sources Module sets this based on auto-generation settings
           };
 
           console.log(`✅ Creating new feed item: ${feedItemForSave.title}`);
@@ -254,6 +260,32 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     console.log(`🏗️ [Clean Architecture] Saved ${savedFeedItems.length} feed items out of ${fetchedItems.length} fetched`);
 
     return savedFeedItems;
+  }
+
+  /**
+   * Determines initial status for new feed items based on auto-generation settings
+   * Sources Module responsibility: set correct status based on WordPress configuration
+   */
+  private async determineInitialStatus(): Promise<FeedItemStatus> {
+    try {
+      // Read WordPress settings for the default user
+      // In a real app, this would be user-specific from the request context
+      const wordPressSite = await prisma.wordPressSite.findUnique({
+        where: { userId: 'demo-user' }, // TODO: Get from auth context
+        select: { enableAutoGeneration: true }
+      });
+
+      if (wordPressSite?.enableAutoGeneration) {
+        console.log(`🤖 Auto-generation enabled → Setting status: draft`);
+        return 'draft'; // Ready for Content Module to process
+      } else {
+        console.log(`⏸️ Auto-generation disabled → Setting status: pending`);
+        return 'pending'; // Not for processing
+      }
+    } catch (error) {
+      console.error(`❌ Error reading WordPress settings, defaulting to 'pending':`, error);
+      return 'pending'; // Safe default
+    }
   }
 }
 

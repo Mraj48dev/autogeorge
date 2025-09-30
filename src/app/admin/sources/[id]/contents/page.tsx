@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
+type FeedItemStatus = 'pending' | 'draft' | 'processed';
+
 interface Contenuto {
   id: string;
   title: string;
@@ -11,7 +13,7 @@ interface Contenuto {
   sourceId: string;
   publishedAt: string;
   fetchedAt: string;
-  processed: boolean;
+  status: FeedItemStatus; // Changed from processed: boolean
   guid?: string;
   articleId?: string;
 }
@@ -259,11 +261,18 @@ export default function SourceContenutiPage() {
                       <span>Pubblicato: {formatDate(contenuto.publishedAt)}</span>
                       <span>Recuperato: {formatDate(contenuto.fetchedAt)}</span>
                       <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                        contenuto.processed
+                        contenuto.status === 'processed'
                           ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          : contenuto.status === 'draft'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {contenuto.processed ? 'Processato' : 'Da processare'}
+                        {contenuto.status === 'processed'
+                          ? 'Processato'
+                          : contenuto.status === 'draft'
+                          ? 'Pronto per generazione'
+                          : 'In attesa'
+                        }
                       </span>
                       {contenuto.articleId && (
                         <span className="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
@@ -325,7 +334,7 @@ export default function SourceContenutiPage() {
                       >
                         Download
                       </button>
-                      {!contenuto.processed && !contenuto.articleId && (
+                      {contenuto.status !== 'processed' && !contenuto.articleId && (
                         <div className="flex space-x-1">
                           <button
                             onClick={() => handleGenerateArticle(contenuto, false)}

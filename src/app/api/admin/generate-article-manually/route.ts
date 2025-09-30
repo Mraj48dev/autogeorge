@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
     await prisma.feedItem.update({
       where: { id: feedItem.id },
       data: {
-        processed: true,
+        status: 'processed',
         articleId: article.id
       }
     });
@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
         },
         feedItem: {
           id: feedItem.id,
-          processed: true,
+          status: 'processed',
           articleId: article.id
         },
         generationMetadata: {

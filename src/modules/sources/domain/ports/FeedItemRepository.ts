@@ -16,15 +16,20 @@ export interface FeedItemRepository {
   findBySourceAndGuid(sourceId: string, guid: string): Promise<Result<SavedFeedItem | null, Error>>;
 
   /**
-   * Updates feed item as processed after article generation
+   * Updates feed item status after article generation
    */
-  markAsProcessed(feedItemId: string, articleId?: string): Promise<Result<void, Error>>;
+  updateStatus(feedItemId: string, status: FeedItemStatus, articleId?: string): Promise<Result<void, Error>>;
 
   /**
-   * Gets unprocessed feed items for auto-generation
+   * Gets feed items ready for processing (status = 'draft')
    */
-  getUnprocessedForSource(sourceId: string): Promise<Result<SavedFeedItem[], Error>>;
+  getReadyForProcessing(sourceId: string): Promise<Result<SavedFeedItem[], Error>>;
 }
+
+/**
+ * Feed Item Status - 3-state system
+ */
+export type FeedItemStatus = 'pending' | 'draft' | 'processed';
 
 /**
  * Domain Entity - Feed Item for saving
@@ -37,6 +42,7 @@ export interface FeedItemForSave {
   url?: string;
   publishedAt: Date;
   fetchedAt: Date;
+  status: FeedItemStatus; // New: Sources Module sets this based on auto-generation settings
 }
 
 /**
@@ -51,6 +57,6 @@ export interface SavedFeedItem {
   url?: string;
   publishedAt: Date;
   fetchedAt: Date;
-  processed: boolean;
+  status: FeedItemStatus; // Changed from processed: boolean
   articleId?: string;
 }

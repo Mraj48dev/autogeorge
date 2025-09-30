@@ -122,11 +122,19 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
 
           if (itemsToProcess.length > 0) {
             try {
+              // Read WordPress automation settings for correct Article status workflow
+              const automationSettings = await this.getWordPressAutomationSettings();
+
+              console.log(`🎯 [AutoGen] Using WordPress automation settings:`, {
+                enableFeaturedImage: automationSettings.enableFeaturedImage,
+                enableAutoPublish: automationSettings.enableAutoPublish
+              });
+
               const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
                 sourceId: request.sourceId,
                 feedItems: itemsToProcess,
-                enableFeaturedImage: request.enableFeaturedImage,
-                enableAutoPublish: request.enableAutoPublish
+                enableFeaturedImage: automationSettings.enableFeaturedImage,
+                enableAutoPublish: automationSettings.enableAutoPublish
               });
 
               if (autoGenResult.isSuccess()) {
@@ -285,6 +293,36 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     } catch (error) {
       console.error(`❌ Error reading WordPress settings, defaulting to 'pending':`, error);
       return 'pending'; // Safe default
+    }
+  }
+
+  /**
+   * Reads WordPress automation settings for article generation
+   * Returns the flags needed by Content Module for correct Article status workflow
+   */
+  private async getWordPressAutomationSettings(): Promise<{
+    enableFeaturedImage: boolean;
+    enableAutoPublish: boolean;
+  }> {
+    try {
+      const wordPressSite = await prisma.wordPressSite.findUnique({
+        where: { userId: 'demo-user' }, // TODO: Get from auth context
+        select: {
+          enableFeaturedImage: true,
+          enableAutoPublish: true
+        }
+      });
+
+      return {
+        enableFeaturedImage: wordPressSite?.enableFeaturedImage || false,
+        enableAutoPublish: wordPressSite?.enableAutoPublish || false
+      };
+    } catch (error) {
+      console.error(`❌ Error reading WordPress automation settings:`, error);
+      return {
+        enableFeaturedImage: false,
+        enableAutoPublish: false
+      };
     }
   }
 }

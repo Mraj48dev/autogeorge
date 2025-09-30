@@ -27,6 +27,10 @@ export class ImageId extends ValueObject<ImageIdProps> {
     return new ImageId({ value: `img_${timestamp}_${random}` });
   }
 
+  static fromString(value: string): ImageId {
+    return ImageId.create(value);
+  }
+
   equals(other: ImageId): boolean {
     return this.value === other.value;
   }

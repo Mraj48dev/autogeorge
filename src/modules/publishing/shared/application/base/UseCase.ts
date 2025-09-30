@@ -1,4 +1,4 @@
-import { Result } from '../../../../shared/domain/types/Result';
+import { Result } from '../../../../../shared/domain/types/Result';
 
 /**
  * Base class for Use Cases in the Publishing module.

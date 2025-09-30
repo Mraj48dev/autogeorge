@@ -111,21 +111,17 @@ export async function GET(request: NextRequest) {
             });
 
             const autoGenEnabled = wordpressSite?.enableAutoGeneration || false;
-            const featuredImageEnabled = wordpressSite?.enableFeaturedImage || false;
-            const autoPublishEnabled = wordpressSite?.enableAutoPublish || false;
 
             console.log(`🤖 Global Auto-generation: ${autoGenEnabled ? 'ENABLED' : 'DISABLED'}`);
-            console.log(`🎨 Featured Image Auto: ${featuredImageEnabled ? 'ENABLED' : 'DISABLED'}`);
-            console.log(`📤 Auto-publish: ${autoPublishEnabled ? 'ENABLED' : 'DISABLED'}`);
+            console.log(`📤 Auto-publish and Featured Images: Handled by separate /api/cron/auto-publishing`);
 
             // Use FetchFromSource use case instead of manual fetch
             const fetchResult = await sourcesContainer.sourcesAdminFacade.fetchFromSource({
               sourceId: sourceData.id,
               force: true,
-              // Pass automation flags from WordPress settings
-              autoGenerate: autoGenEnabled,
-              enableFeaturedImage: featuredImageEnabled,
-              enableAutoPublish: autoPublishEnabled
+              // Only pass auto-generation flag, NO auto-publish (separation of concerns)
+              autoGenerate: autoGenEnabled
+              // enableFeaturedImage and enableAutoPublish removed - handled by separate cron
             });
 
             if (fetchResult.isSuccess()) {

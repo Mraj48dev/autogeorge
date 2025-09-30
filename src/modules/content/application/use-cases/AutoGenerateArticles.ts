@@ -5,6 +5,8 @@ import { ArticleRepository } from '../../domain/ports/ArticleRepository';
 import { AiService } from '../../domain/ports/AiService';
 import { Title } from '../../domain/value-objects/Title';
 import { Content } from '../../domain/value-objects/Content';
+import { ArticleId } from '../../domain/value-objects/ArticleId';
+import { ArticleStatus } from '../../domain/value-objects/ArticleStatus';
 import { Logger } from '../../infrastructure/logger/Logger';
 
 /**
@@ -32,7 +34,9 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
           const article = await this.generateArticleFromFeedItem(
             feedItem,
             request.sourceId,
-            request.generationSettings
+            request.generationSettings,
+            request.enableFeaturedImage || false,
+            request.enableAutoPublish || false
           );
 
           if (article) {
@@ -146,10 +150,54 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     }
   }
 
+  /**
+   * Creates article with correct initial status based on automation flags
+   */
+  private createGeneratedWithWorkflow(
+    title: Title,
+    content: Content,
+    sourceId: string,
+    generationParams: GenerationParameters,
+    seoMetadata?: any,
+    enableFeaturedImage: boolean = false,
+    enableAutoPublish: boolean = false
+  ): Article {
+    const id = ArticleId.generate();
+
+    // Determine correct initial status based on automation workflow
+    let initialStatus: ArticleStatus;
+
+    if (enableAutoPublish && enableFeaturedImage) {
+      // Both enabled: generated → generated_image_draft → generated_with_image → ready_to_publish → published
+      initialStatus = ArticleStatus.generatedImageDraft();
+    } else if (enableAutoPublish && !enableFeaturedImage) {
+      // Only auto-publish: generated → ready_to_publish → published
+      initialStatus = ArticleStatus.readyToPublish();
+    } else if (!enableAutoPublish && enableFeaturedImage) {
+      // Only image generation: generated → generated_image_draft → generated_with_image (manual publish)
+      initialStatus = ArticleStatus.generatedImageDraft();
+    } else {
+      // Neither enabled: generated (manual image + manual publish)
+      initialStatus = ArticleStatus.generated();
+    }
+
+    return new Article(
+      id,
+      title,
+      content,
+      initialStatus,
+      seoMetadata,
+      sourceId,
+      generationParams
+    );
+  }
+
   private async generateArticleFromFeedItem(
     feedItem: FeedItemData,
     sourceId: string,
-    settings: GenerationSettings
+    settings: GenerationSettings,
+    enableFeaturedImage: boolean = false,
+    enableAutoPublish: boolean = false
   ): Promise<Article | null> {
     // Generate content using AI service with unified workflow
     const generateResult = await this.aiService.generateArticle({
@@ -239,21 +287,26 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       return null;
     }
 
-    return Article.createGenerated(
+    // Determine initial status based on automation flags
+    const generationParams = {
+      prompt: this.buildPrompt(feedItem, settings),
+      model: settings.model || 'sonar-pro',
+      temperature: settings.temperature || 0.7,
+      maxTokens: settings.maxTokens || 2000,
+      language: settings.language || 'it',
+      tone: settings.tone || 'professionale',
+      style: settings.style || 'giornalistico',
+      targetAudience: settings.targetAudience || 'generale'
+    };
+
+    return this.createGeneratedWithWorkflow(
       title.value,
       content.value,
       sourceId,
-      {
-        prompt: this.buildPrompt(feedItem, settings),
-        model: settings.model || 'sonar-pro',
-        temperature: settings.temperature || 0.7,
-        maxTokens: settings.maxTokens || 2000,
-        language: settings.language || 'it',
-        tone: settings.tone || 'professionale',
-        style: settings.style || 'giornalistico',
-        targetAudience: settings.targetAudience || 'generale'
-      },
-      generated.seoMetadata
+      generationParams,
+      generated.seoMetadata,
+      enableFeaturedImage,
+      enableAutoPublish
     );
   }
 

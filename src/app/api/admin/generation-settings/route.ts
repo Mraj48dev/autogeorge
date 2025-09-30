@@ -29,6 +29,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get WordPress automation settings
+    const wordpressSites = await prisma.wordPressSite.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        enableAutoGeneration: true,
+        enableFeaturedImage: true,
+        enableAutoPublish: true,
+        isActive: true
+      }
+    });
+
     // Format response
     const responseData = {
       settings: {
@@ -50,6 +64,7 @@ export async function GET(request: NextRequest) {
           targetAudience: settings.defaultTargetAudience
         }
       },
+      wordpressSites,
       isDefault: !settings.updatedAt || settings.createdAt === settings.updatedAt
     };
 

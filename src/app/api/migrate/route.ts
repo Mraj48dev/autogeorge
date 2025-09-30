@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
       AND table_schema = 'public'
     `;
 
+    console.log(`🔍 Featured images table check: ${(featuredImageTable as any[]).length} results`);
+
     if ((featuredImageTable as any[]).length === 0) {
       console.log('🎨 Creating featured_images table...');
 

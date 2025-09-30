@@ -361,8 +361,8 @@ Genera l'articolo ora:`;
       );
 
       const content = {
-        title: article.title.getValue(),
-        content: article.content.getValue(),
+        title: article.title, // Direct access to database field
+        content: article.content, // Direct access to database field
         excerpt: '', // Could extract from article if needed
         categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
         tags: [],

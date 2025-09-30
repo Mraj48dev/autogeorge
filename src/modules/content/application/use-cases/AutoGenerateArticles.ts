@@ -338,26 +338,64 @@ Genera l'articolo ora:`;
 
       console.log(`🎯 [AutoPublish] Found WordPress site: ${wordpressSite.name}`);
 
-      // Use the existing publish API endpoint logic
-      const publishEndpoint = await import('@/app/api/admin/publish/route');
+      // Use services directly instead of simulating HTTP calls
+      const { PrismaPublicationRepository } = await import('@/modules/publishing/infrastructure/repositories/PrismaPublicationRepository');
+      const { WordPressPublishingService } = await import('@/modules/publishing/infrastructure/services/WordPressPublishingService');
+      const { PublishArticle } = await import('@/modules/publishing/application/use-cases/PublishArticle');
+      const { PublicationTarget } = await import('@/modules/publishing/domain/value-objects/PublicationTarget');
 
-      // Simulate the publish request
-      const publishRequest = {
-        json: async () => ({
-          articleId: articleId,
-          siteId: wordpressSite.id,
-          autoPublish: true
-        })
+      // Initialize services
+      const publicationRepository = new PrismaPublicationRepository();
+      const publishingService = new WordPressPublishingService();
+      const publishArticle = new PublishArticle(publicationRepository, publishingService);
+
+      // Create proper publication target using WordPress factory method
+      const publicationTarget = PublicationTarget.wordpress(
+        wordpressSite.id,
+        wordpressSite.url,
+        {
+          username: wordpressSite.username,
+          password: wordpressSite.password,
+          defaultCategory: wordpressSite.defaultCategory || '',
+          defaultStatus: wordpressSite.defaultStatus || 'publish',
+          defaultAuthor: wordpressSite.defaultAuthor || '',
+          enableFeaturedImage: wordpressSite.enableFeaturedImage,
+          enableTags: wordpressSite.enableTags,
+          enableCategories: wordpressSite.enableCategories
+        }
+      );
+
+      const content = {
+        title: article.title.getValue(),
+        content: article.content.getValue(),
+        excerpt: '', // Could extract from article if needed
+        categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
+        tags: [],
+        featuredImage: null, // Will be set by image generation if enabled
+        customFields: {}
       };
 
-      const publishResponse = await publishEndpoint.POST(publishRequest as any);
-      const publishResult = await publishResponse.json();
+      const metadata = {
+        articleId: articleId,
+        sourceId: article.sourceId || '',
+        generatedAt: new Date(),
+        autoPublished: true
+      };
 
-      if (!publishResult.success) {
-        throw new Error(`Publishing failed: ${publishResult.message || 'Unknown error'}`);
+      // Execute publication
+      const result = await publishArticle.execute({
+        articleId,
+        target: publicationTarget,
+        content,
+        metadata
+      });
+
+      if (result.isFailure()) {
+        throw new Error(`Publishing failed: ${result.error.message}`);
       }
 
-      console.log(`✅ [AutoPublish] Article published successfully: ${articleId} → ${publishResult.wordpressUrl || 'WordPress'}`);
+      const publicationData = result.value;
+      console.log(`✅ [AutoPublish] Article published successfully: ${articleId} → ${publicationData.externalUrl || 'WordPress'}`);
 
     } catch (error) {
       console.error(`❌ [AutoPublish] Failed to auto-publish article ${articleId}:`, error);

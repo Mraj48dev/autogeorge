@@ -1,27 +1,24 @@
-import { ValueObject } from '../base/ValueObject';
+import { ValueObject } from '../../../../shared/domain/base/ValueObject';
 
 export type ImageStatusValue = 'pending' | 'searching' | 'found' | 'failed' | 'uploaded';
-
-export interface ImageStatusProps {
-  value: ImageStatusValue;
-}
 
 /**
  * Image Status Value Object
  */
-export class ImageStatus extends ValueObject<ImageStatusProps> {
-  get value(): ImageStatusValue {
-    return this.props.value;
-  }
-
-  static create(value: ImageStatusValue): ImageStatus {
+export class ImageStatus extends ValueObject<ImageStatusValue> {
+  protected validate(value: ImageStatusValue): void {
     const validStatuses: ImageStatusValue[] = ['pending', 'searching', 'found', 'failed', 'uploaded'];
-
     if (!validStatuses.includes(value)) {
       throw new Error(`Invalid image status: ${value}`);
     }
+  }
 
-    return new ImageStatus({ value });
+  get value(): ImageStatusValue {
+    return this.getValue();
+  }
+
+  static create(value: ImageStatusValue): ImageStatus {
+    return new ImageStatus(value);
   }
 
   /**

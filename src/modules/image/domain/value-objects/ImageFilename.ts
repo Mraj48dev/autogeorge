@@ -1,29 +1,27 @@
-import { ValueObject } from '../base/ValueObject';
-
-export interface ImageFilenameProps {
-  value: string;
-}
+import { ValueObject } from '../../../../shared/domain/base/ValueObject';
 
 /**
  * Image Filename Value Object
  */
-export class ImageFilename extends ValueObject<ImageFilenameProps> {
-  get value(): string {
-    return this.props.value;
-  }
-
-  static create(value: string): ImageFilename {
+export class ImageFilename extends ValueObject<string> {
+  protected validate(value: string): void {
     if (!value || value.trim().length === 0) {
       throw new Error('ImageFilename cannot be empty');
     }
+  }
 
+  get value(): string {
+    return this.getValue();
+  }
+
+  static create(value: string): ImageFilename {
     const sanitized = this.sanitizeFilename(value.trim());
 
     if (sanitized.length === 0) {
       throw new Error('ImageFilename cannot be empty after sanitization');
     }
 
-    return new ImageFilename({ value: sanitized });
+    return new ImageFilename(sanitized);
   }
 
   private static sanitizeFilename(filename: string): string {

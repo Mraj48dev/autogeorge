@@ -1,33 +1,28 @@
-import { ValueObject } from '../base/ValueObject';
+import { ValueObject } from '../../../../shared/domain/base/ValueObject';
 
-export interface ImageUrlProps {
-  value: string;
-}
 
 /**
  * Image URL Value Object
  */
-export class ImageUrl extends ValueObject<ImageUrlProps> {
-  get value(): string {
-    return this.props.value;
-  }
-
-  static create(value: string): ImageUrl {
+export class ImageUrl extends ValueObject<string> {
+  protected validate(value: string): void {
     if (!value || value.trim().length === 0) {
       throw new Error('ImageUrl cannot be empty');
     }
-
-    const trimmedValue = value.trim();
-
-    // Basic URL validation
-    if (!this.isValidUrl(trimmedValue)) {
+    if (!this.isValidUrl(value.trim())) {
       throw new Error('Invalid URL format');
     }
-
-    return new ImageUrl({ value: trimmedValue });
   }
 
-  private static isValidUrl(url: string): boolean {
+  get value(): string {
+    return this.getValue();
+  }
+
+  static create(value: string): ImageUrl {
+    return new ImageUrl(value.trim());
+  }
+
+  private isValidUrl(url: string): boolean {
     try {
       const urlObj = new URL(url);
       return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';

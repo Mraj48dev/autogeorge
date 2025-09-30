@@ -1,30 +1,24 @@
-import { ValueObject } from '../base/ValueObject';
-
-export interface ImageAltTextProps {
-  value: string;
-}
+import { ValueObject } from '../../../../shared/domain/base/ValueObject';
 
 /**
  * Image Alt Text Value Object
  */
-export class ImageAltText extends ValueObject<ImageAltTextProps> {
-  get value(): string {
-    return this.props.value;
-  }
-
-  static create(value: string): ImageAltText {
+export class ImageAltText extends ValueObject<string> {
+  protected validate(value: string): void {
     if (!value || value.trim().length === 0) {
       throw new Error('ImageAltText cannot be empty');
     }
-
-    const trimmedValue = value.trim();
-
-    // Alt text should be descriptive but not too long (recommended max 125 chars)
-    if (trimmedValue.length > 250) {
+    if (value.trim().length > 250) {
       throw new Error('ImageAltText is too long (max 250 characters)');
     }
+  }
 
-    return new ImageAltText({ value: trimmedValue });
+  get value(): string {
+    return this.getValue();
+  }
+
+  static create(value: string): ImageAltText {
+    return new ImageAltText(value.trim());
   }
 
   /**
@@ -80,7 +74,7 @@ export class ImageAltText extends ValueObject<ImageAltTextProps> {
       optimized = optimized.substring(0, 122) + '...';
     }
 
-    return new ImageAltText({ value: optimized });
+    return new ImageAltText(optimized);
   }
 
   equals(other: ImageAltText): boolean {

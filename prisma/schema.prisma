@@ -95,6 +95,7 @@ model Article {
   // Relazioni
   source            Source?     @relation(fields: [sourceId], references: [id])
   wordpressSite     WordPressSite? @relation(fields: [wordpressSiteId], references: [id])
+  featuredImages    FeaturedImage[] // Relazione con immagini generate
 
   @@index([wordpressId, wordpressSiteId])
   @@index([publishedAt])
@@ -325,6 +326,28 @@ model Publication {
   updatedAt     DateTime @updatedAt
 
   @@map("publications")
+}
+
+model FeaturedImage {
+  id           String   @id @default(cuid())
+  articleId    String   // Riferimento all'articolo
+  aiPrompt     String   // Prompt AI utilizzato per la generazione
+  filename     String   // Nome del file dell'immagine
+  altText      String   // Testo alternativo per l'immagine
+  url          String?  // URL dell'immagine generata (null se generazione fallita)
+  status       String   // pending, searching, found, failed
+  searchQuery  String?  // Query di ricerca utilizzata (opzionale)
+  errorMessage String?  // Messaggio di errore in caso di fallimento
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relazione con Article
+  article      Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("featured_images")
 }
 
 

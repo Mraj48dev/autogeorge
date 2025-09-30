@@ -38,6 +38,25 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ [AutoImage CRON] Featured image generation is enabled for: ${wordpressSite.name}`);
 
+    // DEBUG: Check all articles and their statuses first
+    const allRecentArticles = await prisma.article.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        createdAt: true
+      }
+    });
+
+    console.log(`🔍 [DEBUG] Recent articles and their statuses:`);
+    allRecentArticles.forEach(article => {
+      console.log(`  - ${article.id}: "${article.title}" → status: "${article.status}" (${article.createdAt})`);
+    });
+
     // Find all articles with status "generated_image_draft" that need images
     const articlesNeedingImages = await prisma.article.findMany({
       where: {
@@ -50,6 +69,13 @@ export async function GET(request: NextRequest) {
     });
 
     console.log(`📊 [AutoImage CRON] Found ${articlesNeedingImages.length} articles needing images`);
+
+    if (articlesNeedingImages.length > 0) {
+      console.log(`🎯 [AutoImage CRON] Articles to process:`);
+      articlesNeedingImages.forEach(article => {
+        console.log(`  - ${article.id}: "${article.title}" → status: "${article.status}"`);
+      });
+    }
 
     if (articlesNeedingImages.length === 0) {
       return NextResponse.json({

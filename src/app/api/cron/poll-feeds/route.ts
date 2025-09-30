@@ -42,6 +42,29 @@ export async function GET(request: NextRequest) {
     const sourcesContainer = createSourcesContainer();
     const prisma = new PrismaClient(); // Still need for basic queries
 
+    // TEMPORARY: Status correction run automatically during polling
+    try {
+      console.log('🔧 Running automatic status correction...');
+
+      // Fix items that have articleId - they should be 'processed'
+      const articlesFixed = await prisma.feedItem.updateMany({
+        where: {
+          articleId: { not: null },
+          status: { not: 'processed' }
+        },
+        data: {
+          status: 'processed'
+        }
+      });
+
+      if (articlesFixed.count > 0) {
+        console.log(`✅ Fixed ${articlesFixed.count} items with articles to 'processed' status`);
+      }
+    } catch (statusError) {
+      console.error('⚠️ Status correction failed:', statusError);
+      // Continue with normal polling even if status correction fails
+    }
+
     try {
       // Get all active RSS sources from database using clean architecture
       const getSourcesResult = await sourcesContainer.sourcesAdminFacade.getSources({

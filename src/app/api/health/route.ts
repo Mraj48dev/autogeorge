@@ -15,8 +15,67 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
-  // TEMPORARY: Database migration if special parameter is provided
+  // TEMPORARY: Utility functions via query parameters
   const { searchParams } = new URL(request.url);
+
+  // Status correction for feed items
+  if (searchParams.get('fix') === 'status') {
+    try {
+      const { prisma } = await import('@/shared/database/prisma');
+
+      // Fix items that have articleId - they should be 'processed'
+      const articlesFixed = await prisma.feedItem.updateMany({
+        where: {
+          articleId: { not: null },
+          status: { not: 'processed' }
+        },
+        data: {
+          status: 'processed'
+        }
+      });
+
+      // Set correct status based on WordPress settings
+      const wordPressSite = await prisma.wordPressSite.findFirst({
+        select: { enableAutoGeneration: true }
+      });
+
+      const shouldBeDraft = wordPressSite?.enableAutoGeneration || false;
+      const targetStatus = shouldBeDraft ? 'draft' : 'pending';
+
+      const itemsWithoutArticles = await prisma.feedItem.updateMany({
+        where: {
+          articleId: null,
+          status: { not: targetStatus }
+        },
+        data: {
+          status: targetStatus
+        }
+      });
+
+      // Get final stats
+      const finalStats = await prisma.feedItem.groupBy({
+        by: ['status'],
+        _count: true
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Status correction completed',
+        fixes: {
+          itemsWithArticlesFixed: articlesFixed.count,
+          itemsWithoutArticlesFixed: itemsWithoutArticles.count,
+          targetStatusForNewItems: targetStatus,
+          finalDistribution: finalStats
+        }
+      });
+    } catch (error) {
+      return NextResponse.json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Status fix failed'
+      }, { status: 500 });
+    }
+  }
+
   if (searchParams.get('migrate') === 'status-column') {
     try {
       const { prisma } = await import('@/shared/database/prisma');

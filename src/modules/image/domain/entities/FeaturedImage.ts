@@ -28,9 +28,16 @@ export interface FeaturedImageProps {
  * Represents a featured image for an article that can be searched, generated,
  * and stored for use in WordPress publication.
  */
-export class FeaturedImage extends Entity<FeaturedImageProps> {
+export class FeaturedImage extends Entity<ImageId> {
+  private readonly props: FeaturedImageProps;
+
+  constructor(props: FeaturedImageProps) {
+    super(props.id, props.createdAt, props.updatedAt);
+    this.props = props;
+  }
+
   get id(): ImageId {
-    return this.props.id;
+    return super.id;
   }
 
   get articleId(): string {

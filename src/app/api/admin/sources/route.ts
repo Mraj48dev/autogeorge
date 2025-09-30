@@ -8,8 +8,67 @@ import { Config } from '../../../../modules/sources/shared/config/env';
  */
 export async function GET(request: NextRequest) {
   try {
-    // TEMPORARY MIGRATION: Check for migration parameter
+    // TEMPORARY FUNCTIONS: Check for utility parameters
     const { searchParams } = new URL(request.url);
+
+    // Status correction functionality
+    if (searchParams.get('fix') === 'status') {
+      const { prisma } = await import('@/shared/database/prisma');
+
+      try {
+        // Fix items that have articleId - they should be 'processed'
+        const articlesFixed = await prisma.feedItem.updateMany({
+          where: {
+            articleId: { not: null },
+            status: { not: 'processed' }
+          },
+          data: {
+            status: 'processed'
+          }
+        });
+
+        // Set correct status for items without articles based on WordPress settings
+        const wordPressSite = await prisma.wordPressSite.findFirst({
+          select: { enableAutoGeneration: true }
+        });
+
+        const shouldBeDraft = wordPressSite?.enableAutoGeneration || false;
+        const targetStatus = shouldBeDraft ? 'draft' : 'pending';
+
+        const itemsWithoutArticles = await prisma.feedItem.updateMany({
+          where: {
+            articleId: null,
+            status: { not: targetStatus }
+          },
+          data: {
+            status: targetStatus
+          }
+        });
+
+        // Get final stats
+        const finalStats = await prisma.feedItem.groupBy({
+          by: ['status'],
+          _count: true
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: 'Status correction completed',
+          fixes: {
+            itemsWithArticlesFixed: articlesFixed.count,
+            itemsWithoutArticlesFixed: itemsWithoutArticles.count,
+            targetStatusForNewItems: targetStatus,
+            finalDistribution: finalStats
+          }
+        });
+      } catch (error) {
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    }
+
     if (searchParams.get('migrate') === 'status-column') {
       const { prisma } = await import('@/shared/database/prisma');
 

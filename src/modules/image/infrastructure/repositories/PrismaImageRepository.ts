@@ -33,8 +33,8 @@ export class PrismaImageRepository implements ImageRepository {
       // WORKAROUND: Use raw SQL until Prisma client recognizes featured_images table
       const result = await prisma.$executeRaw`
         INSERT INTO featured_images (
-          id, article_id, ai_prompt, filename, alt_text, url, status,
-          search_query, error_message, created_at, updated_at
+          id, "articleId", "aiPrompt", filename, "altText", url, status,
+          "searchQuery", "errorMessage", "createdAt", "updatedAt"
         ) VALUES (
           ${image.id.value}, ${image.articleId}, ${image.aiPrompt},
           ${image.filename.value}, ${image.altText.value}, ${image.url?.value},
@@ -122,14 +122,14 @@ export class PrismaImageRepository implements ImageRepository {
       // WORKAROUND: Use raw SQL until Prisma client recognizes featured_images table
       const result = await prisma.$executeRaw`
         UPDATE featured_images SET
-          ai_prompt = ${image.aiPrompt},
+          "aiPrompt" = ${image.aiPrompt},
           filename = ${image.filename.value},
-          alt_text = ${image.altText.value},
+          "altText" = ${image.altText.value},
           url = ${image.url?.value},
           status = ${image.status.value},
-          search_query = ${image.searchQuery},
-          error_message = ${image.errorMessage},
-          updated_at = ${image.updatedAt}
+          "searchQuery" = ${image.searchQuery},
+          "errorMessage" = ${image.errorMessage},
+          "updatedAt" = ${image.updatedAt}
         WHERE id = ${image.id.value}
       `;
 

@@ -31,6 +31,16 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Auto-generation enabled - using Content Module with Perplexity AI');
 
+    // 🔧 LOG: WordPress automation settings for debugging
+    console.log('🎯 [DEBUG] WordPress automation settings:', {
+      siteId: wordpressSite.id,
+      siteName: wordpressSite.name,
+      enableAutoGeneration: wordpressSite.enableAutoGeneration,
+      enableAutoPublish: wordpressSite.enableAutoPublish,
+      enableFeaturedImage: wordpressSite.enableFeaturedImage,
+      isActive: wordpressSite.isActive
+    });
+
     // Find feed items with status 'draft' (ready to process)
     const draftFeedItems = await prisma.feedItem.findMany({
       where: {
@@ -59,8 +69,16 @@ export async function GET(request: NextRequest) {
     // Initialize Sources Container which has ContentModuleArticleAutoGenerator
     const sourcesContainer = createSourcesContainer();
 
+    // 🔧 LOG: Automation flags being passed to Content Module
+    const automationFlags = {
+      enableFeaturedImage: wordpressSite.enableFeaturedImage || false,
+      enableAutoPublish: wordpressSite.enableAutoPublish || false
+    };
+    console.log('🎯 [DEBUG] Automation flags passed to Content Module:', automationFlags);
+
     // Use the real Content Module through Sources Module adapter
     // This will call: ContentModuleArticleAutoGenerator → AutoGenerateArticles → Perplexity AI
+    console.log('🚀 [DEBUG] Calling sourcesContainer.articleAutoGenerator.generateFromFeedItems...');
     const autoGenResult = await sourcesContainer.articleAutoGenerator.generateFromFeedItems({
       sourceId: draftFeedItems[0].sourceId, // Use first item's source ID
       feedItems: draftFeedItems.map(item => ({
@@ -71,8 +89,13 @@ export async function GET(request: NextRequest) {
         url: item.url,
         publishedAt: item.publishedAt
       })),
-      enableFeaturedImage: wordpressSite.enableFeaturedImage || false,
-      enableAutoPublish: wordpressSite.enableAutoPublish || false
+      enableFeaturedImage: automationFlags.enableFeaturedImage,
+      enableAutoPublish: automationFlags.enableAutoPublish
+    });
+
+    console.log('📋 [DEBUG] Auto-generation result:', {
+      success: autoGenResult.isSuccess(),
+      error: autoGenResult.isFailure() ? autoGenResult.error : null
     });
 
     if (autoGenResult.isFailure()) {
@@ -86,6 +109,36 @@ export async function GET(request: NextRequest) {
 
     const result = autoGenResult.value;
     console.log(`✅ Content Module completed: ${result.summary.successful}/${result.summary.total} articles generated with Perplexity AI`);
+
+    // 🔧 LOG: Details of each generated article
+    result.generatedArticles.forEach((genResult, index) => {
+      if (genResult.success) {
+        console.log(`  ✅ Article ${index + 1}: ${genResult.articleId} - Status: ${genResult.status || 'unknown'}`);
+      } else {
+        console.log(`  ❌ Article ${index + 1}: Failed - ${genResult.error}`);
+      }
+    });
+
+    // 🔧 LOG: Check the actual status of created articles in database
+    if (result.generatedArticles.some(r => r.success)) {
+      const createdArticleIds = result.generatedArticles.filter(r => r.success).map(r => r.articleId);
+      console.log('🔍 [DEBUG] Checking actual article statuses in database...');
+
+      for (const articleId of createdArticleIds) {
+        try {
+          const article = await prisma.article.findUnique({
+            where: { id: articleId },
+            select: { id: true, title: true, status: true, createdAt: true }
+          });
+          if (article) {
+            console.log(`  📊 Article ${article.id}: STATUS="${article.status}" title="${article.title.substring(0, 50)}..."`);
+          }
+        } catch (err) {
+          console.log(`  ❌ Error checking article ${articleId}:`, err);
+        }
+      }
+    }
+
     console.log(`🔄 Note: Feed item status updates are handled by Content Module adapter`);
 
     return NextResponse.json({

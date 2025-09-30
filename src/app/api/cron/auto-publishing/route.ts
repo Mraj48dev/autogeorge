@@ -38,15 +38,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ [AutoPublish CRON] Auto-publishing is enabled for: ${wordpressSite.name}`);
 
-    // Find all articles with status "generated" that should be auto-published
-    const generatedArticles = await prisma.article.findMany({
+    // Find all articles with status "ready_to_publish" that should be auto-published
+    const readyArticles = await prisma.article.findMany({
       where: {
-        status: 'generated',
-        // Only auto-publish articles that were created with auto-generation
-        // (not manually generated ones)
-        generationConfig: {
-          not: null
-        }
+        status: 'ready_to_publish'
       },
       orderBy: {
         createdAt: 'asc' // Publish oldest first
@@ -54,13 +49,13 @@ export async function GET(request: NextRequest) {
       take: 10 // Limit to 10 articles per run to avoid overload
     });
 
-    console.log(`📊 [AutoPublish CRON] Found ${generatedArticles.length} articles to auto-publish`);
+    console.log(`📊 [AutoPublish CRON] Found ${readyArticles.length} articles ready to auto-publish`);
 
-    if (generatedArticles.length === 0) {
+    if (readyArticles.length === 0) {
       return NextResponse.json({
         success: true,
         timestamp: new Date().toISOString(),
-        message: 'No generated articles found for auto-publishing',
+        message: 'No articles ready for auto-publishing',
         results: { processed: 0, published: 0, failed: 0 }
       });
     }
@@ -73,7 +68,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Process each article for auto-publishing
-    for (const article of generatedArticles) {
+    for (const article of readyArticles) {
       try {
         console.log(`📤 [AutoPublish CRON] Processing article: ${article.id} - "${article.title}"`);
         results.processed++;

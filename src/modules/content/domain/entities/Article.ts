@@ -100,7 +100,7 @@ export class Article extends AggregateRoot<ArticleId> {
       id,
       title,
       content,
-      ArticleStatus.generated(),
+      ArticleStatus.readyToPublish(),
       seoMetadata,
       sourceId,
       generationParams,

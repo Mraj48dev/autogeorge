@@ -305,7 +305,7 @@ PARAMETRI DI STILE:
 REQUISITI TECNICI:
 - Rispondi SOLO con il JSON valido
 - Non aggiungere testo prima o dopo il JSON
-- Il contenuto deve essere formattato in Markdown
+- Il contenuto deve essere formattato in HTML pulito
 - La meta description deve essere max 160 caratteri
 - Includi 3-5 tag SEO pertinenti
 - L'articolo deve essere originale e ben strutturato

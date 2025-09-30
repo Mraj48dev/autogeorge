@@ -188,6 +188,7 @@ model FeedItem {
   publishedAt DateTime
   fetchedAt   DateTime @default(now())
   status      String   @default("pending") // "pending" | "draft" | "processed"
+  processed   Boolean  @default(false) // TEMPORARY: Keep for migration safety
   articleId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

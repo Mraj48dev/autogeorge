@@ -87,6 +87,7 @@ export async function PUT(request: NextRequest) {
         contentPrompt: body.contentPrompt || undefined,
         seoPrompt: body.seoPrompt || undefined,
         imagePrompt: body.imagePrompt || undefined,
+        imageStyle: body.imageStyle || undefined,
         defaultModel: body.modelSettings?.model || undefined,
         defaultTemperature: body.modelSettings?.temperature || undefined,
         defaultMaxTokens: body.modelSettings?.maxTokens || undefined,
@@ -101,6 +102,7 @@ export async function PUT(request: NextRequest) {
         contentPrompt: body.contentPrompt || 'Scrivi un articolo completo e ben strutturato basato su questo contenuto. L\'articolo deve essere originale, coinvolgente e ben formattato con paragrafi chiari.',
         seoPrompt: body.seoPrompt || 'Includi meta description (max 160 caratteri), tags pertinenti e parole chiave ottimizzate per i motori di ricerca. Fornisci anche un excerpt di 150 parole.',
         imagePrompt: body.imagePrompt || 'Genera un\'immagine in evidenza per questo articolo che sia visivamente accattivante e pertinente al contenuto',
+        imageStyle: body.imageStyle || 'natural',
         defaultModel: body.modelSettings?.model || 'gpt-4',
         defaultTemperature: body.modelSettings?.temperature || 0.7,
         defaultMaxTokens: body.modelSettings?.maxTokens || 2000,
@@ -121,6 +123,7 @@ export async function PUT(request: NextRequest) {
             seoPrompt: settings.seoPrompt,
             imagePrompt: settings.imagePrompt
           },
+          imageStyle: settings.imageStyle,
           modelSettings: {
             model: settings.defaultModel,
             temperature: settings.defaultTemperature,

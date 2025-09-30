@@ -9,6 +9,7 @@ interface GenerationConfig {
     seoPrompt: string;
     imagePrompt: string;
   };
+  imageStyle: string;
   modelSettings: {
     model: string;
     temperature: number;
@@ -82,6 +83,7 @@ export default function SettingsPage() {
             seoPrompt: settings.prompts?.seoPrompt || 'Includi meta description, tags e parole chiave SEO',
             imagePrompt: settings.prompts?.imagePrompt || 'Genera un\'immagine in evidenza per questo articolo'
           },
+          imageStyle: settings.imageStyle || 'natural',
           modelSettings: {
             model: settings.modelSettings?.model || 'sonar-pro',
             temperature: settings.modelSettings?.temperature ?? 0.7,
@@ -171,6 +173,7 @@ export default function SettingsPage() {
           contentPrompt: generationSettings.prompts.contentPrompt,
           seoPrompt: generationSettings.prompts.seoPrompt,
           imagePrompt: generationSettings.prompts.imagePrompt,
+          imageStyle: generationSettings.imageStyle,
           modelSettings: generationSettings.modelSettings,
           languageSettings: generationSettings.languageSettings
         })
@@ -704,6 +707,27 @@ export default function SettingsPage() {
               />
               <p className="text-xs text-gray-500 mt-1">
                 Descrive come generare il comando AI per l'immagine in evidenza
+              </p>
+            </div>
+
+            {/* Image Style */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🎨 Stile Immagine (DALL-E)
+              </label>
+              <select
+                value={generationSettings.imageStyle || 'natural'}
+                onChange={(e) => setGenerationSettings({
+                  ...generationSettings,
+                  imageStyle: e.target.value
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="natural">🌿 Natural - Più naturale, meno saturato</option>
+                <option value="vivid">✨ Vivid - Colori drammatici, iperrealistici</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Controlla lo stile visivo delle immagini generate da DALL-E
               </p>
             </div>
           </div>

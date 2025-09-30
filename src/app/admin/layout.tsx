@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
 import { BUILD_INFO } from '@/lib/buildinfo';
+import LiveClock from '@/components/LiveClock';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -25,6 +26,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <div className="text-sm text-gray-500">
               <div>v1.0.0</div>
+              <LiveClock />
               <div className="text-xs">
                 Deploy: {BUILD_INFO.buildTime}
               </div>

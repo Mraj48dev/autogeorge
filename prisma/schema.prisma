@@ -205,6 +205,7 @@ model GenerationSettings {
   contentPrompt         String
   seoPrompt             String
   imagePrompt           String   @default("Genera un'immagine in evidenza per questo articolo")
+  imageStyle            String   @default("natural")
   defaultModel          String   @default("sonar-pro")
   defaultTemperature    Float    @default(0.7)
   defaultMaxTokens      Int      @default(2000)

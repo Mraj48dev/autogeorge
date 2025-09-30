@@ -69,6 +69,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user settings for imageStyle
+    const userId = request.headers.get('x-user-id') || 'demo-user';
+    const userSettings = await prisma.generationSettings.findUnique({
+      where: { userId },
+      select: { imageStyle: true }
+    });
+    const imageStyle = userSettings?.imageStyle || 'natural';
+
     // Generate image directly with DALL-E
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
@@ -82,6 +90,7 @@ export async function POST(request: NextRequest) {
     // Create DALL-E optimized prompt
     const dallePrompt = createDallePrompt(articleTitle, articleContent);
     console.log('🎨 [AI Generation] Generated prompt:', dallePrompt);
+    console.log('🎨 [AI Generation] Using style:', imageStyle);
 
     // Call OpenAI DALL-E API for image generation
     const dalleResponse = await fetch('https://api.openai.com/v1/images/generations', {
@@ -96,6 +105,7 @@ export async function POST(request: NextRequest) {
         n: 1,
         size: '1024x1024',
         quality: 'standard',
+        style: imageStyle,
         response_format: 'url'
       }),
     });

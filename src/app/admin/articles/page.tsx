@@ -277,7 +277,7 @@ export default function ArticlesBySourcePage() {
     }
   };
 
-  const handleSearchFeaturedImage = async (article: ArticleSummary, articleDetail: ArticleDetail | null) => {
+  const handleGenerateImage = async (article: ArticleSummary, articleDetail: ArticleDetail | null) => {
     try {
       setSearchingImage(true);
       setImageSearchResult(null);
@@ -317,9 +317,9 @@ export default function ArticlesBySourcePage() {
       let finalResult = null;
       let searchMethod = '';
 
-      // 🎨 SPECIAL CASE: AI-only mode (skip search completely)
-      if (enableAIGeneration && !enableImageSearch) {
-        console.log('🎨 [AI Only] Skipping search, going directly to AI generation...');
+      // 🎨 AI Generation
+      if (enableAIGeneration) {
+        console.log('🎨 [AI Generation] Starting AI image generation...');
         try {
           const aiResponse = await fetch('/api/admin/image/generate-only', {
             method: 'POST',
@@ -348,35 +348,7 @@ export default function ArticlesBySourcePage() {
           throw aiError;
         }
       }
-      // 🔍 STEP 1: Try image search first (if enabled and not AI-only)
-      else if (enableImageSearch) {
-        try {
-          console.log('🔍 [Step 1] Attempting image search...');
-          const searchResponse = await fetch('/api/admin/image/search-only', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              articleId: article.id,
-              articleTitle,
-              articleContent,
-              aiPrompt,
-              filename,
-              altText
-            })
-          });
-
-          const searchData = await searchResponse.json();
-          if (searchData.success && searchData.data) {
-            finalResult = searchData.data;
-            searchMethod = 'Ricerca immagini';
-            console.log('✅ [Step 1] Image search successful');
-          } else {
-            console.log('⚠️ [Step 1] Image search found no suitable results');
-          }
-        } catch (searchError) {
-          console.warn('⚠️ [Step 1] Image search failed:', searchError);
-        }
-      }
+      // AI generation completed above
 
       // 🎨 STEP 2: Try AI generation (if no search result and AI enabled, but not AI-only)
       if (!finalResult && enableAIGeneration && enableImageSearch) {
@@ -477,8 +449,8 @@ export default function ArticlesBySourcePage() {
       }
 
     } catch (error) {
-      console.error('💥 [Frontend] Image search exception:', error);
-      alert('Errore durante la ricerca dell\'immagine');
+      console.error('💥 [Frontend] Image generation exception:', error);
+      alert('Errore durante la generazione dell\'immagine');
     } finally {
       setSearchingImage(false);
     }
@@ -1183,6 +1155,30 @@ export default function ArticlesBySourcePage() {
                   </div>
                 )}
 
+                {/* Image Generation Configuration */}
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                  <h4 className="text-sm font-medium text-purple-800 mb-3">🖼️ Generazione Immagini</h4>
+                  <div className="flex flex-col space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={enableAIGeneration}
+                        onChange={(e) => setEnableAIGeneration(e.target.checked)}
+                        className="mr-2 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-sm text-purple-700">
+                        🎨 <strong>Crea immagine con AI</strong> - Generazione personalizzata con DALL-E
+                      </span>
+                    </label>
+                  </div>
+                  <div className="mt-2 text-xs text-purple-600">
+                    {enableAIGeneration ?
+                      "🎨 Generazione AI attiva - Utilizza DALL-E per creare immagini personalizzate" :
+                      "⚠️ Generazione AI disattivata - Nessuna immagine verrà creata"
+                    }
+                  </div>
+                </div>
+
                 {/* JSON Viewer Button */}
                 <div className="bg-yellow-50 rounded-lg p-4">
                   <h3 className="font-semibold text-yellow-900 mb-3 flex items-center">
@@ -1342,29 +1338,6 @@ export default function ArticlesBySourcePage() {
               </div>
             )}
 
-            {/* Image Generation Configuration */}
-            <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <h4 className="text-sm font-medium text-purple-800 mb-3">🖼️ Configurazione Generazione Immagini</h4>
-              <div className="flex flex-col space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={enableAIGeneration}
-                    onChange={(e) => setEnableAIGeneration(e.target.checked)}
-                    className="mr-2 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-sm text-purple-700">
-                    🎨 <strong>Crea immagine con AI</strong> - Generazione personalizzata con DALL-E
-                  </span>
-                </label>
-              </div>
-              <div className="mt-2 text-xs text-purple-600">
-                {enableAIGeneration ?
-                  "🎨 Generazione AI attiva - Utilizza DALL-E per creare immagini personalizzate" :
-                  "⚠️ Generazione AI disattivata - Nessuna immagine verrà creata"
-                }
-              </div>
-            </div>
 
             {/* Action Buttons */}
             <div className="flex justify-between items-center mt-6 pt-4 border-t">
@@ -1383,7 +1356,7 @@ export default function ArticlesBySourcePage() {
                   Chiudi
                 </button>
                 <button
-                  onClick={() => handleSearchFeaturedImage(selectedArticle!, articleDetail)}
+                  onClick={() => handleGenerateImage(selectedArticle!, articleDetail)}
                   disabled={searchingImage || !enableAIGeneration}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center"
                 >
@@ -1396,7 +1369,7 @@ export default function ArticlesBySourcePage() {
                       Cercando...
                     </>
                   ) : (
-                    <>🖼️ Immagine in evidenza</>
+                    <>🎨 Genera immagine</>
                   )}
                 </button>
                 <button

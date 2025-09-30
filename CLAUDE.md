@@ -374,6 +374,22 @@ GET https://autogeorge.vercel.app/api/health
 4. **Cron Esterno**: cron-job.org mai Vercel crons
 5. **Deploy**: `git push` mai `vercel deploy` diretto
 
+## 🚀 **DEPLOY STATUS MONITORING**
+
+**⚠️ SEMPRE AGGIORNARE DEPLOY STATUS**: Dopo ogni deploy, aggiorna la sezione deploy status in alto a destra dell'interfaccia admin per mostrare:
+- ✅ **Deploy completato** con timestamp
+- 🔗 **Link commit GitHub**
+- 📊 **Status endpoint** funzionanti
+- 🎯 **Funzionalità cambiate** nella release
+
+**Template status deploy:**
+```
+✅ Deploy: b8e381e (30/09 04:50)
+🔥 REMOVE: Ricerca immagini web
+✅ NEW: Prompt personalizzato immagini
+🎨 UI: Solo generazione AI
+```
+
 ## RICORDA SEMPRE
 1. **🚨 MAI MODIFICARE DATABASE SENZA BACKUP** - REGOLA #1 ASSOLUTA
 2. **PROGETTO GIÀ COMPLETO** - non reinventare funzionalità esistenti!
@@ -384,3 +400,4 @@ GET https://autogeorge.vercel.app/api/health
 7. **🛡️ BACKUP SYSTEM DISPONIBILE** - usa `./scripts/backup-database.sh`
 8. **⏰ CRON SU cron-job.org** - mai dimenticare che è esterno!
 9. **🔧 RSS BUGS RISOLTI** - FeedItem, item.id, path assoluti
+10. **📊 DEPLOY STATUS** - sempre aggiornare sezione deploy in alto a destra dopo ogni push

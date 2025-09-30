@@ -38,12 +38,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ [AutoGeneration CRON] Auto-generation enabled for: ${wordpressSite.name}`);
 
-    // Find all FeedItems that need to be processed (no corresponding Article)
+    // Find all FeedItems that need to be processed (no articleId assigned yet)
     const feedItemsToProcess = await prisma.feedItem.findMany({
       where: {
-        articles: {
-          none: {}
-        }
+        articleId: null // No article has been generated from this feed item yet
       },
       include: {
         source: {
@@ -185,7 +183,17 @@ async function generateArticleFromFeedItem(
       }
     });
 
+    // Update the FeedItem to mark it as processed
+    await prisma.feedItem.update({
+      where: { id: feedItem.id },
+      data: {
+        articleId: article.id,
+        processed: true
+      }
+    });
+
     console.log(`✅ [AutoGeneration] Article saved: ${article.id} with status: ${article.status}`);
+    console.log(`📋 [AutoGeneration] FeedItem ${feedItem.id} marked as processed`);
 
     return {
       success: true,

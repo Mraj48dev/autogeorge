@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
     const titlePrompt = body.customPrompts?.titlePrompt || settings.titlePrompt;
     const contentPrompt = body.customPrompts?.contentPrompt || settings.contentPrompt;
     const seoPrompt = body.customPrompts?.seoPrompt || settings.seoPrompt;
+    const imagePrompt = body.customPrompts?.imagePrompt || settings.imagePrompt;
 
     // Get API key from environment variables (only Perplexity needed)
     const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
@@ -107,7 +108,8 @@ export async function POST(request: NextRequest) {
       customPrompts: {
         titlePrompt,
         contentPrompt,
-        seoPrompt
+        seoPrompt,
+        imagePrompt
       },
       settings: {
         model: body.settings?.model || settings.defaultModel,
@@ -177,6 +179,7 @@ export async function POST(request: NextRequest) {
           titlePrompt,
           contentPrompt,
           seoPrompt,
+          imagePrompt,
           feedItemContent: feedItem.content,
           feedItemTitle: feedItem.title,
           feedItemUrl: feedItem.url,

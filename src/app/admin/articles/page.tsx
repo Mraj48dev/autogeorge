@@ -111,7 +111,6 @@ export default function ArticlesBySourcePage() {
   const [wordPressTestResult, setWordPressTestResult] = useState<any>(null);
   const [searchingImage, setSearchingImage] = useState(false);
   const [imageSearchResult, setImageSearchResult] = useState<any>(null);
-  const [enableImageSearch, setEnableImageSearch] = useState(true);
   const [enableAIGeneration, setEnableAIGeneration] = useState(true);
   const [filters, setFilters] = useState({
     status: '',
@@ -309,9 +308,8 @@ export default function ArticlesBySourcePage() {
         altText = `Image related to ${articleTitle}`;
       }
 
-      console.log('🎯 [Frontend Enhanced] Starting conditional image search:', {
+      console.log('🎯 [AI Generation] Starting AI image generation:', {
         articleId: article.id,
-        enableImageSearch,
         enableAIGeneration,
         aiPrompt
       });
@@ -468,7 +466,7 @@ export default function ArticlesBySourcePage() {
         alert(`🖼️ Immagine trovata con ${searchMethod}!\n\n` +
               `${searchLevelText}\n` +
               `📊 Score: ${imageData.relevanceScore}/100\n` +
-              `🔍 Modalità: ${enableImageSearch ? '✅' : '❌'} Ricerca / ${enableAIGeneration ? '✅' : '❌'} AI\n` +
+              `🎨 Modalità: ${enableAIGeneration ? '✅' : '❌'} Generazione AI\n` +
               `📋 Keywords: ${metadata.keywords?.slice(0, 3).join(', ') || 'N/A'}\n` +
               `⏱️ Tempo: ${metadata.searchTime}ms\n\n` +
               `${metadata.wasGenerated ? '🎨 Generata con AI' : '📷 Fonte libera'}\n` +
@@ -1344,21 +1342,10 @@ export default function ArticlesBySourcePage() {
               </div>
             )}
 
-            {/* Image Search Configuration */}
+            {/* Image Generation Configuration */}
             <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <h4 className="text-sm font-medium text-purple-800 mb-3">🖼️ Configurazione Ricerca Immagini (v2)</h4>
+              <h4 className="text-sm font-medium text-purple-800 mb-3">🖼️ Configurazione Generazione Immagini</h4>
               <div className="flex flex-col space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={enableImageSearch}
-                    onChange={(e) => setEnableImageSearch(e.target.checked)}
-                    className="mr-2 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-sm text-purple-700">
-                    🔍 <strong>Cerca immagine</strong> - Ricerca web semantica avanzata
-                  </span>
-                </label>
                 <label className="flex items-center">
                   <input
                     type="checkbox"
@@ -1367,18 +1354,14 @@ export default function ArticlesBySourcePage() {
                     className="mr-2 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
                   />
                   <span className="text-sm text-purple-700">
-                    🎨 <strong>Crea immagine con AI</strong> - Generazione personalizzata Perplexity
+                    🎨 <strong>Crea immagine con AI</strong> - Generazione personalizzata con DALL-E
                   </span>
                 </label>
               </div>
               <div className="mt-2 text-xs text-purple-600">
-                {enableImageSearch && enableAIGeneration ?
-                  "🔄 Modalità combinata: prima ricerca, poi AI se necessario" :
-                  enableImageSearch ?
-                    "🔍 Solo ricerca web" :
-                    enableAIGeneration ?
-                      "🎨 Solo generazione AI" :
-                      "⚠️ Nessuna modalità selezionata"
+                {enableAIGeneration ?
+                  "🎨 Generazione AI attiva - Utilizza DALL-E per creare immagini personalizzate" :
+                  "⚠️ Generazione AI disattivata - Nessuna immagine verrà creata"
                 }
               </div>
             </div>
@@ -1401,7 +1384,7 @@ export default function ArticlesBySourcePage() {
                 </button>
                 <button
                   onClick={() => handleSearchFeaturedImage(selectedArticle!, articleDetail)}
-                  disabled={searchingImage || (!enableImageSearch && !enableAIGeneration)}
+                  disabled={searchingImage || !enableAIGeneration}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center"
                 >
                   {searchingImage ? (

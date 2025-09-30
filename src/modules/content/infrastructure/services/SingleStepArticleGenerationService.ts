@@ -11,6 +11,7 @@ export interface SingleStepGenerationRequest {
     titlePrompt?: string;
     contentPrompt?: string;
     seoPrompt?: string;
+    imagePrompt?: string;
   };
   settings?: {
     model?: string;
@@ -179,7 +180,8 @@ export class SingleStepArticleGenerationService {
     const {
       titlePrompt = 'Crea un titolo accattivante e SEO-friendly per questo articolo',
       contentPrompt = 'Scrivi un articolo completo e ben strutturato basato su questo contenuto',
-      seoPrompt = 'Includi meta description, tags e parole chiave ottimizzate per i motori di ricerca'
+      seoPrompt = 'Includi meta description, tags e parole chiave ottimizzate per i motori di ricerca',
+      imagePrompt = 'Genera un\'immagine in evidenza per questo articolo che sia visivamente accattivante e pertinente al contenuto'
     } = request.customPrompts;
 
     const settings = request.settings || {};
@@ -252,7 +254,7 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
 - content: ${contentPrompt} - Articolo completo in HTML ben strutturato con almeno 3-4 sezioni H2, paragrafi, liste, formattazione semantica. Deve includere introduzione, sviluppo e conclusione in un unico campo HTML.
 
 🖼️ FEATURED_IMAGE:
-- ai_prompt: Prompt dettagliato per generare l'immagine in evidenza
+- ai_prompt: ${imagePrompt}
 - alt_text: Testo alternativo SEO-friendly per l'immagine
 - filename: Nome file suggerito (es: "danimarca-droni-vertice-2025.jpg")
 

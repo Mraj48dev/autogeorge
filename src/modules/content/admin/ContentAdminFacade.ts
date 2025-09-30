@@ -1,5 +1,6 @@
 import { Result } from '../../../shared/domain/types/Result';
 import { GenerateArticle, GenerateArticleInput, GenerateArticleOutput, GenerateArticleError } from '../application/use-cases/GenerateArticle';
+import { AutoGenerateArticles, AutoGenerateRequest, AutoGenerateResponse } from '../application/use-cases/AutoGenerateArticles';
 
 /**
  * Admin Facade for the Content module.
@@ -22,7 +23,8 @@ import { GenerateArticle, GenerateArticleInput, GenerateArticleOutput, GenerateA
  */
 export class ContentAdminFacade {
   constructor(
-    private readonly generateArticle: GenerateArticle
+    private readonly generateArticle: GenerateArticle,
+    private readonly autoGenerateArticles: AutoGenerateArticles
   ) {}
 
   /**
@@ -158,6 +160,28 @@ export class ContentAdminFacade {
       return Result.failure(
         AdminError.healthCheckFailed(
           `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Auto-generates articles from feed items using AI services
+   * This is a simplified wrapper for the AutoGenerateArticles use case
+   */
+  async generateArticlesFromFeeds(request: AutoGenerateRequest): Promise<Result<AutoGenerateResponse, AdminError>> {
+    try {
+      const result = await this.autoGenerateArticles.execute(request);
+
+      if (result.isFailure()) {
+        return Result.failure(AdminError.useCaseFailed(result.error.message));
+      }
+
+      return Result.success(result.value);
+    } catch (error) {
+      return Result.failure(
+        AdminError.executionFailed(
+          `Auto-generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
         )
       );
     }

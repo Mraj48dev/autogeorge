@@ -206,7 +206,8 @@ export class ContentContainer {
   get contentAdminFacade(): ContentAdminFacade {
     if (!this._contentAdminFacade) {
       this._contentAdminFacade = new ContentAdminFacade(
-        this.generateArticle
+        this.generateArticle,
+        this.autoGenerateArticles
       );
     }
     return this._contentAdminFacade;

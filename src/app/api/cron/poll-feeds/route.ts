@@ -91,12 +91,11 @@ export async function GET(request: NextRequest) {
         successfulPolls: 0,
         failedPolls: 0,
         newItemsFound: 0,
-        generatedArticles: 0,
         errors: [] as string[],
         duration: 0
       };
 
-      // Poll each feed using FetchFromSource use case (includes auto-generation!)
+      // Poll each feed using FetchFromSource use case (RSS fetch only, NO auto-generation)
       const batchSize = 3; // Process in small batches to avoid overload
       for (let i = 0; i < activeSources.length; i += batchSize) {
         const batch = activeSources.slice(i, i + batchSize);
@@ -105,55 +104,31 @@ export async function GET(request: NextRequest) {
           try {
             console.log(`🔍 [CRON] Polling feed: ${sourceData.name} (${sourceData.url})`);
 
-            // Check WordPress settings for global auto-generation flag
-            const wordpressSite = await prisma.wordPressSite.findFirst({
-              where: { isActive: true }
-            });
+            console.log(`📡 [SOURCES] RSS fetch only - no auto-generation (separate cron will handle this)`);
 
-            const autoGenEnabled = wordpressSite?.enableAutoGeneration || false;
-            const autoImageEnabled = wordpressSite?.enableFeaturedImage || false;
-            const autoPublishEnabled = wordpressSite?.enableAutoPublish || false;
-
-            console.log(`🤖 Global Auto-generation: ${autoGenEnabled ? 'ENABLED' : 'DISABLED'}`);
-            console.log(`🎨 Global Auto-image: ${autoImageEnabled ? 'ENABLED' : 'DISABLED'}`);
-            console.log(`📤 Global Auto-publish: ${autoPublishEnabled ? 'ENABLED' : 'DISABLED'}`);
-            console.log(`🔄 Workflow: Articles will start with correct status based on automation flags`);
-
-            // Use FetchFromSource use case with all automation flags for correct status determination
+            // CLEAN SEPARATION: Only RSS fetch, NO auto-generation
+            // Auto-generation will be handled by separate /api/cron/auto-generation
             const fetchResult = await sourcesContainer.sourcesAdminFacade.fetchFromSource({
               sourceId: sourceData.id,
               force: true,
-              autoGenerate: autoGenEnabled,
-              // Pass automation flags so AutoGenerateArticles can determine correct initial status
-              enableFeaturedImage: autoImageEnabled,
-              enableAutoPublish: autoPublishEnabled
+              autoGenerate: false  // 🚨 IMPORTANT: Sources module only fetches RSS, never generates
             });
 
             if (fetchResult.isSuccess()) {
               const result = fetchResult.value;
               const newItems = result.newItems;
               const totalItems = result.fetchedItems;
-              const generatedArticles = result.generatedArticles || 0;
 
-              console.log(`📥 [CRON] ${sourceData.name}: ${totalItems} fetched, ${newItems} new items`);
-
-              if (generatedArticles > 0) {
-                console.log(`🤖 [CRON] AUTO-GENERATED: ${generatedArticles} articles created automatically!`);
-              }
+              console.log(`📥 [SOURCES] ${sourceData.name}: ${totalItems} fetched, ${newItems} new feed items saved`);
 
               results.successfulPolls++;
               results.newItemsFound += newItems;
-              results.generatedArticles += generatedArticles;
 
               if (newItems > 0) {
-                const autoGenStatus = sourceData.configuration?.autoGenerate ? 'with auto-generation' : 'without auto-generation';
-                console.log(`✅ 🎉 [CRON] SUCCESS: ${newItems} new items from ${sourceData.name} (${autoGenStatus})`);
-
-                if (generatedArticles > 0) {
-                  console.log(`   🚀 Generated ${generatedArticles} articles automatically via Perplexity!`);
-                }
+                console.log(`✅ [SOURCES] SUCCESS: ${newItems} new feed items from ${sourceData.name}`);
+                console.log(`   📋 Saved as FeedItems with status 'draft' - auto-generation cron will process them`);
               } else {
-                console.log(`   ℹ️  [CRON] No new items from ${sourceData.name}`);
+                console.log(`   ℹ️  [SOURCES] No new items from ${sourceData.name}`);
               }
             } else {
               // FetchFromSource already handles error recording in the source
@@ -186,7 +161,6 @@ export async function GET(request: NextRequest) {
         successful: results.successfulPolls,
         failed: results.failedPolls,
         newItems: results.newItemsFound,
-        generatedArticles: results.generatedArticles,
         duration: `${results.duration}ms`
       });
 

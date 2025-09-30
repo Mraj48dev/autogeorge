@@ -7,7 +7,6 @@ import { Title } from '../../domain/value-objects/Title';
 import { Content } from '../../domain/value-objects/Content';
 import { ArticleId } from '../../domain/value-objects/ArticleId';
 import { ArticleStatus } from '../../domain/value-objects/ArticleStatus';
-import { PublishingContent } from '../../../publishing/domain/ports/PublishingService';
 import { Logger } from '../../infrastructure/logger/Logger';
 
 /**
@@ -47,35 +46,9 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
             if (saveResult.isSuccess()) {
               const articleId = article.id.getValue();
 
-              // 🎨 Generate featured image if enabled
-              if (request.enableFeaturedImage) {
-                try {
-                  console.log(`🎨 [AutoGen] Generating featured image for article: ${articleId}`);
-                  await this.autoGenerateImage(articleId);
-                  this.logger.info('Featured image generation completed successfully', {
-                    articleId,
-                    feedItemId: feedItem.id
-                  });
-                } catch (imageError) {
-                  console.warn(`⚠️ [AutoGen] Featured image generation failed for article ${articleId}:`, imageError);
-                  // Continue without failing the entire generation
-                }
-              }
-
-              // 📤 Auto-publish if enabled
-              if (request.enableAutoPublish) {
-                try {
-                  console.log(`📤 [AutoGen] Auto-publishing article: ${articleId}`);
-                  await this.autoPublishArticle(articleId);
-                  this.logger.info('Auto-publishing completed successfully', {
-                    articleId,
-                    feedItemId: feedItem.id
-                  });
-                } catch (publishError) {
-                  console.warn(`⚠️ [AutoGen] Auto-publishing failed for article ${articleId}:`, publishError);
-                  // Continue without failing the entire generation
-                }
-              }
+              // ✅ CLEAN ARCHITECTURE: Only generate article, let separate crons handle image/publish
+              console.log(`✅ [AutoGen] Article created with status: ${article.status.getValue()}`);
+              console.log(`🔄 [AutoGen] Workflow: Separate crons will handle image generation and publishing`);
 
               results.push({
                 feedItemId: feedItem.id,
@@ -87,8 +60,10 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
                 feedItemId: feedItem.id,
                 articleId: articleId,
                 articleTitle: article.title.getValue(),
+                articleStatus: article.status.getValue(),
                 featuredImageEnabled: request.enableFeaturedImage,
-                autoPublishEnabled: request.enableAutoPublish
+                autoPublishEnabled: request.enableAutoPublish,
+                note: 'Image generation and publishing will be handled by separate cron jobs'
               });
             } else {
               // Save failed - log the error and mark as failed
@@ -367,179 +342,6 @@ REQUISITI TECNICI:
 Genera l'articolo ora:`;
   }
 
-  /**
-   * Auto-publish article to WordPress
-   */
-  private async autoPublishArticle(articleId: string): Promise<void> {
-    try {
-      console.log(`📤 [AutoPublish] Starting auto-publish for article: ${articleId}`);
-
-      // Get article from database
-      const article = await this.articleRepository.findById(articleId);
-      if (!article) {
-        throw new Error(`Article not found: ${articleId}`);
-      }
-
-      // Get WordPress settings
-      const { prisma } = await import('@/shared/database/prisma');
-      const wordpressSite = await prisma.wordPressSite.findFirst({
-        where: { isActive: true }
-      });
-
-      if (!wordpressSite) {
-        throw new Error('No active WordPress site found for auto-publishing');
-      }
-
-      console.log(`🎯 [AutoPublish] Found WordPress site: ${wordpressSite.name}`);
-
-      // Use services directly instead of simulating HTTP calls
-      const { PrismaPublicationRepository } = await import('@/modules/publishing/infrastructure/repositories/PrismaPublicationRepository');
-      const { WordPressPublishingService } = await import('@/modules/publishing/infrastructure/services/WordPressPublishingService');
-      const { PublishArticle } = await import('@/modules/publishing/application/use-cases/PublishArticle');
-      const { PublicationTarget } = await import('@/modules/publishing/domain/value-objects/PublicationTarget');
-
-      // Initialize services
-      const publicationRepository = new PrismaPublicationRepository();
-      const publishingService = new WordPressPublishingService();
-      const publishArticle = new PublishArticle(publicationRepository, publishingService);
-
-      // Create proper publication target using WordPress factory method (FIXED: correct parameter order)
-      const publicationTarget = PublicationTarget.wordpress(
-        wordpressSite.id,     // siteId first (CORRECT ORDER)
-        wordpressSite.url,    // siteUrl second (CORRECT ORDER)
-        {
-          username: wordpressSite.username,
-          password: wordpressSite.password,
-          status: wordpressSite.defaultStatus || 'publish'
-        }
-      );
-
-      const content: PublishingContent = {
-        title: article.title || 'Generated Article', // Direct access to database field
-        content: article.content || 'Generated content', // Direct access to database field
-        excerpt: (article.title || 'Generated Article').substring(0, 150), // Extract from title if needed
-        featuredImageUrl: article.featuredMediaUrl || undefined, // Use featured media URL if available
-        attachments: []
-      };
-
-      const metadata = {
-        articleId: articleId,
-        sourceId: article.sourceId || '',
-        generatedAt: new Date(),
-        autoPublished: true
-      };
-
-      // Execute publication
-      const result = await publishArticle.execute({
-        articleId,
-        target: publicationTarget,
-        content,
-        metadata
-      });
-
-      if (result.isFailure()) {
-        throw new Error(`Publishing failed: ${result.error.message}`);
-      }
-
-      const publicationData = result.value;
-      console.log(`✅ [AutoPublish] Article published successfully: ${articleId} → ${publicationData.externalUrl || 'WordPress'}`);
-
-    } catch (error) {
-      console.error(`❌ [AutoPublish] Failed to auto-publish article ${articleId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Auto-generate featured image for article using direct DALL-E API call
-   */
-  private async autoGenerateImage(articleId: string): Promise<void> {
-    try {
-      console.log(`🎨 [AutoImage] Starting auto-image generation for article: ${articleId}`);
-
-      // Get article from database
-      const article = await this.articleRepository.findById(articleId);
-      if (!article) {
-        throw new Error(`Article not found: ${articleId}`);
-      }
-
-      // Get OpenAI API key
-      const openaiApiKey = process.env.OPENAI_API_KEY;
-      if (!openaiApiKey) {
-        throw new Error('OpenAI API key not configured');
-      }
-
-      // Generate image prompt based on article title and content
-      const imagePrompt = this.generateImagePrompt(article.title, article.content);
-      console.log(`🎨 [AutoImage] Generated prompt: ${imagePrompt}`);
-
-      // Call OpenAI DALL-E API for image generation
-      const dalleResponse = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: imagePrompt,
-          n: 1,
-          size: '1024x1024',
-          quality: 'standard',
-          style: 'natural',
-          response_format: 'url'
-        }),
-      });
-
-      if (!dalleResponse.ok) {
-        const errorData = await dalleResponse.json();
-        throw new Error(`DALL-E generation failed: ${errorData.error?.message || dalleResponse.status}`);
-      }
-
-      const dalleData = await dalleResponse.json();
-      const imageUrl = dalleData.data?.[0]?.url;
-
-      if (!imageUrl) {
-        throw new Error('DALL-E did not return an image URL');
-      }
-
-      // Update article with featured image URL
-      const { prisma } = await import('@/shared/database/prisma');
-      await prisma.article.update({
-        where: { id: articleId },
-        data: {
-          featuredMediaUrl: imageUrl
-        }
-      });
-
-      console.log(`✅ [AutoImage] Featured image generated successfully: ${articleId} → ${imageUrl}`);
-
-    } catch (error) {
-      console.error(`❌ [AutoImage] Failed to auto-generate image for article ${articleId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate image prompt based on article content
-   */
-  private generateImagePrompt(title: string, content: string): string {
-    // Extract key themes from title and content for image generation
-    const cleanTitle = title.replace(/[^\w\s]/gi, '').toLowerCase();
-
-    // Create a focused prompt for DALL-E
-    const prompt = `Create a professional, high-quality featured image for an article titled: "${title}".
-The image should be:
-- Modern and clean design
-- Relevant to the article topic
-- Professional and engaging
-- Suitable for a news/blog website
-- No text overlays
-- High contrast and clear
-Style: photorealistic, modern, clean`;
-
-    return prompt;
-  }
 }
 
 export interface AutoGenerateRequest {

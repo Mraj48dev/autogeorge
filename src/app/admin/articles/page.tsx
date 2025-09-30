@@ -1177,6 +1177,24 @@ export default function ArticlesBySourcePage() {
                       "⚠️ Generazione AI disattivata - Nessuna immagine verrà creata"
                     }
                   </div>
+
+                  <button
+                    onClick={() => handleGenerateImage(selectedArticle!, articleDetail)}
+                    disabled={searchingImage || !enableAIGeneration}
+                    className="w-full mt-3 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center justify-center text-sm font-medium"
+                  >
+                    {searchingImage ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generando...
+                      </>
+                    ) : (
+                      <>🎨 Genera immagine</>
+                    )}
+                  </button>
                 </div>
 
                 {/* JSON Viewer Button */}
@@ -1354,23 +1372,6 @@ export default function ArticlesBySourcePage() {
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Chiudi
-                </button>
-                <button
-                  onClick={() => handleGenerateImage(selectedArticle!, articleDetail)}
-                  disabled={searchingImage || !enableAIGeneration}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center"
-                >
-                  {searchingImage ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Cercando...
-                    </>
-                  ) : (
-                    <>🎨 Genera immagine</>
-                  )}
                 </button>
                 <button
                   onClick={handleTestWordPress}

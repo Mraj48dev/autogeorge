@@ -2,7 +2,7 @@ import { CommandUseCase, ExecutionContext } from '../../shared/application/base/
 import { Result } from '../../shared/domain/types/Result';
 import { ArticleRepository } from '../../domain/ports/ArticleRepository';
 import { AiService, ArticleGenerationRequest } from '../../domain/ports/AiService';
-import { Article, GenerationParameters, ArticleJsonData } from '../../domain/entities/Article';
+import { Article, GenerationParameters, ArticleJsonData, ArticleAutomationSettings } from '../../domain/entities/Article';
 import { Title } from '../../domain/value-objects/Title';
 import { Content } from '../../domain/value-objects/Content';
 import { ArticleId } from '../../domain/value-objects/ArticleId';
@@ -162,7 +162,8 @@ export class GenerateArticle extends CommandUseCase<
         input.sourceId || 'manual',
         generationParams,
         undefined, // seoMetadata - can be extracted from articleData later
-        articleData // Pass the structured JSON data
+        articleData, // Pass the structured JSON data
+        input.automationSettings // Pass automation settings to determine correct initial status
       );
 
       // Step 6: Save the article
@@ -375,6 +376,9 @@ export interface GenerateArticleInput {
 
   /** Presence penalty */
   presencePenalty?: number;
+
+  /** Automation settings that influence the initial article status */
+  automationSettings?: ArticleAutomationSettings;
 }
 
 /**

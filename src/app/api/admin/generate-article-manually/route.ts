@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
 import { SingleStepArticleGenerationService } from '@/modules/content/infrastructure/services/SingleStepArticleGenerationService';
+import { Article } from '@/modules/content/domain/entities/Article';
 
 /**
  * POST /api/admin/generate-article-manually
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get WordPress configuration for image upload (if available)
+    // Get WordPress configuration and automation settings
     const wordpressSite = await prisma.wordPressSite.findUnique({
       where: { userId }
     });
@@ -77,6 +78,18 @@ export async function POST(request: NextRequest) {
         password: wordpressSite.password
       };
     }
+
+    // 🔧 FIX: Extract automation settings from WordPress configuration
+    const automationSettings = {
+      enableFeaturedImage: wordpressSite?.enableFeaturedImage || false,
+      enableAutoPublish: wordpressSite?.enableAutoPublish || false
+    };
+
+    console.log('🎯 [Status Fix] Automation settings extracted:', {
+      enableFeaturedImage: automationSettings.enableFeaturedImage,
+      enableAutoPublish: automationSettings.enableAutoPublish,
+      enableAutoGeneration: wordpressSite?.enableAutoGeneration || false
+    });
 
     // Use custom prompts if provided, otherwise use default settings
     const titlePrompt = body.customPrompts?.titlePrompt || settings.titlePrompt;
@@ -148,12 +161,21 @@ export async function POST(request: NextRequest) {
     const finalSlug = advancedData.basic_data?.slug || null;
     const finalMetaDescription = advancedData.seo_critical?.meta_description || null;
 
-    // Create the article with generated content and basic metadata
+    // 🔧 FIX: Determine correct initial status based on automation settings
+    const initialStatus = Article.determineInitialStatus(automationSettings);
+
+    console.log('🎯 [Status Fix] Article initial status determined:', {
+      status: initialStatus.getValue(),
+      automationSettings,
+      enableAutoGeneration: wordpressSite?.enableAutoGeneration || false
+    });
+
+    // Create the article with generated content and CORRECT status
     const article = await prisma.article.create({
       data: {
         title: finalTitle,
         content: finalContent,
-        status: 'generated',
+        status: initialStatus.getValue(), // 🔧 FIX: Use determined status instead of hardcoded 'generated'
         sourceId: feedItem.sourceId,
 
         // ✅ SIMPLIFIED: Save only slug for now

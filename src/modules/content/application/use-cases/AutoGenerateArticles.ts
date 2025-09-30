@@ -1,6 +1,6 @@
 import { UseCase } from '../../shared/application/base/UseCase';
 import { Result } from '../../shared/domain/types/Result';
-import { Article, GenerationParameters } from '../../domain/entities/Article';
+import { Article, GenerationParameters, ArticleAutomationSettings } from '../../domain/entities/Article';
 import { ArticleRepository } from '../../domain/ports/ArticleRepository';
 import { AiService } from '../../domain/ports/AiService';
 import { Title } from '../../domain/value-objects/Title';
@@ -128,6 +128,7 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
 
   /**
    * Creates article with correct initial status based on automation flags
+   * @deprecated Use Article.createGenerated() with automationSettings instead
    */
   private createGeneratedWithWorkflow(
     title: Title,
@@ -138,9 +139,12 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     enableFeaturedImage: boolean = false,
     enableAutoPublish: boolean = false
   ): Article {
-    const id = ArticleId.generate();
+    // Use the centralized logic from Article domain entity
+    const automationSettings = {
+      enableFeaturedImage,
+      enableAutoPublish
+    };
 
-    // Determine correct initial status based on automation workflow
     console.log(`🔧 [AutoGen] AUTOMATION FLAGS DEBUG:`, {
       enableFeaturedImage,
       enableAutoPublish,
@@ -148,39 +152,23 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       feedItemTitle: title.getValue().substring(0, 50) + '...'
     });
 
-    let initialStatus: ArticleStatus;
-
-    if (enableFeaturedImage) {
-      // Image generation enabled: start with generated_image_draft (regardless of auto-publish)
-      // generated_image_draft → generated_with_image → [ready_to_publish OR manual]
-      initialStatus = ArticleStatus.generatedImageDraft();
-      console.log(`🎨 [AutoGen] Image generation enabled → Starting with generated_image_draft`);
-    } else if (enableAutoPublish) {
-      // Only auto-publish enabled (no images): go directly to ready_to_publish
-      // ready_to_publish → published
-      initialStatus = ArticleStatus.readyToPublish();
-      console.log(`📤 [AutoGen] Auto-publish enabled (no images) → Starting with ready_to_publish`);
-    } else {
-      // Neither flag enabled: generated is the FINAL state (manual workflow)
-      initialStatus = ArticleStatus.generated();
-      console.log(`✋ [AutoGen] No automation flags → Final state: generated (manual workflow)`);
-    }
+    const article = Article.createGenerated(
+      title,
+      content,
+      sourceId,
+      generationParams,
+      seoMetadata,
+      undefined, // articleData
+      automationSettings
+    );
 
     console.log(`🎯 [AutoGen] FINAL STATUS ASSIGNED:`, {
-      statusValue: initialStatus.getValue(),
+      statusValue: article.status.getValue(),
       enableFeaturedImage,
       enableAutoPublish
     });
 
-    return new Article(
-      id,
-      title,
-      content,
-      initialStatus,
-      seoMetadata,
-      sourceId,
-      generationParams
-    );
+    return article;
   }
 
   private async generateArticleFromFeedItem(

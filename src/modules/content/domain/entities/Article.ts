@@ -85,7 +85,7 @@ export class Article extends AggregateRoot<ArticleId> {
   }
 
   /**
-   * Creates a new generated article and publishes ArticleGenerated event
+   * Creates a new generated article with correct initial status based on automation settings
    */
   static createGenerated(
     title: Title,
@@ -93,14 +93,19 @@ export class Article extends AggregateRoot<ArticleId> {
     sourceId: string,
     generationParams: GenerationParameters,
     seoMetadata?: SeoMetadata,
-    articleData?: ArticleJsonData
+    articleData?: ArticleJsonData,
+    automationSettings?: ArticleAutomationSettings
   ): Article {
     const id = ArticleId.generate();
+
+    // Determine correct initial status based on automation settings
+    const initialStatus = Article.determineInitialStatus(automationSettings);
+
     const article = new Article(
       id,
       title,
       content,
-      ArticleStatus.readyToPublish(),
+      initialStatus,
       seoMetadata,
       sourceId,
       generationParams,
@@ -118,6 +123,31 @@ export class Article extends AggregateRoot<ArticleId> {
     );
 
     return article;
+  }
+
+  /**
+   * Determines the correct initial status for a generated article based on automation settings
+   */
+  static determineInitialStatus(automationSettings?: ArticleAutomationSettings): ArticleStatus {
+    if (!automationSettings) {
+      // Default behavior: generated status (manual workflow)
+      return ArticleStatus.generated();
+    }
+
+    const { enableFeaturedImage, enableAutoPublish } = automationSettings;
+
+    if (enableFeaturedImage) {
+      // Image generation enabled: start with generated_image_draft (regardless of auto-publish)
+      // Workflow: generated_image_draft → generated_with_image → [ready_to_publish OR manual]
+      return ArticleStatus.generatedImageDraft();
+    } else if (enableAutoPublish) {
+      // Only auto-publish enabled (no images): go directly to ready_to_publish
+      // Workflow: ready_to_publish → published
+      return ArticleStatus.readyToPublish();
+    } else {
+      // Neither flag enabled: generated is the FINAL state (manual workflow)
+      return ArticleStatus.generated();
+    }
   }
 
   // Getters
@@ -418,4 +448,12 @@ export interface ArticleJsonData {
       url: string;
     }>;
   };
+}
+
+/**
+ * Automation settings that influence article initial status
+ */
+export interface ArticleAutomationSettings {
+  enableFeaturedImage?: boolean; // Enable featured image generation workflow
+  enableAutoPublish?: boolean;   // Enable auto-publishing workflow
 }

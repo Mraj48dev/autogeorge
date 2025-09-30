@@ -1,6 +1,6 @@
 import { UseCase } from '../../shared/application/base/UseCase';
 import { Result } from '../../shared/domain/types/Result';
-import { Article, GenerationParameters } from '../../domain/entities/Article';
+import { Article, GenerationParameters, ArticleAutomationSettings } from '../../domain/entities/Article';
 import { ArticleRepository } from '../../domain/ports/ArticleRepository';
 import { AiService } from '../../domain/ports/AiService';
 import { Title } from '../../domain/value-objects/Title';
@@ -69,13 +69,15 @@ export class GenerateArticleManually implements UseCase<ManualGenerateRequest, M
         return Result.failure(`Failed to create article: ${errors.join(', ')}`);
       }
 
-      // Create and save article
+      // Create and save article with correct initial status based on automation settings
       const article = Article.createGenerated(
         title.value,
         content.value,
         request.sourceId,
         generationParams,
-        generated.seoMetadata
+        generated.seoMetadata,
+        undefined, // articleData - could be added in future
+        request.automationSettings // Pass automation settings to determine correct initial status
       );
 
       await this.articleRepository.save(article);
@@ -145,6 +147,7 @@ export interface ManualGenerateRequest {
   sourceId: string;
   customPrompts: CustomPrompts;
   settings: GenerationSettings;
+  automationSettings?: ArticleAutomationSettings;
 }
 
 export interface ManualGenerateResponse {

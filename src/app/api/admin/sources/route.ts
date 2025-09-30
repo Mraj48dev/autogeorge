@@ -8,12 +8,66 @@ import { Config } from '../../../../modules/sources/shared/config/env';
  */
 export async function GET(request: NextRequest) {
   try {
+    // TEMPORARY MIGRATION: Check for migration parameter
+    const { searchParams } = new URL(request.url);
+    if (searchParams.get('migrate') === 'status-column') {
+      const { prisma } = await import('@/shared/database/prisma');
+
+      try {
+        // Check if status column exists
+        const columns = await prisma.$queryRaw`
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_name = 'feed_items'
+          AND table_schema = 'public'
+          AND column_name = 'status'
+        `;
+
+        if ((columns as any[]).length === 0) {
+          // Add status column
+          await prisma.$executeRaw`
+            ALTER TABLE feed_items
+            ADD COLUMN status VARCHAR(20) DEFAULT 'pending'
+          `;
+
+          // Migrate data
+          await prisma.$executeRaw`
+            UPDATE feed_items
+            SET status = CASE
+              WHEN processed = true THEN 'processed'
+              ELSE 'pending'
+            END
+          `;
+
+          // Create index
+          await prisma.$executeRaw`
+            CREATE INDEX IF NOT EXISTS idx_feed_items_status
+            ON feed_items(status)
+          `;
+
+          return NextResponse.json({
+            migration: 'completed',
+            message: 'Status column added and data migrated successfully'
+          });
+        } else {
+          return NextResponse.json({
+            migration: 'already_applied',
+            message: 'Status column already exists'
+          });
+        }
+      } catch (error) {
+        return NextResponse.json({
+          migration: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    }
     // Initialize the sources container
     const container = createSourcesContainer();
     const sourcesAdminFacade = container.sourcesAdminFacade;
 
-    // Parse query parameters
-    const { searchParams } = new URL(request.url);
+    // Parse query parameters (reusing searchParams from migration check)
+    // const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const type = searchParams.get('type') || undefined;

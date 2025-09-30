@@ -9,7 +9,6 @@ import { ValueObject } from '../../../../shared/domain/base/ValueObject';
 export class PublicationTarget extends ValueObject<PublicationTargetValue> {
   private constructor(value: PublicationTargetValue) {
     super(value);
-    this.validate();
   }
 
   /**
@@ -140,8 +139,7 @@ export class PublicationTarget extends ValueObject<PublicationTargetValue> {
   /**
    * Validates the publication target
    */
-  protected validate(): void {
-    const value = this.value;
+  protected validate(value: PublicationTargetValue): void {
     console.log('PublicationTarget.validate - received value:', JSON.stringify(value));
     console.log('PublicationTarget.validate - typeof value:', typeof value);
     console.log('PublicationTarget.validate - value is null:', value === null);

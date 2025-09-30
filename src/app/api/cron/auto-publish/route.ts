@@ -88,14 +88,32 @@ export async function GET(request: NextRequest) {
         const publishingService = new WordPressPublishingService();
 
         // Create publication target (FIXED: correct parameter order)
+        console.log(`🔍 [DEBUG] WordPress site data:`, {
+          id: wordpressSite.id,
+          url: wordpressSite.url,
+          username: wordpressSite.username ? '[SET]' : '[NOT SET]',
+          password: wordpressSite.password ? '[SET]' : '[NOT SET]',
+          defaultStatus: wordpressSite.defaultStatus
+        });
+
+        const config = {
+          username: wordpressSite.username,
+          password: wordpressSite.password,
+          status: wordpressSite.defaultStatus || 'publish'
+        };
+
+        console.log(`🔍 [DEBUG] Config object:`, config);
+        console.log(`🔍 [DEBUG] Calling PublicationTarget.wordpress with:`, {
+          siteUrl: wordpressSite.url,
+          siteId: wordpressSite.id,
+          configType: typeof config,
+          configKeys: Object.keys(config)
+        });
+
         const publicationTarget = PublicationTarget.wordpress(
           wordpressSite.url,    // siteUrl first
           wordpressSite.id,     // siteId second
-          {
-            username: wordpressSite.username,
-            password: wordpressSite.password,
-            status: wordpressSite.defaultStatus || 'publish'
-          }
+          config
         );
 
         const content = {

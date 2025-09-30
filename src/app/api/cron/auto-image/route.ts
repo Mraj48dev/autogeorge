@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { createImageContainer } from '@/composition-root/modules/image';
 
 /**
  * GET /api/cron/auto-image
@@ -99,8 +100,8 @@ export async function GET(request: NextRequest) {
         console.log(`🎨 [AutoImage CRON] Processing article: ${article.id} - "${article.title}"`);
         results.processed++;
 
-        // Generate featured image using existing image generation service
-        const imageGenerationResult = await generateFeaturedImage(article);
+        // Generate featured image using new Image Module
+        const imageGenerationResult = await generateFeaturedImageWithModule(article);
 
         if (imageGenerationResult.success) {
           // Update article status to generated_with_image
@@ -218,72 +219,60 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate featured image for article using OpenAI DALL-E
+ * Generate featured image for article using new Image Module
  */
-async function generateFeaturedImage(article: any): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
+async function generateFeaturedImageWithModule(article: any): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
   try {
-    console.log(`🎨 [AutoImage] Generating featured image for article: ${article.id}`);
+    console.log(`🎨 [AutoImage Module] Generating featured image for article: ${article.id}`);
 
-    // Get OpenAI API key
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    if (!openaiApiKey) {
-      console.error('❌ [AutoImage] OpenAI API key not configured');
-      return {
-        success: false,
-        error: 'OpenAI API key not configured'
-      };
-    }
+    // Create Image Module container
+    const imageContainer = createImageContainer();
 
-    // Generate image prompt based on article title and content
-    const imagePrompt = generateImagePrompt(article.title, article.content);
-    console.log(`🎨 [AutoImage] Generated prompt: ${imagePrompt}`);
+    // Prepare input for Image Module
+    const imageInput = {
+      articleId: article.id,
+      title: article.title,
+      content: article.content || '',
+      aiPrompt: generateImagePrompt(article.title, article.content),
+      filename: `featured-${article.id}.png`,
+      altText: `Immagine in evidenza per: ${article.title}`,
+      style: 'natural' as const,
+      size: '1792x1024' as const
+    };
 
-    // Call OpenAI DALL-E API for image generation
-    const dalleResponse = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'dall-e-3',
-        prompt: imagePrompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'standard',
-        style: 'natural',
-        response_format: 'url'
-      }),
+    console.log(`🎨 [AutoImage Module] Input prepared:`, {
+      articleId: imageInput.articleId,
+      title: imageInput.title,
+      filename: imageInput.filename,
+      style: imageInput.style,
+      size: imageInput.size
     });
 
-    if (!dalleResponse.ok) {
-      const errorData = await dalleResponse.json();
-      console.error('❌ [AutoImage] DALL-E API failed:', errorData);
+    // Execute image generation through Image Module
+    const result = await imageContainer.imageAdminFacade.execute('GenerateImage', imageInput);
+
+    if (result.isFailure()) {
+      console.error('❌ [AutoImage Module] Image generation failed:', result.error.message);
       return {
         success: false,
-        error: `DALL-E generation failed: ${errorData.error?.message || dalleResponse.status}`
+        error: result.error.message
       };
     }
 
-    const dalleData = await dalleResponse.json();
-    const imageUrl = dalleData.data?.[0]?.url;
+    const generatedImage = result.value;
+    console.log(`✅ [AutoImage Module] Image generated successfully:`, {
+      imageId: generatedImage.imageId,
+      url: generatedImage.url,
+      status: generatedImage.status
+    });
 
-    if (!imageUrl) {
-      console.error('❌ [AutoImage] No image URL in DALL-E response');
-      return {
-        success: false,
-        error: 'DALL-E did not return an image URL'
-      };
-    }
-
-    console.log(`✅ [AutoImage] Image generated successfully: ${imageUrl}`);
     return {
       success: true,
-      imageUrl: imageUrl
+      imageUrl: generatedImage.url
     };
 
   } catch (error) {
-    console.error(`💥 [AutoImage] Error in generateFeaturedImage:`, error);
+    console.error(`💥 [AutoImage Module] Error in generateFeaturedImageWithModule:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

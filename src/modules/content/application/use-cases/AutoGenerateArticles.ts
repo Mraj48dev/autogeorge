@@ -141,6 +141,13 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     const id = ArticleId.generate();
 
     // Determine correct initial status based on automation workflow
+    console.log(`🔧 [AutoGen] AUTOMATION FLAGS DEBUG:`, {
+      enableFeaturedImage,
+      enableAutoPublish,
+      sourceId,
+      feedItemTitle: title.getValue().substring(0, 50) + '...'
+    });
+
     let initialStatus: ArticleStatus;
 
     if (enableFeaturedImage) {
@@ -158,6 +165,12 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       initialStatus = ArticleStatus.generated();
       console.log(`✋ [AutoGen] No automation flags → Final state: generated (manual workflow)`);
     }
+
+    console.log(`🎯 [AutoGen] FINAL STATUS ASSIGNED:`, {
+      statusValue: initialStatus.getValue(),
+      enableFeaturedImage,
+      enableAutoPublish
+    });
 
     return new Article(
       id,
@@ -250,6 +263,17 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       contentValue: contentValue?.substring(0, 100) || 'EMPTY',
       contentType: typeof contentValue,
       contentLength: contentValue?.length || 0
+    });
+
+    // 🔍 CHECK CONTENT FORMAT: HTML vs Markdown
+    const isHtml = contentValue.includes('<') && contentValue.includes('>');
+    const isMarkdown = contentValue.includes('##') || contentValue.includes('**') || contentValue.includes('*');
+    console.log(`📝 [AutoGen] CONTENT FORMAT CHECK:`, {
+      feedItemId: feedItem.id,
+      isHtml,
+      isMarkdown,
+      contentStart: contentValue.substring(0, 200),
+      promptIncludesHtml: this.buildPrompt(feedItem, settings).includes('HTML')
     });
 
     // Create article entity

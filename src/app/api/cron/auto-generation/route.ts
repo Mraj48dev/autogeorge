@@ -75,15 +75,17 @@ export async function GET(request: NextRequest) {
           source: {
             connect: { id: feedItem.sourceId }
           },
-          seoMetadata: {
-            metaDescription: feedItem.title?.substring(0, 160) || '',
-            seoTags: ['auto-generated', 'rss', 'content']
-          },
-          generationMetadata: {
-            model: 'simplified',
-            provider: 'auto-generation-cron',
-            feedItemId: feedItem.id,
-            generationTime: Date.now()
+          articleData: {
+            seoMetadata: {
+              metaDescription: feedItem.title?.substring(0, 160) || '',
+              seoTags: ['auto-generated', 'rss', 'content']
+            },
+            generationMetadata: {
+              model: 'simplified',
+              provider: 'auto-generation-cron',
+              feedItemId: feedItem.id,
+              generationTime: Date.now()
+            }
           }
         }
       });

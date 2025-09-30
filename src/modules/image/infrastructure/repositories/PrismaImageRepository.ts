@@ -14,27 +14,25 @@ import { ImageStatus } from '../../domain/value-objects/ImageStatus';
 export class PrismaImageRepository implements ImageRepository {
   async save(image: FeaturedImage): Promise<Result<FeaturedImage, Error>> {
     try {
-      const data = {
-        id: image.id.value,
-        articleId: image.articleId,
-        aiPrompt: image.aiPrompt,
-        filename: image.filename.value,
-        altText: image.altText.value,
-        url: image.url?.value,
-        status: image.status.value,
-        searchQuery: image.searchQuery,
-        errorMessage: image.errorMessage,
-        createdAt: image.createdAt,
-        updatedAt: image.updatedAt,
-      };
+      // WORKAROUND: Use raw SQL until Prisma client recognizes featured_images table
+      const result = await prisma.$executeRaw`
+        INSERT INTO featured_images (
+          id, article_id, ai_prompt, filename, alt_text, url, status,
+          search_query, error_message, created_at, updated_at
+        ) VALUES (
+          ${image.id.value}, ${image.articleId}, ${image.aiPrompt},
+          ${image.filename.value}, ${image.altText.value}, ${image.url?.value},
+          ${image.status.value}, ${image.searchQuery}, ${image.errorMessage},
+          ${image.createdAt}, ${image.updatedAt}
+        )
+      `;
 
-      const savedImage = await prisma.featuredImage.create({
-        data
-      });
+      console.log('✅ [FeaturedImage] Raw SQL insert successful:', result);
 
-      return Result.success(this.mapToDomain(savedImage));
+      return Result.success(image); // Return the original image since insert was successful
 
     } catch (error) {
+      console.error('❌ [FeaturedImage] Raw SQL insert failed:', error);
       return Result.failure(
         new Error(`Failed to save featured image: ${error instanceof Error ? error.message : 'Unknown error'}`)
       );
@@ -97,25 +95,26 @@ export class PrismaImageRepository implements ImageRepository {
 
   async update(image: FeaturedImage): Promise<Result<FeaturedImage, Error>> {
     try {
-      const data = {
-        aiPrompt: image.aiPrompt,
-        filename: image.filename.value,
-        altText: image.altText.value,
-        url: image.url?.value,
-        status: image.status.value,
-        searchQuery: image.searchQuery,
-        errorMessage: image.errorMessage,
-        updatedAt: image.updatedAt,
-      };
+      // WORKAROUND: Use raw SQL until Prisma client recognizes featured_images table
+      const result = await prisma.$executeRaw`
+        UPDATE featured_images SET
+          ai_prompt = ${image.aiPrompt},
+          filename = ${image.filename.value},
+          alt_text = ${image.altText.value},
+          url = ${image.url?.value},
+          status = ${image.status.value},
+          search_query = ${image.searchQuery},
+          error_message = ${image.errorMessage},
+          updated_at = ${image.updatedAt}
+        WHERE id = ${image.id.value}
+      `;
 
-      const updatedImage = await prisma.featuredImage.update({
-        where: { id: image.id.value },
-        data
-      });
+      console.log('✅ [FeaturedImage] Raw SQL update successful:', result);
 
-      return Result.success(this.mapToDomain(updatedImage));
+      return Result.success(image); // Return the original image since update was successful
 
     } catch (error) {
+      console.error('❌ [FeaturedImage] Raw SQL update failed:', error);
       return Result.failure(
         new Error(`Failed to update featured image: ${error instanceof Error ? error.message : 'Unknown error'}`)
       );

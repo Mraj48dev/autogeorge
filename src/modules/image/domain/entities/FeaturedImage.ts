@@ -89,18 +89,40 @@ export class FeaturedImage extends Entity<ImageId> {
     filename: string,
     altText: string
   ): FeaturedImage {
+    console.log('🔍 [DEBUG] FeaturedImage.create() called with:', {
+      articleId, aiPrompt, filename, altText
+    });
+
     const id = ImageId.generate();
+    console.log('🔍 [DEBUG] Generated ImageId:', { id, value: id?.value });
+
     const now = new Date();
+
+    const filenameVO = ImageFilename.create(filename);
+    const altTextVO = ImageAltText.create(altText);
+    const statusVO = ImageStatus.create('pending');
+
+    console.log('🔍 [DEBUG] Created value objects:', {
+      filename: filenameVO?.value,
+      altText: altTextVO?.value,
+      status: statusVO?.value
+    });
 
     const featuredImage = new FeaturedImage({
       id,
       articleId,
       aiPrompt,
-      filename: ImageFilename.create(filename),
-      altText: ImageAltText.create(altText),
-      status: ImageStatus.create('pending'),
+      filename: filenameVO,
+      altText: altTextVO,
+      status: statusVO,
       createdAt: now,
       updatedAt: now,
+    });
+
+    console.log('🔍 [DEBUG] Created FeaturedImage:', {
+      hasImage: !!featuredImage,
+      hasId: !!featuredImage.id,
+      idValue: featuredImage.id?.value
     });
 
     // Raise domain event

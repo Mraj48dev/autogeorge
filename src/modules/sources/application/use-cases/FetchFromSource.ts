@@ -305,20 +305,41 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
     enableAutoPublish: boolean;
   }> {
     try {
+      const userId = 'demo-user'; // TODO: Get from auth context
+      console.log('🔍 [FetchFromSource] Reading WordPress automation settings for userId:', userId);
+
       const wordPressSite = await prisma.wordPressSite.findUnique({
-        where: { userId: 'demo-user' }, // TODO: Get from auth context
+        where: { userId },
         select: {
+          id: true,
+          name: true,
+          enableAutoGeneration: true,
           enableFeaturedImage: true,
-          enableAutoPublish: true
+          enableAutoPublish: true,
+          isActive: true
         }
       });
 
-      return {
+      console.log('🎯 [FetchFromSource] WordPress site found:', {
+        found: !!wordPressSite,
+        siteId: wordPressSite?.id,
+        siteName: wordPressSite?.name,
+        enableAutoGeneration: wordPressSite?.enableAutoGeneration,
+        enableFeaturedImage: wordPressSite?.enableFeaturedImage,
+        enableAutoPublish: wordPressSite?.enableAutoPublish,
+        isActive: wordPressSite?.isActive
+      });
+
+      const result = {
         enableFeaturedImage: wordPressSite?.enableFeaturedImage || false,
         enableAutoPublish: wordPressSite?.enableAutoPublish || false
       };
+
+      console.log('🔧 [FetchFromSource] Automation settings result:', result);
+
+      return result;
     } catch (error) {
-      console.error(`❌ Error reading WordPress automation settings:`, error);
+      console.error(`❌ [FetchFromSource] Error reading WordPress automation settings:`, error);
       return {
         enableFeaturedImage: false,
         enableAutoPublish: false

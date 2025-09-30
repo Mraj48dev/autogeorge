@@ -143,18 +143,20 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     // Determine correct initial status based on automation workflow
     let initialStatus: ArticleStatus;
 
-    if (enableAutoPublish && enableFeaturedImage) {
-      // Both enabled: generated → generated_image_draft → generated_with_image → ready_to_publish → published
+    if (enableFeaturedImage) {
+      // Image generation enabled: start with generated_image_draft (regardless of auto-publish)
+      // generated_image_draft → generated_with_image → [ready_to_publish OR manual]
       initialStatus = ArticleStatus.generatedImageDraft();
-    } else if (enableAutoPublish && !enableFeaturedImage) {
-      // Only auto-publish: generated → ready_to_publish → published
+      console.log(`🎨 [AutoGen] Image generation enabled → Starting with generated_image_draft`);
+    } else if (enableAutoPublish) {
+      // Only auto-publish enabled (no images): go directly to ready_to_publish
+      // ready_to_publish → published
       initialStatus = ArticleStatus.readyToPublish();
-    } else if (!enableAutoPublish && enableFeaturedImage) {
-      // Only image generation: generated → generated_image_draft → generated_with_image (manual publish)
-      initialStatus = ArticleStatus.generatedImageDraft();
+      console.log(`📤 [AutoGen] Auto-publish enabled (no images) → Starting with ready_to_publish`);
     } else {
-      // Neither enabled: generated (manual image + manual publish)
+      // Neither flag enabled: generated is the FINAL state (manual workflow)
       initialStatus = ArticleStatus.generated();
+      console.log(`✋ [AutoGen] No automation flags → Final state: generated (manual workflow)`);
     }
 
     return new Article(

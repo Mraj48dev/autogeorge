@@ -153,7 +153,9 @@ export class SourcesContainer {
 
   get articleAutoGenerator(): ArticleAutoGenerator {
     if (!this._articleAutoGenerator) {
-      this._articleAutoGenerator = new ContentModuleArticleAutoGenerator();
+      this._articleAutoGenerator = new ContentModuleArticleAutoGenerator(
+        this.feedItemRepository // Inject FeedItemRepository for status updates
+      );
     }
     return this._articleAutoGenerator;
   }

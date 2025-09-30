@@ -1,12 +1,17 @@
 import { Result } from '../../shared/domain/types/Result';
 import { ArticleAutoGenerator, AutoGenerateFromFeedItemsRequest, AutoGenerateFromFeedItemsResponse } from '../../domain/ports/ArticleAutoGenerator';
+import { FeedItemRepository } from '../../domain/ports/FeedItemRepository';
 import { createContentContainer } from '../../../content/infrastructure/container/ContentContainer';
 
 /**
  * Adapter that bridges the sources module to the content module
- * for automatic article generation functionality
+ * for automatic article generation functionality.
+ *
+ * Also responsible for updating feed item status after successful generation.
  */
 export class ContentModuleArticleAutoGenerator implements ArticleAutoGenerator {
+
+  constructor(private readonly feedItemRepository: FeedItemRepository) {}
 
   async generateFromFeedItems(request: AutoGenerateFromFeedItemsRequest): Promise<Result<AutoGenerateFromFeedItemsResponse, Error>> {
     try {
@@ -50,6 +55,37 @@ export class ContentModuleArticleAutoGenerator implements ArticleAutoGenerator {
 
       const contentResult = result.value;
 
+      // 🔄 UPDATE FEED ITEM STATUS: Content Module responsibility
+      // After successful article generation, update feed items from 'draft' to 'processed'
+      console.log(`🔄 [ContentModuleArticleAutoGenerator] Updating feed item status after generation...`);
+
+      let statusUpdates = 0;
+      for (const generationResult of contentResult.results) {
+        if (generationResult.success && generationResult.articleId) {
+          try {
+            // Update feed item status from 'draft' to 'processed'
+            const updateResult = await this.feedItemRepository.updateStatus(
+              generationResult.feedItemId,
+              'processed',
+              generationResult.articleId
+            );
+
+            if (updateResult.isSuccess()) {
+              statusUpdates++;
+              console.log(`✅ [ContentModuleArticleAutoGenerator] Updated feed item ${generationResult.feedItemId} → status: processed, articleId: ${generationResult.articleId}`);
+            } else {
+              console.error(`❌ [ContentModuleArticleAutoGenerator] Failed to update feed item ${generationResult.feedItemId} status:`, updateResult.error);
+            }
+          } catch (error) {
+            console.error(`💥 [ContentModuleArticleAutoGenerator] Error updating feed item ${generationResult.feedItemId} status:`, error);
+          }
+        } else {
+          console.log(`⚠️ [ContentModuleArticleAutoGenerator] Skipping status update for failed generation: ${generationResult.feedItemId}`);
+        }
+      }
+
+      console.log(`📊 [ContentModuleArticleAutoGenerator] Status updates completed: ${statusUpdates}/${contentResult.results.length} feed items updated`);
+
       // Convert response back to sources module format
       const sourcesModuleResponse: AutoGenerateFromFeedItemsResponse = {
         generatedArticles: contentResult.results.map(r => ({
@@ -65,7 +101,8 @@ export class ContentModuleArticleAutoGenerator implements ArticleAutoGenerator {
         sourceId: request.sourceId,
         total: sourcesModuleResponse.summary.total,
         successful: sourcesModuleResponse.summary.successful,
-        failed: sourcesModuleResponse.summary.failed
+        failed: sourcesModuleResponse.summary.failed,
+        statusUpdatesApplied: statusUpdates
       });
 
       return Result.success(sourcesModuleResponse);

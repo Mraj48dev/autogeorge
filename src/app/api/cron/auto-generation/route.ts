@@ -86,25 +86,7 @@ export async function GET(request: NextRequest) {
 
     const result = autoGenResult.value;
     console.log(`✅ Content Module completed: ${result.summary.successful}/${result.summary.total} articles generated with Perplexity AI`);
-
-    // Update feed items status to 'processed' for successful generations
-    let updatedItems = 0;
-    for (const genResult of result.generatedArticles) {
-      if (genResult.success && genResult.articleId) {
-        await prisma.feedItem.update({
-          where: { id: genResult.feedItemId },
-          data: {
-            status: 'processed',
-            articleId: genResult.articleId,
-            processed: true // Keep for backward compatibility
-          }
-        });
-        updatedItems++;
-        console.log(`📝 Updated feed item ${genResult.feedItemId} → status: processed, articleId: ${genResult.articleId}`);
-      }
-    }
-
-    console.log(`🎯 Final results: ${result.summary.successful} articles generated, ${updatedItems} feed items updated to processed`);
+    console.log(`🔄 Note: Feed item status updates are handled by Content Module adapter`);
 
     return NextResponse.json({
       success: true,
@@ -113,7 +95,6 @@ export async function GET(request: NextRequest) {
         processed: draftFeedItems.length,
         successful: result.summary.successful,
         failed: result.summary.failed,
-        updatedFeedItems: updatedItems,
         generatedArticles: result.generatedArticles.filter(r => r.success).map(r => r.articleId)
       }
     });

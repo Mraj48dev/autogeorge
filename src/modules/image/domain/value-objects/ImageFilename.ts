@@ -11,7 +11,7 @@ export class ImageFilename extends ValueObject<string> {
   }
 
   get value(): string {
-    return this.getValue();
+    return super.getValue();
   }
 
   static create(value: string): ImageFilename {
@@ -50,16 +50,16 @@ export class ImageFilename extends ValueObject<string> {
    * Get the file extension
    */
   getExtension(): string {
-    const lastDot = this.value.lastIndexOf('.');
-    return lastDot !== -1 ? this.value.substring(lastDot) : '';
+    const lastDot = this.getValue().lastIndexOf('.');
+    return lastDot !== -1 ? this.getValue().substring(lastDot) : '';
   }
 
   /**
    * Get the basename without extension
    */
   getBasename(): string {
-    const lastDot = this.value.lastIndexOf('.');
-    return lastDot !== -1 ? this.value.substring(0, lastDot) : this.value;
+    const lastDot = this.getValue().lastIndexOf('.');
+    return lastDot !== -1 ? this.getValue().substring(0, lastDot) : this.getValue();
   }
 
   /**
@@ -72,6 +72,6 @@ export class ImageFilename extends ValueObject<string> {
   }
 
   equals(other: ImageFilename): boolean {
-    return this.value === other.value;
+    return this.getValue() === other.getValue();
   }
 }

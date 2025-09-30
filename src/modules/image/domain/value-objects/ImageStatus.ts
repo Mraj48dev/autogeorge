@@ -14,7 +14,7 @@ export class ImageStatus extends ValueObject<ImageStatusValue> {
   }
 
   get value(): ImageStatusValue {
-    return this.getValue();
+    return super.getValue();
   }
 
   static create(value: ImageStatusValue): ImageStatus {
@@ -25,44 +25,44 @@ export class ImageStatus extends ValueObject<ImageStatusValue> {
    * Status check methods
    */
   isPending(): boolean {
-    return this.value === 'pending';
+    return this.getValue() === 'pending';
   }
 
   isSearching(): boolean {
-    return this.value === 'searching';
+    return this.getValue() === 'searching';
   }
 
   isFound(): boolean {
-    return this.value === 'found';
+    return this.getValue() === 'found';
   }
 
   isFailed(): boolean {
-    return this.value === 'failed';
+    return this.getValue() === 'failed';
   }
 
   isUploaded(): boolean {
-    return this.value === 'uploaded';
+    return this.getValue() === 'uploaded';
   }
 
   /**
    * Check if the status allows for retry
    */
   canRetry(): boolean {
-    return this.value === 'failed' || this.value === 'pending';
+    return this.getValue() === 'failed' || this.getValue() === 'pending';
   }
 
   /**
    * Check if the image is ready for WordPress upload
    */
   isReadyForUpload(): boolean {
-    return this.value === 'found';
+    return this.getValue() === 'found';
   }
 
   /**
    * Get human-readable status
    */
   getDisplayText(): string {
-    switch (this.value) {
+    switch (this.getValue()) {
       case 'pending':
         return 'In attesa';
       case 'searching':
@@ -74,7 +74,7 @@ export class ImageStatus extends ValueObject<ImageStatusValue> {
       case 'uploaded':
         return 'Caricata su WordPress';
       default:
-        return this.value;
+        return this.getValue();
     }
   }
 
@@ -82,7 +82,7 @@ export class ImageStatus extends ValueObject<ImageStatusValue> {
    * Get CSS class for status display
    */
   getCssClass(): string {
-    switch (this.value) {
+    switch (this.getValue()) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'searching':
@@ -99,6 +99,6 @@ export class ImageStatus extends ValueObject<ImageStatusValue> {
   }
 
   equals(other: ImageStatus): boolean {
-    return this.value === other.value;
+    return this.getValue() === other.getValue();
   }
 }

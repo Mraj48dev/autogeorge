@@ -15,7 +15,7 @@ export class ImageUrl extends ValueObject<string> {
   }
 
   get value(): string {
-    return this.getValue();
+    return super.getValue();
   }
 
   static create(value: string): ImageUrl {
@@ -36,7 +36,7 @@ export class ImageUrl extends ValueObject<string> {
    */
   isImageUrl(): boolean {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
-    const url = this.value.toLowerCase();
+    const url = this.getValue().toLowerCase();
     return imageExtensions.some(ext => url.includes(ext));
   }
 
@@ -45,7 +45,7 @@ export class ImageUrl extends ValueObject<string> {
    */
   getDomain(): string {
     try {
-      const urlObj = new URL(this.value);
+      const urlObj = new URL(this.getValue());
       return urlObj.hostname;
     } catch {
       return '';
@@ -53,6 +53,6 @@ export class ImageUrl extends ValueObject<string> {
   }
 
   equals(other: ImageUrl): boolean {
-    return this.value === other.value;
+    return this.getValue() === other.getValue();
   }
 }

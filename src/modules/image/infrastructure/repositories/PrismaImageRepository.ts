@@ -15,7 +15,7 @@ export class PrismaImageRepository implements ImageRepository {
   async save(image: FeaturedImage): Promise<Result<FeaturedImage, Error>> {
     try {
       console.log('🔍 [DEBUG] Saving FeaturedImage:', {
-        id: image.id?.value || 'UNDEFINED',
+        id: image.id?.getValue() || 'UNDEFINED',
         articleId: image.articleId,
         hasId: !!image.id,
         idType: typeof image.id,
@@ -26,7 +26,7 @@ export class PrismaImageRepository implements ImageRepository {
         throw new Error('Image ID is undefined');
       }
 
-      if (!image.id.value) {
+      if (!image.id.getValue()) {
         throw new Error('Image ID value is undefined');
       }
 
@@ -36,9 +36,9 @@ export class PrismaImageRepository implements ImageRepository {
           id, "articleId", "aiPrompt", filename, "altText", url, status,
           "searchQuery", "errorMessage", "createdAt", "updatedAt"
         ) VALUES (
-          ${image.id.value}, ${image.articleId}, ${image.aiPrompt},
-          ${image.filename.value}, ${image.altText.value}, ${image.url?.value},
-          ${image.status.value}, ${image.searchQuery}, ${image.errorMessage},
+          ${image.id.getValue()}, ${image.articleId}, ${image.aiPrompt},
+          ${image.filename.getValue()}, ${image.altText.getValue()}, ${image.url?.getValue()},
+          ${image.status.getValue()}, ${image.searchQuery}, ${image.errorMessage},
           ${image.createdAt}, ${image.updatedAt}
         )
       `;
@@ -54,7 +54,7 @@ export class PrismaImageRepository implements ImageRepository {
         imageData: {
           hasImage: !!image,
           hasId: !!(image && image.id),
-          idValue: image && image.id ? image.id.value : 'NO_ID'
+          idValue: image && image.id ? image.id.getValue() : 'NO_ID'
         }
       });
       return Result.failure(
@@ -123,14 +123,14 @@ export class PrismaImageRepository implements ImageRepository {
       const result = await prisma.$executeRaw`
         UPDATE featured_images SET
           "aiPrompt" = ${image.aiPrompt},
-          filename = ${image.filename.value},
-          "altText" = ${image.altText.value},
-          url = ${image.url?.value},
-          status = ${image.status.value},
+          filename = ${image.filename.getValue()},
+          "altText" = ${image.altText.getValue()},
+          url = ${image.url?.getValue()},
+          status = ${image.status.getValue()},
           "searchQuery" = ${image.searchQuery},
           "errorMessage" = ${image.errorMessage},
           "updatedAt" = ${image.updatedAt}
-        WHERE id = ${image.id.value}
+        WHERE id = ${image.id.getValue()}
       `;
 
       console.log('✅ [FeaturedImage] Raw SQL update successful:', result);

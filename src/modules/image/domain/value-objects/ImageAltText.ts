@@ -14,7 +14,7 @@ export class ImageAltText extends ValueObject<string> {
   }
 
   get value(): string {
-    return this.getValue();
+    return super.getValue();
   }
 
   static create(value: string): ImageAltText {
@@ -25,7 +25,7 @@ export class ImageAltText extends ValueObject<string> {
    * Check if alt text is SEO-friendly
    */
   isSeoFriendly(): boolean {
-    const value = this.value.toLowerCase();
+    const value = this.getValue().toLowerCase();
 
     // Should not start with "image of" or "picture of"
     if (value.startsWith('image of') || value.startsWith('picture of')) {
@@ -49,14 +49,14 @@ export class ImageAltText extends ValueObject<string> {
    * Get the word count
    */
   getWordCount(): number {
-    return this.value.split(/\s+/).filter(word => word.length > 0).length;
+    return this.getValue().split(/\s+/).filter(word => word.length > 0).length;
   }
 
   /**
    * Create a SEO-optimized version
    */
   toSeoOptimized(): ImageAltText {
-    let optimized = this.value;
+    let optimized = this.getValue();
 
     // Remove redundant phrases
     optimized = optimized
@@ -66,7 +66,7 @@ export class ImageAltText extends ValueObject<string> {
     // Trim and ensure it's not empty
     optimized = optimized.trim();
     if (optimized.length === 0) {
-      optimized = this.value; // Fallback to original
+      optimized = this.getValue(); // Fallback to original
     }
 
     // Truncate if too long but preserve meaning
@@ -78,6 +78,6 @@ export class ImageAltText extends ValueObject<string> {
   }
 
   equals(other: ImageAltText): boolean {
-    return this.value === other.value;
+    return this.getValue() === other.getValue();
   }
 }

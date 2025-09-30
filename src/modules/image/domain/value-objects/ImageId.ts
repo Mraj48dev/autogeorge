@@ -11,7 +11,7 @@ export class ImageId extends ValueObject<string> {
   }
 
   get value(): string {
-    return this.getValue();
+    return super.getValue();
   }
 
   static create(value: string): ImageId {
@@ -30,6 +30,6 @@ export class ImageId extends ValueObject<string> {
   }
 
   equals(other: ImageId): boolean {
-    return this.value === other.value;
+    return this.getValue() === other.getValue();
   }
 }

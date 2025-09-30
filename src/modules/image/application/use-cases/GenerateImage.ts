@@ -36,9 +36,7 @@ export class GenerateImage {
   constructor(
     private readonly imageRepository: ImageRepository,
     private readonly imageGenerationService: ImageGenerationService
-  ) {
-    super();
-  }
+  ) {}
 
   async execute(input: GenerateImageInput): Promise<Result<GenerateImageOutput, Error>> {
     try {

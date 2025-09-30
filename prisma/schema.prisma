@@ -229,6 +229,7 @@ model WordPressSite {
   defaultCategory  String?
   defaultStatus    String   @default("draft")
   defaultAuthor    String?
+  enableAutoGeneration Boolean @default(false)
   enableAutoPublish Boolean @default(false)
   enableFeaturedImage Boolean @default(true)
   enableTags       Boolean @default(true)

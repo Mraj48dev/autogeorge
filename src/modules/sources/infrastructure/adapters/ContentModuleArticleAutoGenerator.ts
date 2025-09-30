@@ -29,7 +29,9 @@ export class ContentModuleArticleAutoGenerator implements ArticleAutoGenerator {
           url: item.url,
           publishedAt: item.publishedAt
         })),
-        generationSettings
+        generationSettings,
+        enableFeaturedImage: request.enableFeaturedImage,
+        enableAutoPublish: request.enableAutoPublish
       };
 
       console.log(`📤 [ContentModuleArticleAutoGenerator] Sending request to AutoGenerateArticles use case:`, {

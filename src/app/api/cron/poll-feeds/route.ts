@@ -104,12 +104,28 @@ export async function GET(request: NextRequest) {
         const batchPromises = batch.map(async (sourceData) => {
           try {
             console.log(`🔍 [CRON] Polling feed: ${sourceData.name} (${sourceData.url})`);
-            console.log(`🤖 Auto-generation: ${sourceData.configuration?.autoGenerate ? 'ENABLED' : 'DISABLED'}`);
+
+            // Check WordPress settings for global auto-generation flag
+            const wordpressSite = await prisma.wordPressSite.findFirst({
+              where: { isActive: true }
+            });
+
+            const autoGenEnabled = wordpressSite?.enableAutoGeneration || false;
+            const featuredImageEnabled = wordpressSite?.enableFeaturedImage || false;
+            const autoPublishEnabled = wordpressSite?.enableAutoPublish || false;
+
+            console.log(`🤖 Global Auto-generation: ${autoGenEnabled ? 'ENABLED' : 'DISABLED'}`);
+            console.log(`🎨 Featured Image Auto: ${featuredImageEnabled ? 'ENABLED' : 'DISABLED'}`);
+            console.log(`📤 Auto-publish: ${autoPublishEnabled ? 'ENABLED' : 'DISABLED'}`);
 
             // Use FetchFromSource use case instead of manual fetch
             const fetchResult = await sourcesContainer.sourcesAdminFacade.fetchFromSource({
               sourceId: sourceData.id,
-              force: true
+              force: true,
+              // Pass automation flags from WordPress settings
+              autoGenerate: autoGenEnabled,
+              enableFeaturedImage: featuredImageEnabled,
+              enableAutoPublish: autoPublishEnabled
             });
 
             if (fetchResult.isSuccess()) {

@@ -16,6 +16,8 @@ export interface AutoGenerateFromFeedItemsRequest {
   sourceId: string;
   feedItems: FeedItemForGeneration[];
   generationSettings?: GenerationSettings;
+  enableFeaturedImage?: boolean; // Enable featured image generation
+  enableAutoPublish?: boolean; // Enable auto-publishing to WordPress
 }
 
 export interface AutoGenerateFromFeedItemsResponse {

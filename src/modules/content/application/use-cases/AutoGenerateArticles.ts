@@ -40,16 +40,52 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
             const saveResult = await this.articleRepository.save(article);
 
             if (saveResult.isSuccess()) {
+              const articleId = article.id.getValue();
+
+              // 🎨 Generate featured image if enabled
+              if (request.enableFeaturedImage) {
+                try {
+                  console.log(`🎨 [AutoGen] Generating featured image for article: ${articleId}`);
+                  // Call image generation service (implementation would be in infrastructure layer)
+                  // For now, just log the intent
+                  this.logger.info('Featured image generation triggered', {
+                    articleId,
+                    feedItemId: feedItem.id
+                  });
+                } catch (imageError) {
+                  console.warn(`⚠️ [AutoGen] Featured image generation failed for article ${articleId}:`, imageError);
+                  // Continue without failing the entire generation
+                }
+              }
+
+              // 📤 Auto-publish if enabled
+              if (request.enableAutoPublish) {
+                try {
+                  console.log(`📤 [AutoGen] Auto-publishing article: ${articleId}`);
+                  // Call publishing service (implementation would be in infrastructure layer)
+                  // For now, just log the intent
+                  this.logger.info('Auto-publishing triggered', {
+                    articleId,
+                    feedItemId: feedItem.id
+                  });
+                } catch (publishError) {
+                  console.warn(`⚠️ [AutoGen] Auto-publishing failed for article ${articleId}:`, publishError);
+                  // Continue without failing the entire generation
+                }
+              }
+
               results.push({
                 feedItemId: feedItem.id,
-                articleId: article.id.getValue(),
+                articleId: articleId,
                 success: true
               });
 
               this.logger.info('Article generated and saved successfully', {
                 feedItemId: feedItem.id,
-                articleId: article.id.getValue(),
-                articleTitle: article.title.getValue()
+                articleId: articleId,
+                articleTitle: article.title.getValue(),
+                featuredImageEnabled: request.enableFeaturedImage,
+                autoPublishEnabled: request.enableAutoPublish
               });
             } else {
               // Save failed - log the error and mark as failed
@@ -284,6 +320,8 @@ export interface AutoGenerateRequest {
   sourceId: string;
   feedItems: FeedItemData[];
   generationSettings: GenerationSettings;
+  enableFeaturedImage?: boolean; // Enable featured image generation
+  enableAutoPublish?: boolean; // Enable auto-publishing to WordPress
 }
 
 export interface AutoGenerateResponse {

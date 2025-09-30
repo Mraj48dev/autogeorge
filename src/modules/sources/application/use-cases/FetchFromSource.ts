@@ -85,9 +85,10 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
           return Result.failure(saveResult.error);
         }
 
-        // Trigger auto-generation if enabled - check for new items OR existing unprocessed items
+        // Trigger auto-generation if enabled globally - check for new items OR existing unprocessed items
         let generatedArticles = 0;
-        if (source.shouldAutoGenerate() && this.articleAutoGenerator) {
+        const shouldAutoGenerate = request.autoGenerate !== undefined ? request.autoGenerate : source.shouldAutoGenerate();
+        if (shouldAutoGenerate && this.articleAutoGenerator) {
           // Get all unprocessed items for this source
           const unprocessedResult = await this.feedItemRepository.getUnprocessedForSource(request.sourceId);
           let itemsToProcess: FeedItemForGeneration[] = [];
@@ -121,7 +122,9 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
             try {
               const autoGenResult = await this.articleAutoGenerator.generateFromFeedItems({
                 sourceId: request.sourceId,
-                feedItems: itemsToProcess
+                feedItems: itemsToProcess,
+                enableFeaturedImage: request.enableFeaturedImage,
+                enableAutoPublish: request.enableAutoPublish
               });
 
               if (autoGenResult.isSuccess()) {
@@ -258,6 +261,9 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
 export interface FetchFromSourceRequest {
   sourceId: string;
   force?: boolean; // Override fetch interval checks
+  autoGenerate?: boolean; // Override autoGenerate flag from global settings
+  enableFeaturedImage?: boolean; // Enable featured image generation
+  enableAutoPublish?: boolean; // Enable auto-publishing to WordPress
 }
 
 // Response interface

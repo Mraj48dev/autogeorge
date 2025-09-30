@@ -31,6 +31,7 @@ interface WordPressSiteConfig {
   defaultCategory?: string;
   defaultStatus: string;
   defaultAuthor?: string;
+  enableAutoGeneration: boolean;
   enableAutoPublish: boolean;
   enableFeaturedImage: boolean;
   enableTags: boolean;
@@ -137,6 +138,7 @@ export default function SettingsPage() {
             defaultCategory: '',
             defaultStatus: 'draft',
             defaultAuthor: '',
+            enableAutoGeneration: false,
             enableAutoPublish: false,
             enableFeaturedImage: true,
             enableTags: true,
@@ -531,45 +533,72 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-gray-900">Opzioni Pubblicazione</h4>
+                  <h4 className="text-sm font-medium text-gray-900">Automazione Flusso Completo</h4>
 
+                  {/* Generazione automatica - sempre attivabile */}
                   <div className="flex items-center">
                     <input
                       type="checkbox"
-                      id="enableAutoPublish"
-                      checked={wordPressSettings.enableAutoPublish}
-                      onChange={(e) => updateWordPressSettings({ enableAutoPublish: e.target.checked })}
+                      id="enableAutoGeneration"
+                      checked={wordPressSettings.enableAutoGeneration}
+                      onChange={(e) => updateWordPressSettings({
+                        enableAutoGeneration: e.target.checked,
+                        // Se disabilito generazione automatica, disabilito anche gli altri
+                        enableAutoPublish: e.target.checked ? wordPressSettings.enableAutoPublish : false,
+                        enableFeaturedImage: e.target.checked ? wordPressSettings.enableFeaturedImage : false
+                      })}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="enableAutoPublish" className="ml-2 text-sm text-gray-700">
-                      Pubblicazione automatica
+                    <label htmlFor="enableAutoGeneration" className="ml-2 text-sm text-gray-700 font-medium">
+                      🤖 Generazione automatica
                     </label>
                   </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="enableFeaturedImage"
-                      checked={wordPressSettings.enableFeaturedImage}
-                      onChange={(e) => updateWordPressSettings({ enableFeaturedImage: e.target.checked })}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="enableFeaturedImage" className="ml-2 text-sm text-gray-700">
-                      Immagine in evidenza automatica
-                    </label>
-                  </div>
+                  {wordPressSettings.enableAutoGeneration && (
+                    <div className="ml-6 pl-4 border-l-2 border-gray-200 space-y-3">
+                      {/* Immagine in evidenza - solo se generazione automatica attiva */}
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="enableFeaturedImage"
+                          checked={wordPressSettings.enableFeaturedImage}
+                          onChange={(e) => updateWordPressSettings({ enableFeaturedImage: e.target.checked })}
+                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="enableFeaturedImage" className="ml-2 text-sm text-gray-700">
+                          🎨 Immagine in evidenza automatica
+                        </label>
+                      </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="isActive"
-                      checked={wordPressSettings.isActive}
-                      onChange={(e) => updateWordPressSettings({ isActive: e.target.checked })}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
-                      Configurazione attiva
-                    </label>
+                      {/* Pubblicazione automatica - solo se generazione automatica attiva */}
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="enableAutoPublish"
+                          checked={wordPressSettings.enableAutoPublish}
+                          onChange={(e) => updateWordPressSettings({ enableAutoPublish: e.target.checked })}
+                          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="enableAutoPublish" className="ml-2 text-sm text-gray-700">
+                          📤 Pubblicazione automatica
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="isActive"
+                        checked={wordPressSettings.isActive}
+                        onChange={(e) => updateWordPressSettings({ isActive: e.target.checked })}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
+                        ⚙️ Configurazione attiva
+                      </label>
+                    </div>
                   </div>
                 </div>
 

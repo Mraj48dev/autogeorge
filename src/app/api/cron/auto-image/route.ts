@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
             where: { id: article.id },
             data: {
               status: 'generated_with_image',
-              featuredImageUrl: imageGenerationResult.imageUrl
+              featuredMediaUrl: imageGenerationResult.imageUrl
             }
           });
 

@@ -415,10 +415,10 @@ Genera l'articolo ora:`;
       );
 
       const content: PublishingContent = {
-        title: article.title, // Direct access to database field
-        content: article.content, // Direct access to database field
-        excerpt: article.title.substring(0, 150), // Extract from title if needed
-        featuredImageUrl: undefined, // Will be set by image generation if enabled
+        title: article.title || 'Generated Article', // Direct access to database field
+        content: article.content || 'Generated content', // Direct access to database field
+        excerpt: (article.title || 'Generated Article').substring(0, 150), // Extract from title if needed
+        featuredImageUrl: article.featuredMediaUrl || undefined, // Use featured media URL if available
         attachments: []
       };
 
@@ -451,7 +451,7 @@ Genera l'articolo ora:`;
   }
 
   /**
-   * Auto-generate featured image for article
+   * Auto-generate featured image for article using direct DALL-E API call
    */
   private async autoGenerateImage(articleId: string): Promise<void> {
     try {
@@ -463,34 +463,82 @@ Genera l'articolo ora:`;
         throw new Error(`Article not found: ${articleId}`);
       }
 
-      // Use the existing image generation API endpoint logic
-      const imageEndpoint = await import('@/app/api/admin/image/generate-only/route');
-
-      // Simulate the image generation request
-      const imageRequest = {
-        json: async () => ({
-          articleId: articleId,
-          articleTitle: article.title, // Direct access to database field
-          articleContent: article.content, // Direct access to database field
-          aiPrompt: `Create a featured image for an article titled: "${article.title}"`,
-          filename: `featured_${articleId}.jpg`,
-          altText: `Featured image for ${article.title}`
-        })
-      };
-
-      const imageResponse = await imageEndpoint.POST(imageRequest as any);
-      const imageResult = await imageResponse.json();
-
-      if (!imageResult.success) {
-        throw new Error(`Image generation failed: ${imageResult.error || 'Unknown error'}`);
+      // Get OpenAI API key
+      const openaiApiKey = process.env.OPENAI_API_KEY;
+      if (!openaiApiKey) {
+        throw new Error('OpenAI API key not configured');
       }
 
-      console.log(`✅ [AutoImage] Featured image generated successfully: ${articleId} → ${imageResult.imageUrl || 'Generated'}`);
+      // Generate image prompt based on article title and content
+      const imagePrompt = this.generateImagePrompt(article.title, article.content);
+      console.log(`🎨 [AutoImage] Generated prompt: ${imagePrompt}`);
+
+      // Call OpenAI DALL-E API for image generation
+      const dalleResponse = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: imagePrompt,
+          n: 1,
+          size: '1024x1024',
+          quality: 'standard',
+          style: 'natural',
+          response_format: 'url'
+        }),
+      });
+
+      if (!dalleResponse.ok) {
+        const errorData = await dalleResponse.json();
+        throw new Error(`DALL-E generation failed: ${errorData.error?.message || dalleResponse.status}`);
+      }
+
+      const dalleData = await dalleResponse.json();
+      const imageUrl = dalleData.data?.[0]?.url;
+
+      if (!imageUrl) {
+        throw new Error('DALL-E did not return an image URL');
+      }
+
+      // Update article with featured image URL
+      const { prisma } = await import('@/shared/database/prisma');
+      await prisma.article.update({
+        where: { id: articleId },
+        data: {
+          featuredMediaUrl: imageUrl
+        }
+      });
+
+      console.log(`✅ [AutoImage] Featured image generated successfully: ${articleId} → ${imageUrl}`);
 
     } catch (error) {
       console.error(`❌ [AutoImage] Failed to auto-generate image for article ${articleId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Generate image prompt based on article content
+   */
+  private generateImagePrompt(title: string, content: string): string {
+    // Extract key themes from title and content for image generation
+    const cleanTitle = title.replace(/[^\w\s]/gi, '').toLowerCase();
+
+    // Create a focused prompt for DALL-E
+    const prompt = `Create a professional, high-quality featured image for an article titled: "${title}".
+The image should be:
+- Modern and clean design
+- Relevant to the article topic
+- Professional and engaging
+- Suitable for a news/blog website
+- No text overlays
+- High contrast and clear
+Style: photorealistic, modern, clean`;
+
+    return prompt;
   }
 }
 

@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
 
+/**
+ * 🤖 AUTO-GENERATION CRON JOB - REAL CONTENT MODULE WITH PERPLEXITY AI
+ *
+ * This cron processes draft feed items and generates real articles using:
+ * - Sources Module → Content Module integration
+ * - ContentModuleArticleAutoGenerator adapter
+ * - Real AutoGenerateArticles use case with Perplexity AI
+ * - Proper article status workflow based on WordPress automation settings
+ */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🤖 [AutoGeneration] Starting...');
+    console.log('🤖 [REAL AutoGeneration] Starting with Content Module + Perplexity AI...');
 
-    // Simple test - check if WordPress site exists and auto-generation is enabled
+    // Check if WordPress site exists and auto-generation is enabled
     const wordpressSite = await prisma.wordPressSite.findFirst({
       where: { isActive: true }
     });
 
     if (!wordpressSite || !wordpressSite.enableAutoGeneration) {
+      console.log('⏸️ Auto-generation disabled or no active site');
       return NextResponse.json({
         success: true,
         message: 'Auto-generation disabled or no active site',
@@ -18,111 +29,101 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log('✅ Auto-generation enabled');
+    console.log('✅ Auto-generation enabled - using Content Module with Perplexity AI');
 
-    // Simple test - count feed items that need processing
-    const feedItemCount = await prisma.feedItem.count({
-      where: { articleId: null }
+    // Find feed items with status 'draft' (ready to process)
+    const draftFeedItems = await prisma.feedItem.findMany({
+      where: {
+        status: 'draft',
+        articleId: null  // Not yet processed
+      },
+      take: 3, // Process up to 3 items per cron run to avoid timeouts
+      orderBy: { fetchedAt: 'asc' } // Process oldest first
     });
 
-    console.log(`📊 Found ${feedItemCount} feed items needing processing`);
+    console.log(`📊 Found ${draftFeedItems.length} draft feed items ready for processing`);
 
-    if (feedItemCount === 0) {
+    if (draftFeedItems.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No feed items to process',
+        message: 'No draft feed items to process',
         results: { processed: 0, successful: 0, failed: 0 }
       });
     }
 
-    // Process one feed item to create article
-    const feedItems = await prisma.feedItem.findMany({
-      where: { articleId: null },
-      take: 1
+    // Log what we're about to process
+    draftFeedItems.forEach((item, index) => {
+      console.log(`  ${index + 1}. 📝 "${item.title}" (${item.id}) from source ${item.sourceId}`);
     });
 
-    if (feedItems.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'No feed items to process',
-        results: { processed: 0, successful: 0, failed: 0 }
-      });
-    }
+    // Initialize Sources Container which has ContentModuleArticleAutoGenerator
+    const sourcesContainer = createSourcesContainer();
 
-    const feedItem = feedItems[0];
-    console.log(`🤖 Processing feed item: ${feedItem.id} - "${feedItem.title}"`);
+    // Use the real Content Module through Sources Module adapter
+    // This will call: ContentModuleArticleAutoGenerator → AutoGenerateArticles → Perplexity AI
+    const autoGenResult = await sourcesContainer.articleAutoGenerator.generateFromFeedItems({
+      sourceId: draftFeedItems[0].sourceId, // Use first item's source ID
+      feedItems: draftFeedItems.map(item => ({
+        id: item.id,
+        guid: item.guid || item.id,
+        title: item.title,
+        content: item.content,
+        url: item.url,
+        publishedAt: item.publishedAt
+      })),
+      enableFeaturedImage: wordpressSite.enableFeaturedImage || false,
+      enableAutoPublish: wordpressSite.enableAutoPublish || false
+    });
 
-    let status = 'generated';
-    if (wordpressSite.enableFeaturedImage) {
-      status = 'generated_image_draft';
-      console.log(`🎨 Status: generated_image_draft (image enabled)`);
-    } else if (wordpressSite.enableAutoPublish) {
-      status = 'ready_to_publish';
-      console.log(`📤 Status: ready_to_publish (auto-publish enabled)`);
-    } else {
-      console.log(`✋ Status: generated (manual workflow)`);
-    }
-
-    try {
-      const articleId = `art_${Math.random().toString(36).substr(2, 8)}-${Math.random().toString(36).substr(2, 4)}-${Math.random().toString(36).substr(2, 4)}-${Math.random().toString(36).substr(2, 4)}-${Math.random().toString(36).substr(2, 12)}`;
-
-      const article = await prisma.article.create({
-        data: {
-          id: articleId,
-          title: `[AI Generated] ${feedItem.title}`,
-          content: `<p>Articolo generato automaticamente da: ${feedItem.title}</p><p>${feedItem.content || ''}</p>`,
-          status: status,
-          source: {
-            connect: { id: feedItem.sourceId }
-          },
-          articleData: {
-            seoMetadata: {
-              metaDescription: feedItem.title?.substring(0, 160) || '',
-              seoTags: ['auto-generated', 'rss', 'content']
-            },
-            generationMetadata: {
-              model: 'simplified',
-              provider: 'auto-generation-cron',
-              feedItemId: feedItem.id,
-              generationTime: Date.now()
-            }
-          }
-        }
-      });
-
-      // Update feed item
-      await prisma.feedItem.update({
-        where: { id: feedItem.id },
-        data: { articleId: article.id, processed: true }
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: `Generated 1 article with status: ${status}`,
-        results: {
-          processed: 1,
-          successful: 1,
-          failed: 0,
-          articleId: article.id,
-          status: article.status
-        }
-      });
-
-    } catch (createError) {
-      console.error('Article creation failed:', createError);
+    if (autoGenResult.isFailure()) {
+      console.error('❌ Content Module auto-generation failed:', autoGenResult.error);
       return NextResponse.json({
         success: false,
-        error: 'Article creation failed',
-        details: createError instanceof Error ? createError.message : 'Unknown error'
+        error: 'Content Module auto-generation failed',
+        details: autoGenResult.error.message
       }, { status: 500 });
     }
 
+    const result = autoGenResult.value;
+    console.log(`✅ Content Module completed: ${result.summary.successful}/${result.summary.total} articles generated with Perplexity AI`);
+
+    // Update feed items status to 'processed' for successful generations
+    let updatedItems = 0;
+    for (const genResult of result.generatedArticles) {
+      if (genResult.success && genResult.articleId) {
+        await prisma.feedItem.update({
+          where: { id: genResult.feedItemId },
+          data: {
+            status: 'processed',
+            articleId: genResult.articleId,
+            processed: true // Keep for backward compatibility
+          }
+        });
+        updatedItems++;
+        console.log(`📝 Updated feed item ${genResult.feedItemId} → status: processed, articleId: ${genResult.articleId}`);
+      }
+    }
+
+    console.log(`🎯 Final results: ${result.summary.successful} articles generated, ${updatedItems} feed items updated to processed`);
+
+    return NextResponse.json({
+      success: true,
+      message: `Generated ${result.summary.successful} articles using Content Module with Perplexity AI`,
+      results: {
+        processed: draftFeedItems.length,
+        successful: result.summary.successful,
+        failed: result.summary.failed,
+        updatedFeedItems: updatedItems,
+        generatedArticles: result.generatedArticles.filter(r => r.success).map(r => r.articleId)
+      }
+    });
+
   } catch (error) {
-    console.error('💥 Error in auto-generation:', error);
+    console.error('💥 Error in REAL auto-generation with Content Module:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
+        error: 'Internal server error in Content Module auto-generation',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

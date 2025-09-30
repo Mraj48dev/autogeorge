@@ -105,10 +105,40 @@ export async function GET(request: NextRequest) {
           publishedAt: new Date(item.publishedAt)
         }));
 
-        // Genera articoli per questa source
+        // 🔧 FIX: Get WordPress automation settings before generation
+        const wordpressSite = await prisma.wordPressSite.findUnique({
+          where: { userId: 'demo-user' }, // TODO: Get from auth context
+          select: {
+            id: true,
+            name: true,
+            enableAutoGeneration: true,
+            enableFeaturedImage: true,
+            enableAutoPublish: true,
+            isActive: true
+          }
+        });
+
+        const automationSettings = {
+          enableFeaturedImage: wordpressSite?.enableFeaturedImage || false,
+          enableAutoPublish: wordpressSite?.enableAutoPublish || false
+        };
+
+        console.log('🎯 [DEBUG] WordPress automation settings for generation:', {
+          found: !!wordpressSite,
+          siteId: wordpressSite?.id,
+          siteName: wordpressSite?.name,
+          enableAutoGeneration: wordpressSite?.enableAutoGeneration,
+          enableFeaturedImage: automationSettings.enableFeaturedImage,
+          enableAutoPublish: automationSettings.enableAutoPublish,
+          isActive: wordpressSite?.isActive
+        });
+
+        // Genera articoli per questa source WITH CORRECT AUTOMATION SETTINGS
         const generationResult = await articleAutoGenerator.generateFromFeedItems({
           sourceId: sourceId,
-          feedItems: feedItemsForGeneration
+          feedItems: feedItemsForGeneration,
+          enableFeaturedImage: automationSettings.enableFeaturedImage,
+          enableAutoPublish: automationSettings.enableAutoPublish
         });
 
         if (generationResult.isSuccess()) {

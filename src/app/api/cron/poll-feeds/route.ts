@@ -111,17 +111,22 @@ export async function GET(request: NextRequest) {
             });
 
             const autoGenEnabled = wordpressSite?.enableAutoGeneration || false;
+            const autoImageEnabled = wordpressSite?.enableFeaturedImage || false;
+            const autoPublishEnabled = wordpressSite?.enableAutoPublish || false;
 
             console.log(`🤖 Global Auto-generation: ${autoGenEnabled ? 'ENABLED' : 'DISABLED'}`);
-            console.log(`📤 Auto-publish and Featured Images: Handled by separate /api/cron/auto-publishing`);
+            console.log(`🎨 Global Auto-image: ${autoImageEnabled ? 'ENABLED' : 'DISABLED'}`);
+            console.log(`📤 Global Auto-publish: ${autoPublishEnabled ? 'ENABLED' : 'DISABLED'}`);
+            console.log(`🔄 Workflow: Articles will start with correct status based on automation flags`);
 
-            // Use FetchFromSource use case instead of manual fetch
+            // Use FetchFromSource use case with all automation flags for correct status determination
             const fetchResult = await sourcesContainer.sourcesAdminFacade.fetchFromSource({
               sourceId: sourceData.id,
               force: true,
-              // Only pass auto-generation flag, NO auto-publish (separation of concerns)
-              autoGenerate: autoGenEnabled
-              // enableFeaturedImage and enableAutoPublish removed - handled by separate cron
+              autoGenerate: autoGenEnabled,
+              // Pass automation flags so AutoGenerateArticles can determine correct initial status
+              enableFeaturedImage: autoImageEnabled,
+              enableAutoPublish: autoPublishEnabled
             });
 
             if (fetchResult.isSuccess()) {

@@ -189,41 +189,69 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate featured image for article
+ * Generate featured image for article using OpenAI DALL-E
  */
 async function generateFeaturedImage(article: any): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
   try {
     console.log(`🎨 [AutoImage] Generating featured image for article: ${article.id}`);
 
-    // Use the existing image generation API endpoint logic
-    const { generateImageWithDALLE } = await import('@/modules/images/infrastructure/services/DallEImageService');
+    // Get OpenAI API key
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      console.error('❌ [AutoImage] OpenAI API key not configured');
+      return {
+        success: false,
+        error: 'OpenAI API key not configured'
+      };
+    }
 
     // Generate image prompt based on article title and content
     const imagePrompt = generateImagePrompt(article.title, article.content);
-
     console.log(`🎨 [AutoImage] Generated prompt: ${imagePrompt}`);
 
-    // Generate image using DALL-E service
-    const imageResult = await generateImageWithDALLE({
-      prompt: imagePrompt,
-      style: 'natural',
-      size: '1024x1024',
-      quality: 'standard'
+    // Call OpenAI DALL-E API for image generation
+    const dalleResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: imagePrompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard',
+        style: 'natural',
+        response_format: 'url'
+      }),
     });
 
-    if (imageResult.success && imageResult.imageUrl) {
-      console.log(`✅ [AutoImage] Image generated successfully: ${imageResult.imageUrl}`);
-      return {
-        success: true,
-        imageUrl: imageResult.imageUrl
-      };
-    } else {
-      console.error(`❌ [AutoImage] Image generation failed:`, imageResult.error);
+    if (!dalleResponse.ok) {
+      const errorData = await dalleResponse.json();
+      console.error('❌ [AutoImage] DALL-E API failed:', errorData);
       return {
         success: false,
-        error: imageResult.error || 'Unknown image generation error'
+        error: `DALL-E generation failed: ${errorData.error?.message || dalleResponse.status}`
       };
     }
+
+    const dalleData = await dalleResponse.json();
+    const imageUrl = dalleData.data?.[0]?.url;
+
+    if (!imageUrl) {
+      console.error('❌ [AutoImage] No image URL in DALL-E response');
+      return {
+        success: false,
+        error: 'DALL-E did not return an image URL'
+      };
+    }
+
+    console.log(`✅ [AutoImage] Image generated successfully: ${imageUrl}`);
+    return {
+      success: true,
+      imageUrl: imageUrl
+    };
 
   } catch (error) {
     console.error(`💥 [AutoImage] Error in generateFeaturedImage:`, error);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
 import { OpenAIService } from '@/modules/content/infrastructure/services/OpenAIService';
+import { Article } from '@/modules/content/domain/entities/Article';
 
 interface GenerateArticleRequest {
   prompt: string;
@@ -87,12 +88,32 @@ L'articolo deve essere originale, coinvolgente e ben formattato.`,
     const title = result.title;
     const content = result.content;
 
-    // Create the article in database
+    // 🔧 FIX: Get WordPress automation settings to determine correct initial status
+    const userId = request.headers.get('x-user-id') || 'demo-user';
+    const wordpressSite = await prisma.wordPressSite.findUnique({
+      where: { userId }
+    });
+
+    const automationSettings = {
+      enableFeaturedImage: wordpressSite?.enableFeaturedImage || false,
+      enableAutoPublish: wordpressSite?.enableAutoPublish || false
+    };
+
+    // 🔧 FIX: Determine correct initial status based on automation settings
+    const initialStatus = Article.determineInitialStatus(automationSettings);
+
+    console.log('🎯 [Generate-Article Fix] Article initial status determined:', {
+      status: initialStatus.getValue(),
+      automationSettings,
+      enableAutoGeneration: wordpressSite?.enableAutoGeneration || false
+    });
+
+    // Create the article in database with CORRECT status
     const article = await prisma.article.create({
       data: {
         title,
         content,
-        status: 'generated',
+        status: initialStatus.getValue(), // 🔧 FIX: Use determined status instead of hardcoded 'generated'
         sourceId: body.sourceId || null
       }
     });

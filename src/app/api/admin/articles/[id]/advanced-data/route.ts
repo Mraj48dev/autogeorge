@@ -65,7 +65,7 @@ export async function GET(
         slug: article.slug,
         category: (article.customFields as any)?.category || null,
         tags: (article.tags as any)?.primary || [],
-        status: 'generated'
+        status: article.status
       },
 
       seo_critical: advancedData.seo_critical || {

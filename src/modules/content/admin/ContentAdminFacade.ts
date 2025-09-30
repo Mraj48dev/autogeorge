@@ -291,7 +291,7 @@ export class ContentAdminFacade {
             content: 'This is a dry run. No actual article was generated.',
             wordCount: 100,
             estimatedReadingTime: 1,
-            status: 'generated',
+            status: 'draft', // Dry run - not affected by automation settings
             generationMetadata: {
               tokensUsed: 0,
               generationTime: 0,

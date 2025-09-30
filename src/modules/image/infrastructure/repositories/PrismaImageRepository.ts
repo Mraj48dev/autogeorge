@@ -14,6 +14,22 @@ import { ImageStatus } from '../../domain/value-objects/ImageStatus';
 export class PrismaImageRepository implements ImageRepository {
   async save(image: FeaturedImage): Promise<Result<FeaturedImage, Error>> {
     try {
+      console.log('🔍 [DEBUG] Saving FeaturedImage:', {
+        id: image.id?.value || 'UNDEFINED',
+        articleId: image.articleId,
+        hasId: !!image.id,
+        idType: typeof image.id,
+        imageObject: image
+      });
+
+      if (!image.id) {
+        throw new Error('Image ID is undefined');
+      }
+
+      if (!image.id.value) {
+        throw new Error('Image ID value is undefined');
+      }
+
       // WORKAROUND: Use raw SQL until Prisma client recognizes featured_images table
       const result = await prisma.$executeRaw`
         INSERT INTO featured_images (
@@ -33,6 +49,14 @@ export class PrismaImageRepository implements ImageRepository {
 
     } catch (error) {
       console.error('❌ [FeaturedImage] Raw SQL insert failed:', error);
+      console.error('❌ [FeaturedImage] Error details:', {
+        error,
+        imageData: {
+          hasImage: !!image,
+          hasId: !!(image && image.id),
+          idValue: image && image.id ? image.id.value : 'NO_ID'
+        }
+      });
       return Result.failure(
         new Error(`Failed to save featured image: ${error instanceof Error ? error.message : 'Unknown error'}`)
       );

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     } else {
       // Default: only show articles that have been processed by AI
       where.status = {
-        in: ['generated', 'ready_to_publish', 'published', 'failed']
+        in: ['generated', 'generated_image_draft', 'generated_with_image', 'ready_to_publish', 'published', 'failed']
       };
     }
 

@@ -125,6 +125,9 @@ export async function GET(request: NextRequest) {
               }
             });
             console.log(`🚀 [AutoImage CRON] Article moved to ready_to_publish: ${article.id}`);
+          } else {
+            console.log(`✋ [AutoImage CRON] Auto-publish disabled → Article stays in generated_with_image: ${article.id}`);
+            console.log(`🎨 [AutoImage CRON] Workflow complete: Image generated, manual publish required`);
           }
 
         } else {

@@ -140,7 +140,8 @@ export class PublicationTarget extends ValueObject<PublicationTargetValue> {
   /**
    * Validates the publication target
    */
-  protected validate(value: PublicationTargetValue): void {
+  protected validate(): void {
+    const value = this.value;
     console.log('PublicationTarget.validate - received value:', JSON.stringify(value));
     console.log('PublicationTarget.validate - typeof value:', typeof value);
     console.log('PublicationTarget.validate - value is null:', value === null);

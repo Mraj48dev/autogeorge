@@ -349,19 +349,14 @@ Genera l'articolo ora:`;
       const publishingService = new WordPressPublishingService();
       const publishArticle = new PublishArticle(publicationRepository, publishingService);
 
-      // Create proper publication target using WordPress factory method
+      // Create proper publication target using WordPress factory method (FIXED: correct parameter order)
       const publicationTarget = PublicationTarget.wordpress(
-        wordpressSite.id,
-        wordpressSite.url,
+        wordpressSite.url,    // siteUrl first (like manual publishing)
+        wordpressSite.id,     // siteId second (like manual publishing)
         {
           username: wordpressSite.username,
           password: wordpressSite.password,
-          defaultCategory: wordpressSite.defaultCategory || '',
-          defaultStatus: wordpressSite.defaultStatus || 'publish',
-          defaultAuthor: wordpressSite.defaultAuthor || '',
-          enableFeaturedImage: wordpressSite.enableFeaturedImage,
-          enableTags: wordpressSite.enableTags,
-          enableCategories: wordpressSite.enableCategories
+          status: wordpressSite.defaultStatus || 'publish'
         }
       );
 

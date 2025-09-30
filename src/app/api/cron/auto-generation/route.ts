@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Process one feed item to test article creation
+    // Process one feed item to create article
     const feedItems = await prisma.feedItem.findMany({
       where: { articleId: null },
       take: 1
@@ -50,11 +50,17 @@ export async function GET(request: NextRequest) {
     }
 
     const feedItem = feedItems[0];
+    console.log(`🤖 Processing feed item: ${feedItem.id} - "${feedItem.title}"`);
+
     let status = 'generated';
     if (wordpressSite.enableFeaturedImage) {
       status = 'generated_image_draft';
+      console.log(`🎨 Status: generated_image_draft (image enabled)`);
     } else if (wordpressSite.enableAutoPublish) {
       status = 'ready_to_publish';
+      console.log(`📤 Status: ready_to_publish (auto-publish enabled)`);
+    } else {
+      console.log(`✋ Status: generated (manual workflow)`);
     }
 
     try {

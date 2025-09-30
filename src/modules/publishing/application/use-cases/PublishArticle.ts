@@ -1,5 +1,5 @@
-import { UseCase } from '../../../content/shared/application/base/UseCase';
-import { Result } from '../../../content/shared/domain/types/Result';
+import { UseCase } from '../../shared/application/base/UseCase';
+import { Result } from '../../../../shared/domain/types/Result';
 import { Publication, PublicationMetadata } from '../../domain/entities/Publication';
 import { PublicationTarget } from '../../domain/value-objects/PublicationTarget';
 import { PublicationRepository } from '../../domain/ports/PublicationRepository';

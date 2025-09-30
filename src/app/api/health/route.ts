@@ -15,6 +15,61 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
+  // TEMPORARY: Database migration if special parameter is provided
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get('migrate') === 'status-column') {
+    try {
+      const { prisma } = await import('@/shared/database/prisma');
+
+      // Check if status column exists
+      const columns = await prisma.$queryRaw`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'feed_items'
+        AND table_schema = 'public'
+        AND column_name = 'status'
+      `;
+
+      if ((columns as any[]).length === 0) {
+        // Add status column
+        await prisma.$executeRaw`
+          ALTER TABLE feed_items
+          ADD COLUMN status VARCHAR(20) DEFAULT 'pending'
+        `;
+
+        // Migrate data
+        await prisma.$executeRaw`
+          UPDATE feed_items
+          SET status = CASE
+            WHEN processed = true THEN 'processed'
+            ELSE 'pending'
+          END
+        `;
+
+        // Create index
+        await prisma.$executeRaw`
+          CREATE INDEX IF NOT EXISTS idx_feed_items_status
+          ON feed_items(status)
+        `;
+
+        return NextResponse.json({
+          migration: 'completed',
+          message: 'Status column added and data migrated successfully'
+        });
+      } else {
+        return NextResponse.json({
+          migration: 'already_applied',
+          message: 'Status column already exists'
+        });
+      }
+    } catch (error) {
+      return NextResponse.json({
+        migration: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }
+
   try {
     // Info base applicazione
     const healthData = {

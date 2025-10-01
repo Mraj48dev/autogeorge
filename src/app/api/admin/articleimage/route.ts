@@ -59,9 +59,45 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract featured image from articleData JSON
+    // Check both articleData (legacy) and featured_images table (new Image Module)
     const articleData = article.articleData as any;
-    const featuredImage = articleData?.featuredImage || null;
+    let featuredImage = articleData?.featuredImage || null;
+
+    // If not found in articleData, check featured_images table
+    if (!featuredImage) {
+      try {
+        const featuredImageFromDB = await prisma.$queryRaw`
+          SELECT * FROM featured_images
+          WHERE "articleId" = ${articleId}
+          AND status = 'found'
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        ` as any[];
+
+        if (featuredImageFromDB && featuredImageFromDB.length > 0) {
+          const dbImage = featuredImageFromDB[0];
+          featuredImage = {
+            image: {
+              id: dbImage.id,
+              articleId: dbImage.articleId,
+              url: dbImage.url,
+              filename: dbImage.filename,
+              altText: dbImage.altText,
+              status: dbImage.status,
+              searchLevel: 'ai_generated'
+            },
+            metadata: {
+              wasGenerated: true,
+              provider: 'DALL-E',
+              source: 'featured_images_table'
+            }
+          };
+          console.log('🎨 [Article Image] Found image in featured_images table:', articleId);
+        }
+      } catch (dbError) {
+        console.error('❌ [Article Image] Error querying featured_images table:', dbError);
+      }
+    }
 
     if (!featuredImage) {
       return NextResponse.json({
@@ -70,7 +106,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log('📖 [Article Image] Retrieved saved featured image for article:', articleId);
+    console.log('📖 [Article Image] Retrieved saved featured image for article:', articleId, {
+      source: featuredImage.metadata?.source || 'articleData',
+      hasUrl: !!featuredImage.image?.url
+    });
 
     return NextResponse.json({
       success: true,

@@ -66,6 +66,17 @@ export async function GET(request: NextRequest) {
     // If not found in articleData, check featured_images table
     if (!featuredImage) {
       try {
+        console.log('🔍 [DEBUG] Searching featured_images for articleId:', articleId);
+
+        // First, check if any images exist for this article
+        const allImages = await prisma.$queryRaw`
+          SELECT * FROM featured_images
+          WHERE "articleId" = ${articleId}
+          ORDER BY "createdAt" DESC
+        ` as any[];
+
+        console.log('🔍 [DEBUG] All images found:', allImages);
+
         const featuredImageFromDB = await prisma.$queryRaw`
           SELECT * FROM featured_images
           WHERE "articleId" = ${articleId}

@@ -13,10 +13,6 @@ export class ImageStatus extends ValueObject<ImageStatusValue> {
     }
   }
 
-  get value(): ImageStatusValue {
-    return super.getValue();
-  }
-
   static create(value: ImageStatusValue): ImageStatus {
     return new ImageStatus(value);
   }

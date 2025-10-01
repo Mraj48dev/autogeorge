@@ -89,11 +89,11 @@ export class GenerateImage {
 
       // Step 7: Return success result
       return Result.success({
-        imageId: featuredImage.id.value,
+        imageId: featuredImage.id.getValue(),
         url: generatedImage.url,
-        filename: featuredImage.filename.value,
-        altText: featuredImage.altText.value,
-        status: featuredImage.status.value,
+        filename: featuredImage.filename.getValue(),
+        altText: featuredImage.altText.getValue(),
+        status: featuredImage.status.getValue(),
         revisedPrompt: generatedImage.revisedPrompt
       });
 

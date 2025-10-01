@@ -10,10 +10,6 @@ export class ImageFilename extends ValueObject<string> {
     }
   }
 
-  get value(): string {
-    return super.getValue();
-  }
-
   static create(value: string): ImageFilename {
     const sanitized = this.sanitizeFilename(value.trim());
 

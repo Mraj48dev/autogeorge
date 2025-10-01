@@ -10,10 +10,6 @@ export class ImageId extends ValueObject<string> {
     }
   }
 
-  get value(): string {
-    return super.getValue();
-  }
-
   static create(value: string): ImageId {
     return new ImageId(value.trim());
   }

@@ -66,7 +66,7 @@ export class PrismaImageRepository implements ImageRepository {
   async findById(id: ImageId): Promise<Result<FeaturedImage | null, Error>> {
     try {
       const image = await prisma.featuredImage.findUnique({
-        where: { id: id.value }
+        where: { id: id.getValue() }
       });
 
       if (!image) {
@@ -148,7 +148,7 @@ export class PrismaImageRepository implements ImageRepository {
   async delete(id: ImageId): Promise<Result<void, Error>> {
     try {
       await prisma.featuredImage.delete({
-        where: { id: id.value }
+        where: { id: id.getValue() }
       });
 
       return Result.success(undefined);

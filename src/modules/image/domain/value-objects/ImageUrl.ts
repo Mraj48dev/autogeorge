@@ -14,10 +14,6 @@ export class ImageUrl extends ValueObject<string> {
     }
   }
 
-  get value(): string {
-    return super.getValue();
-  }
-
   static create(value: string): ImageUrl {
     return new ImageUrl(value.trim());
   }

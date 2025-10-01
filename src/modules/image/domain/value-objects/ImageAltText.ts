@@ -13,10 +13,6 @@ export class ImageAltText extends ValueObject<string> {
     }
   }
 
-  get value(): string {
-    return super.getValue();
-  }
-
   static create(value: string): ImageAltText {
     return new ImageAltText(value.trim());
   }

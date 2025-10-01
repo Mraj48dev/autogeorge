@@ -94,7 +94,7 @@ export class FeaturedImage extends Entity<ImageId> {
     });
 
     const id = ImageId.generate();
-    console.log('🔍 [DEBUG] Generated ImageId:', { id, value: id?.value });
+    console.log('🔍 [DEBUG] Generated ImageId:', { id, value: id?.getValue() });
 
     const now = new Date();
 
@@ -103,9 +103,9 @@ export class FeaturedImage extends Entity<ImageId> {
     const statusVO = ImageStatus.create('pending');
 
     console.log('🔍 [DEBUG] Created value objects:', {
-      filename: filenameVO?.value,
-      altText: altTextVO?.value,
-      status: statusVO?.value
+      filename: filenameVO?.getValue(),
+      altText: altTextVO?.getValue(),
+      status: statusVO?.getValue()
     });
 
     const featuredImage = new FeaturedImage({
@@ -122,13 +122,13 @@ export class FeaturedImage extends Entity<ImageId> {
     console.log('🔍 [DEBUG] Created FeaturedImage:', {
       hasImage: !!featuredImage,
       hasId: !!featuredImage.id,
-      idValue: featuredImage.id?.value
+      idValue: featuredImage.id?.getValue()
     });
 
     // Raise domain event
     featuredImage.addDomainEvent(
       new FeaturedImageSearched(
-        id.value,
+        id.getValue(),
         articleId,
         aiPrompt,
         filename,
@@ -159,11 +159,11 @@ export class FeaturedImage extends Entity<ImageId> {
     // Raise domain event
     this.addDomainEvent(
       new FeaturedImageStored(
-        this.id.value,
+        this.id.getValue(),
         this.articleId,
         url,
-        this.filename.value,
-        this.altText.value
+        this.filename.getValue(),
+        this.altText.getValue()
       )
     );
   }
@@ -179,7 +179,7 @@ export class FeaturedImage extends Entity<ImageId> {
     // Raise domain event
     this.addDomainEvent(
       new FeaturedImageFailed(
-        this.id.value,
+        this.id.getValue(),
         this.articleId,
         errorMessage
       )
@@ -202,10 +202,10 @@ export class FeaturedImage extends Entity<ImageId> {
     }
 
     return {
-      url: this.url!.value,
-      filename: this.filename.value,
-      altText: this.altText.value,
-      title: this.altText.value, // Use alt text as title
+      url: this.url!.getValue(),
+      filename: this.filename.getValue(),
+      altText: this.altText.getValue(),
+      title: this.altText.getValue(), // Use alt text as title
     };
   }
 

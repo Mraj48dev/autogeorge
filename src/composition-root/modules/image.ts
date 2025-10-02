@@ -1,7 +1,9 @@
 import { ImageAdminFacade } from '../../modules/image/admin/ImageAdminFacade';
 import { GenerateImage } from '../../modules/image/application/use-cases/GenerateImage';
+import { UploadImageToWordPress } from '../../modules/image/application/use-cases/UploadImageToWordPress';
 import { PrismaImageRepository } from '../../modules/image/infrastructure/repositories/PrismaImageRepository';
 import { DalleImageGenerationService } from '../../modules/image/infrastructure/services/DalleImageGenerationService';
+import { WordPressMediaService } from '../../modules/publishing/infrastructure/services/WordPressMediaService';
 
 /**
  * Image Module Container
@@ -12,6 +14,7 @@ export function createImageContainer() {
   // Infrastructure layer
   const imageRepository = new PrismaImageRepository();
   const imageGenerationService = new DalleImageGenerationService();
+  const wordPressMediaService = new WordPressMediaService();
 
   // Application layer
   const generateImage = new GenerateImage(
@@ -19,9 +22,15 @@ export function createImageContainer() {
     imageGenerationService
   );
 
+  const uploadImageToWordPress = new UploadImageToWordPress(
+    imageRepository,
+    wordPressMediaService
+  );
+
   // Admin layer
   const imageAdminFacade = new ImageAdminFacade(
-    generateImage
+    generateImage,
+    uploadImageToWordPress
   );
 
   return {
@@ -30,9 +39,11 @@ export function createImageContainer() {
 
     // Services
     imageGenerationService,
+    wordPressMediaService,
 
     // Use Cases
     generateImage,
+    uploadImageToWordPress,
 
     // Admin
     imageAdminFacade,

@@ -187,6 +187,24 @@ export class FeaturedImage extends Entity<ImageId> {
   }
 
   /**
+   * Mark as uploaded to WordPress with permanent URL
+   */
+  markAsUploaded(wordPressMediaId: number, permanentUrl: string): void {
+    this.props.url = ImageUrl.create(permanentUrl);
+    this.props.status = ImageStatus.create('uploaded');
+    this.props.updatedAt = new Date();
+
+    // Store WordPress media ID in searchQuery field for reference
+    this.props.searchQuery = `wp_media_id:${wordPressMediaId}`;
+
+    console.log('✅ [FeaturedImage] Marked as uploaded:', {
+      imageId: this.id.getValue(),
+      wordPressMediaId,
+      permanentUrl
+    });
+  }
+
+  /**
    * Check if the image is ready for WordPress upload
    */
   isReadyForWordPress(): boolean {

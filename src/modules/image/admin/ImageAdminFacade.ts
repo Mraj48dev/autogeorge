@@ -1,5 +1,6 @@
 import { Result } from '../../../shared/domain/types/Result';
 import { GenerateImage, GenerateImageInput, GenerateImageOutput } from '../application/use-cases/GenerateImage';
+import { UploadImageToWordPress, UploadImageToWordPressInput, UploadImageToWordPressOutput } from '../application/use-cases/UploadImageToWordPress';
 
 /**
  * Admin Facade for Image Module
@@ -8,7 +9,8 @@ import { GenerateImage, GenerateImageInput, GenerateImageOutput } from '../appli
  */
 export class ImageAdminFacade {
   constructor(
-    private readonly generateImageUseCase: GenerateImage
+    private readonly generateImageUseCase: GenerateImage,
+    private readonly uploadImageToWordPressUseCase: UploadImageToWordPress
   ) {}
 
   /**
@@ -16,7 +18,8 @@ export class ImageAdminFacade {
    */
   listUseCases(): string[] {
     return [
-      'GenerateImage'
+      'GenerateImage',
+      'UploadImageToWordPress'
     ];
   }
 
@@ -40,6 +43,9 @@ export class ImageAdminFacade {
         case 'GenerateImage':
           return await this.generateImageUseCase.execute(input as GenerateImageInput);
 
+        case 'UploadImageToWordPress':
+          return await this.uploadImageToWordPressUseCase.execute(input as UploadImageToWordPressInput);
+
         default:
           return Result.failure(new Error(`Unknown use case: ${useCase}`));
       }
@@ -58,6 +64,9 @@ export class ImageAdminFacade {
       switch (useCase) {
         case 'GenerateImage':
           return this.validateGenerateImageInput(input);
+
+        case 'UploadImageToWordPress':
+          return this.validateUploadImageToWordPressInput(input);
 
         default:
           return Result.failure(new Error(`Unknown use case: ${useCase}`));
@@ -121,6 +130,27 @@ export class ImageAdminFacade {
 
     if (input.size && !['1024x1024', '1792x1024', '1024x1792'].includes(input.size)) {
       return Result.failure(new Error('Size must be one of: 1024x1024, 1792x1024, 1024x1792'));
+    }
+
+    return Result.success(true);
+  }
+
+  private validateUploadImageToWordPressInput(input: any): Result<boolean, Error> {
+    if (!input.imageId || typeof input.imageId !== 'string' || input.imageId.trim().length === 0) {
+      return Result.failure(new Error('Field "imageId" is required and must be a non-empty string'));
+    }
+
+    if (!input.wordPressConfig || typeof input.wordPressConfig !== 'object') {
+      return Result.failure(new Error('Field "wordPressConfig" is required and must be an object'));
+    }
+
+    const wpConfig = input.wordPressConfig;
+    const required = ['siteUrl', 'username', 'password'];
+
+    for (const field of required) {
+      if (!wpConfig[field] || typeof wpConfig[field] !== 'string' || wpConfig[field].trim().length === 0) {
+        return Result.failure(new Error(`WordPressConfig field '${field}' is required and must be a non-empty string`));
+      }
     }
 
     return Result.success(true);

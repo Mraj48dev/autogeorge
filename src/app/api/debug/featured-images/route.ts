@@ -15,11 +15,8 @@ export async function GET(request: NextRequest) {
       take: 10
     });
 
-    // Also get orphaned featured images
+    // Also get all featured images
     const allFeaturedImages = await prisma.featuredImage.findMany({
-      where: {
-        articleId: { not: null }
-      },
       orderBy: { createdAt: 'desc' },
       take: 20
     });

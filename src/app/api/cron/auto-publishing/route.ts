@@ -38,10 +38,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ [AutoPublish CRON] Auto-publishing is enabled for: ${wordpressSite.name}`);
 
-    // Find all articles with status "ready_to_publish" that should be auto-published
+    // Find all articles that should be auto-published
+    // ✅ INCLUDE: Both 'ready_to_publish' AND 'generated_with_image' for auto-publish
     const readyArticles = await prisma.article.findMany({
       where: {
-        status: 'ready_to_publish'
+        status: { in: ['ready_to_publish', 'generated_with_image'] }
       },
       orderBy: {
         createdAt: 'asc' // Publish oldest first

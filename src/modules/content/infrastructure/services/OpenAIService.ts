@@ -88,7 +88,7 @@ export class OpenAIService implements AiService {
       const result: ArticleGenerationResult = {
         title: parsedContent.title,
         content: parsedContent.content,
-        format: 'markdown' as ContentFormat,
+        format: 'html' as ContentFormat,
         statistics,
         modelUsed: request.model || this.defaultModel,
         metadata,
@@ -471,7 +471,7 @@ export class OpenAIService implements AiService {
       prompt += `- Include these keywords naturally: ${request.keywords.join(', ')}\n`;
     }
 
-    prompt += '\nFormat the response as a well-structured article with a clear title and body. Use markdown formatting.';
+    prompt += '\nFormat the response as a well-structured article with a clear title and body. Use clean HTML formatting with proper semantic tags (h2, h3, p, ul, li, strong, em).';
 
     return prompt;
   }

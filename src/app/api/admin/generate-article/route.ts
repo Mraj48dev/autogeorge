@@ -58,9 +58,9 @@ Requisiti:
 - Stile: ${style}
 - Parole chiave da includere: ${keywords.join(', ')}
 - Lingua: italiano
-- Formato: markdown ben strutturato con titoli e paragrafi chiari
+- Formato: HTML semantico ben strutturato con tag <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>
 
-L'articolo deve essere originale, coinvolgente e ben formattato.`,
+L'articolo deve essere originale, coinvolgente e formattato ESCLUSIVAMENTE in HTML pulito (NO markdown).`,
       targetWordCount: wordCount,
       tone,
       style,

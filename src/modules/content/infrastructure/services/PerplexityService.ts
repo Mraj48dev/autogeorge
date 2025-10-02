@@ -115,7 +115,7 @@ export class PerplexityService implements AiService {
       const result: ArticleGenerationResult = {
         title: parsedContent.title,
         content: parsedContent.content,
-        format: 'markdown' as ContentFormat,
+        format: 'html' as ContentFormat,
         statistics,
         modelUsed: model,
         metadata,
@@ -403,7 +403,7 @@ export class PerplexityService implements AiService {
       prompt += `- Include these keywords naturally: ${request.keywords.join(', ')}\n`;
     }
 
-    prompt += '\nFormat the response as JSON with "title" and "content" fields. Use markdown formatting for the content.';
+    prompt += '\nFormat the response as JSON with "title" and "content" fields. Use clean HTML formatting for the content with proper tags (h2, h3, p, ul, li, strong, em).';
 
     return prompt;
   }

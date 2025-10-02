@@ -256,10 +256,10 @@ Indicazioni per il titolo: ${titlePrompt}
 Indicazioni per il contenuto: ${articlePrompt}
 Indicazioni per l'immagine: ${imagePrompt}
 
-Rispondi SOLO con questo JSON (senza markdown code blocks):
+Rispondi SOLO con questo JSON puro (senza markdown code blocks o altri formati):
 {
   "title": "[titolo ottimizzato SEO]",
-  "content": "[articolo completo in markdown con paragrafi, titoli e formattazione]",
+  "content": "[articolo completo in HTML semantico con tag <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>]",
   "metaDescription": "[meta description 150-160 caratteri]",
   "seoTags": ["tag1", "tag2", "tag3"],
   "imagePrompt": "[prompt dettagliato per generare immagine in evidenza]"

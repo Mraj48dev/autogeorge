@@ -1,6 +1,7 @@
 import { Result } from '../../../../shared/domain/types/Result';
 import { FeaturedImage } from '../../domain/entities/FeaturedImage';
 import { ImageRepository } from '../../domain/ports/ImageRepository';
+import { ImageId } from '../../domain/value-objects/ImageId';
 import { WordPressMediaService } from '../../../publishing/infrastructure/services/WordPressMediaService';
 import { PlatformConfig } from '../../../publishing/domain/ports/MediaService';
 
@@ -38,7 +39,8 @@ export class UploadImageToWordPress {
   async execute(input: UploadImageToWordPressInput): Promise<Result<UploadImageToWordPressOutput, Error>> {
     try {
       // Step 1: Get the featured image from database
-      const imageResult = await this.imageRepository.findById({ getValue: () => input.imageId } as any);
+      const imageId = ImageId.fromString(input.imageId);
+      const imageResult = await this.imageRepository.findById(imageId);
       if (imageResult.isFailure()) {
         return Result.failure(new Error(`Image not found: ${imageResult.error.message}`));
       }

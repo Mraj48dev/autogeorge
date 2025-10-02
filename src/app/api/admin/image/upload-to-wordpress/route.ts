@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createImageContainer } from '@/modules/image/infrastructure/container/ImageContainer';
+import { createImageContainer } from '@/composition-root/modules/image';
 
 /**
  * POST /api/admin/image/upload-to-wordpress

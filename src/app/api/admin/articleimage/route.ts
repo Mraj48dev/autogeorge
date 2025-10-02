@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
               totalTime: 0
             }
           };
-          console.log('🎨 [Article Image] Found image in featured_images table:', articleId);
+          console.log('🎨 [Article Image] Found DALL-E image in featured_images table:', articleId);
         }
       } catch (dbError) {
         console.error('❌ [Article Image] Error querying featured_images table:', dbError);

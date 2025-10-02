@@ -95,12 +95,22 @@ export async function GET(request: NextRequest) {
               filename: dbImage.filename,
               altText: dbImage.altText,
               status: dbImage.status,
-              searchLevel: 'ai_generated'
+              searchLevel: 'ai_generated',
+              relevanceScore: 100
+            },
+            searchResults: {
+              totalFound: 1,
+              candidatesEvaluated: 1,
+              bestScore: 100,
+              searchLevel: 'ai_generated',
+              processingTime: 0
             },
             metadata: {
               wasGenerated: true,
               provider: 'DALL-E',
-              source: 'featured_images_table'
+              source: 'featured_images_table',
+              searchTime: 0,
+              totalTime: 0
             }
           };
           console.log('🎨 [Article Image] Found image in featured_images table:', articleId);

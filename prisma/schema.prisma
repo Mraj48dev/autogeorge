@@ -335,9 +335,14 @@ model FeaturedImage {
   filename     String   // Nome del file dell'immagine
   altText      String   // Testo alternativo per l'immagine
   url          String?  // URL dell'immagine generata (null se generazione fallita)
-  status       String   // pending, searching, found, failed
+  status       String   // pending, searching, found, generated, uploaded, failed
   searchQuery  String?  // Query di ricerca utilizzata (opzionale)
   errorMessage String?  // Messaggio di errore in caso di fallimento
+
+  // WordPress upload fields
+  wordpressMediaId Int?    // ID dell'immagine nella media library di WordPress
+  wordpressUrl     String? // URL dell'immagine su WordPress
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -347,6 +352,7 @@ model FeaturedImage {
   @@index([articleId])
   @@index([status])
   @@index([createdAt])
+  @@index([wordpressMediaId])
   @@map("featured_images")
 }
 

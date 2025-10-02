@@ -81,11 +81,16 @@ export class GenerateImage {
       const generatedImage = generationResult.value;
       featuredImage.markAsFound(generatedImage.url);
 
+      console.log('ℹ️ [GenerateImage] DALL-E image generated, URL expires in 24h:', generatedImage.url.substring(0, 80));
+
       // Step 6: Save final state
       const updateResult = await this.imageRepository.update(featuredImage);
       if (updateResult.isFailure()) {
         return Result.failure(new Error(`Failed to update image entity: ${updateResult.error.message}`));
       }
+
+      console.log('✅ [GenerateImage] Image entity saved, ready for WordPress upload');
+      console.log('⚠️ [GenerateImage] IMPORTANTE: URL DALL-E scade in 24h, usa UploadImageToWordPress per renderlo permanente');
 
       // Step 7: Return success result
       return Result.success({

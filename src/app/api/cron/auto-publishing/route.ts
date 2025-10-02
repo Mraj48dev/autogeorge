@@ -111,13 +111,106 @@ export async function GET(request: NextRequest) {
           config
         );
 
+        // ✅ STEP 1: Check for featured image and upload to WordPress if needed
+        let featuredMediaId: number | undefined;
+        let featuredImageUrl: string | undefined;
+
+        console.log(`🖼️ [AutoPublish] Checking for featured image for article: ${article.id}`);
+
+        // Query for featured image associated with this article
+        const featuredImage = await prisma.featuredImage.findFirst({
+          where: {
+            articleId: article.id,
+            status: { in: ['generated', 'uploaded'] }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        if (featuredImage) {
+          console.log(`🖼️ [AutoPublish] Found featured image:`, {
+            imageId: featuredImage.id,
+            status: featuredImage.status,
+            hasUrl: !!featuredImage.url,
+            hasWordPressId: !!featuredImage.wordpressMediaId
+          });
+
+          // If image already uploaded to WordPress, use existing ID
+          if (featuredImage.status === 'uploaded' && featuredImage.wordpressMediaId) {
+            featuredMediaId = featuredImage.wordpressMediaId;
+            featuredImageUrl = featuredImage.wordpressUrl || featuredImage.url;
+            console.log(`✅ [AutoPublish] Using existing WordPress media ID: ${featuredMediaId}`);
+          }
+          // If image generated but not uploaded, upload it now
+          else if (featuredImage.status === 'generated' && featuredImage.url) {
+            console.log(`📤 [AutoPublish] Uploading featured image to WordPress...`);
+
+            try {
+              // Import WordPress media service
+              const { WordPressMediaService } = await import('@/modules/image/infrastructure/services/WordPressMediaService');
+              const mediaService = new WordPressMediaService();
+
+              // Download the image from DALL-E URL
+              const imageResponse = await fetch(featuredImage.url);
+              if (!imageResponse.ok) {
+                throw new Error(`Failed to download image: ${imageResponse.status}`);
+              }
+
+              const imageBuffer = await imageResponse.arrayBuffer();
+              const imageBlob = new Blob([imageBuffer], { type: 'image/png' });
+              const imageFile = new File([imageBlob], featuredImage.filename || 'featured-image.png', { type: 'image/png' });
+
+              // Upload to WordPress
+              const uploadResult = await mediaService.uploadMedia({
+                siteUrl: wordpressSite.url,
+                username: wordpressSite.username,
+                password: wordpressSite.password
+              }, {
+                file: imageFile,
+                title: featuredImage.altText || article.title,
+                alt_text: featuredImage.altText || article.title,
+                caption: featuredImage.altText || article.title
+              });
+
+              if (uploadResult.isSuccess()) {
+                const mediaResult = uploadResult.value;
+                featuredMediaId = mediaResult.id;
+                featuredImageUrl = mediaResult.url;
+
+                // Update featured image record with WordPress info
+                await prisma.featuredImage.update({
+                  where: { id: featuredImage.id },
+                  data: {
+                    status: 'uploaded',
+                    wordpressMediaId: mediaResult.id,
+                    wordpressUrl: mediaResult.url
+                  }
+                });
+
+                console.log(`✅ [AutoPublish] Image uploaded to WordPress:`, {
+                  mediaId: mediaResult.id,
+                  mediaUrl: mediaResult.url
+                });
+              } else {
+                console.error(`❌ [AutoPublish] Failed to upload image to WordPress:`, uploadResult.error);
+                // Continue without featured image
+              }
+            } catch (uploadError) {
+              console.error(`💥 [AutoPublish] Error during image upload:`, uploadError);
+              // Continue without featured image
+            }
+          }
+        } else {
+          console.log(`ℹ️ [AutoPublish] No featured image found for article: ${article.id}`);
+        }
+
+        // ✅ STEP 2: Prepare content and metadata with featured image info
         const content = {
           title: article.title,
           content: article.content,
           excerpt: article.title.substring(0, 150),
           categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
           tags: [],
-          featuredImage: null,
+          featuredImage: featuredImageUrl || null,
           customFields: {}
         };
 
@@ -125,7 +218,9 @@ export async function GET(request: NextRequest) {
           articleId: article.id,
           sourceId: article.sourceId || '',
           generatedAt: new Date(),
-          autoPublished: true
+          autoPublished: true,
+          ...(featuredMediaId && { featuredMediaId }),
+          ...(featuredImageUrl && { featuredImageUrl })
         };
 
         // Attempt to publish
@@ -142,7 +237,14 @@ export async function GET(request: NextRequest) {
           });
 
           results.published++;
-          console.log(`✅ [AutoPublish CRON] Article published successfully: ${article.id} → ${publishResult.value.externalUrl || 'WordPress'}`);
+          console.log(`✅ [AutoPublish CRON] Article published successfully:`, {
+            articleId: article.id,
+            title: article.title,
+            externalUrl: publishResult.value.externalUrl || 'WordPress',
+            externalId: publishResult.value.externalId,
+            featuredMediaId: featuredMediaId || 'none',
+            featuredImageUrl: featuredImageUrl || 'none'
+          });
         } else {
           results.failed++;
           results.errors.push(`${article.id}: ${publishResult.error.message}`);

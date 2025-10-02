@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    console.log('🔄 [Upload CRON] Starting image upload to WordPress process...');
+    console.log('🔄 [WordPress Upload CRON] Starting auto-upload process...');
 
     // Get WordPress settings
     const wpResponse = await fetch(`${process.env.VERCEL_URL || 'https://autogeorge.vercel.app'}/api/admin/wordpress-settings`, {

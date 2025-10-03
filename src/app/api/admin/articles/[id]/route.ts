@@ -157,3 +157,133 @@ export async function GET(
     );
   }
 }
+
+/**
+ * PATCH /api/admin/articles/[id]
+ * Fix corrupted article by extracting proper data from JSON content
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const articleId = params.id;
+    const body = await request.json();
+
+    if (!articleId) {
+      return NextResponse.json(
+        { error: 'Article ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get the current article
+    const article = await prisma.article.findUnique({
+      where: { id: articleId }
+    });
+
+    if (!article) {
+      return NextResponse.json(
+        { error: 'Article not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if this is a cleanup operation
+    if (body.action === 'fix-corruption') {
+      console.log(`🔧 Fixing corrupted article: ${articleId}`);
+
+      // Try to extract data from JSON content
+      let extractedData = null;
+
+      // Method 1: Try to parse content as JSON
+      if (article.content && (article.content.startsWith('{') || article.content.includes('{"article":'))) {
+        try {
+          const jsonContent = article.content.trim();
+          const parsed = JSON.parse(jsonContent);
+
+          // Check for advanced structure
+          if (parsed.article && parsed.article.basic_data && parsed.article.content) {
+            extractedData = {
+              title: parsed.article.basic_data.title || 'Recovered Article',
+              content: parsed.article.content || 'Content recovered from JSON.',
+              slug: parsed.article.basic_data.slug || null,
+              meta_description: parsed.article.seo_critical?.meta_description || null,
+              tags: parsed.article.basic_data?.tags || [],
+              ai_image_prompt: parsed.article.featured_image?.ai_prompt || null
+            };
+          }
+          // Check for simple structure
+          else if (parsed.title && parsed.content) {
+            extractedData = {
+              title: parsed.title,
+              content: parsed.content,
+              slug: parsed.slug || null,
+              meta_description: parsed.meta_description || null,
+              tags: parsed.tags || [],
+              ai_image_prompt: parsed.ai_image_prompt || null
+            };
+          }
+        } catch (parseError) {
+          console.log(`❌ Failed to parse JSON for article ${articleId}:`, parseError);
+        }
+      }
+
+      // If we successfully extracted data, update the article
+      if (extractedData) {
+        await prisma.article.update({
+          where: { id: articleId },
+          data: {
+            title: extractedData.title,
+            content: extractedData.content,
+            slug: extractedData.slug,
+            yoastSeo: extractedData.meta_description ? {
+              meta_description: extractedData.meta_description
+            } : null,
+            // Store original corrupted data for reference
+            articleData: {
+              ...article.articleData,
+              cleanupApplied: new Date().toISOString(),
+              originalCorruptedTitle: article.title,
+              originalCorruptedContent: article.content.substring(0, 1000) + '...',
+              extractedData
+            }
+          }
+        });
+
+        console.log(`✅ Fixed article ${articleId}: "${extractedData.title}"`);
+
+        return NextResponse.json({
+          success: true,
+          message: 'Article corruption fixed',
+          extractedData: {
+            title: extractedData.title,
+            contentLength: extractedData.content.length,
+            slug: extractedData.slug,
+            metaDescription: extractedData.meta_description
+          }
+        });
+      } else {
+        return NextResponse.json(
+          { error: 'Could not extract valid data from corrupted article' },
+          { status: 400 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid action' },
+      { status: 400 }
+    );
+
+  } catch (error) {
+    console.error('Patch article API error:', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}

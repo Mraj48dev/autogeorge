@@ -202,6 +202,8 @@ export async function PATCH(
           const jsonContent = article.content.trim();
           const parsed = JSON.parse(jsonContent);
 
+          console.log(`🔍 Parsed JSON structure for ${articleId}:`, Object.keys(parsed));
+
           // Check for advanced structure
           if (parsed.article && parsed.article.basic_data && parsed.article.content) {
             extractedData = {
@@ -212,6 +214,7 @@ export async function PATCH(
               tags: parsed.article.basic_data?.tags || [],
               ai_image_prompt: parsed.article.featured_image?.ai_prompt || null
             };
+            console.log(`✅ Extracted data from advanced structure for ${articleId}`);
           }
           // Check for simple structure
           else if (parsed.title && parsed.content) {
@@ -223,9 +226,49 @@ export async function PATCH(
               tags: parsed.tags || [],
               ai_image_prompt: parsed.ai_image_prompt || null
             };
+            console.log(`✅ Extracted data from simple structure for ${articleId}`);
+          } else {
+            console.log(`⚠️ Unknown JSON structure for ${articleId}:`, {
+              hasArticle: !!parsed.article,
+              hasBasicData: !!(parsed.article?.basic_data),
+              hasContent: !!(parsed.article?.content),
+              hasTitle: !!parsed.title,
+              hasDirectContent: !!parsed.content,
+              topLevelKeys: Object.keys(parsed)
+            });
           }
         } catch (parseError) {
           console.log(`❌ Failed to parse JSON for article ${articleId}:`, parseError);
+        }
+      }
+
+      // Method 2: Try to extract from title if it contains JSON start
+      if (!extractedData && article.title && article.title.includes('basic_data')) {
+        try {
+          // Title might be truncated JSON, try to reconstruct from both title and content
+          const titlePart = article.title;
+          const contentPart = article.content || '';
+
+          // Try to find a complete JSON structure
+          const combinedContent = titlePart + contentPart;
+          const jsonMatch = combinedContent.match(/\{[\s\S]*\}/);
+
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.article && parsed.article.basic_data && parsed.article.content) {
+              extractedData = {
+                title: parsed.article.basic_data.title || 'Recovered Article',
+                content: parsed.article.content || 'Content recovered from JSON.',
+                slug: parsed.article.basic_data.slug || null,
+                meta_description: parsed.article.seo_critical?.meta_description || null,
+                tags: parsed.article.basic_data?.tags || [],
+                ai_image_prompt: parsed.article.featured_image?.ai_prompt || null
+              };
+              console.log(`✅ Extracted data from reconstructed JSON for ${articleId}`);
+            }
+          }
+        } catch (parseError) {
+          console.log(`❌ Failed to reconstruct JSON for article ${articleId}:`, parseError);
         }
       }
 

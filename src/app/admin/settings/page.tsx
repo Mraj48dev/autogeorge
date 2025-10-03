@@ -6,7 +6,6 @@ interface GenerationConfig {
   prompts: {
     titlePrompt: string;
     contentPrompt: string;
-    seoPrompt: string;
     imagePrompt: string;
   };
   imageStyle: string;
@@ -79,10 +78,9 @@ export default function SettingsPage() {
         // Ensure all required fields are present
         const completeSettings = {
           prompts: {
-            titlePrompt: settings.prompts?.titlePrompt || 'Crea un titolo accattivante e SEO-friendly per questo articolo',
-            contentPrompt: settings.prompts?.contentPrompt || 'Scrivi un articolo completo e ben strutturato',
-            seoPrompt: settings.prompts?.seoPrompt || 'Includi meta description, tags e parole chiave SEO',
-            imagePrompt: settings.prompts?.imagePrompt || 'Genera un\'immagine in evidenza per questo articolo'
+            titlePrompt: settings.prompts?.titlePrompt || 'che sia accattivante, SEO-friendly, chiaro e informativo.',
+            contentPrompt: settings.prompts?.contentPrompt || 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
+            imagePrompt: settings.prompts?.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.'
           },
           imageStyle: settings.imageStyle || 'natural',
           modelSettings: {
@@ -173,7 +171,6 @@ export default function SettingsPage() {
         body: JSON.stringify({
           titlePrompt: generationSettings.prompts.titlePrompt,
           contentPrompt: generationSettings.prompts.contentPrompt,
-          seoPrompt: generationSettings.prompts.seoPrompt,
           imagePrompt: generationSettings.prompts.imagePrompt,
           imageStyle: generationSettings.imageStyle,
           modelSettings: generationSettings.modelSettings,
@@ -663,7 +660,7 @@ export default function SettingsPage() {
             Configurazione Prompt
           </h3>
           <p className="text-sm text-gray-600 mb-6">
-            Personalizza i prompt utilizzati per generare titoli, contenuti e metadati SEO
+            Configura le parti personalizzabili dei prompt. I prefissi fissi vengono automaticamente concatenati con le tue indicazioni.
           </p>
 
           <div className="space-y-6">
@@ -671,6 +668,11 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Prompt per il Titolo
               </label>
+              <div className="mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700">
+                  <strong>Prefisso fisso:</strong> "Crea il titolo per l'articolo generato a partire dalla source..."
+                </p>
+              </div>
               <textarea
                 rows={3}
                 value={generationSettings.prompts?.titlePrompt || ''}
@@ -678,10 +680,10 @@ export default function SettingsPage() {
                   prompts: { ...generationSettings.prompts, titlePrompt: e.target.value }
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Prompt per generare titoli accattivanti..."
+                placeholder="che sia accattivante, SEO-friendly, chiaro e informativo."
               />
               <p className="text-xs text-gray-500 mt-1">
-                Descrive come deve essere generato il titolo dell'articolo
+                Specifica le caratteristiche che deve avere il titolo (questa parte si aggiunge dopo il prefisso fisso)
               </p>
             </div>
 
@@ -689,6 +691,11 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Prompt per il Contenuto
               </label>
+              <div className="mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700">
+                  <strong>Prefisso fisso:</strong> "Crea un articolo generato a partire dalla source..."
+                </p>
+              </div>
               <textarea
                 rows={4}
                 value={generationSettings.prompts?.contentPrompt || ''}
@@ -696,35 +703,23 @@ export default function SettingsPage() {
                   prompts: { ...generationSettings.prompts, contentPrompt: e.target.value }
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Prompt per generare il corpo dell'articolo..."
+                placeholder="che sia completo, ben strutturato, originale e coinvolgente..."
               />
               <p className="text-xs text-gray-500 mt-1">
-                Descrive come deve essere strutturato e scritto il contenuto principale
+                Specifica come deve essere strutturato e scritto l'articolo (questa parte si aggiunge dopo il prefisso fisso)
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Prompt per SEO e Metadata
-              </label>
-              <textarea
-                rows={3}
-                value={generationSettings.prompts?.seoPrompt || ''}
-                onChange={(e) => updateGenerationSettings({
-                  prompts: { ...generationSettings.prompts, seoPrompt: e.target.value }
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Prompt per generare metadati SEO..."
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Descrive come generare meta description, tags e parole chiave
-              </p>
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Prompt per Immagine in Evidenza
+                Indicazioni per l'Immagine in Evidenza
               </label>
+              <div className="mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700">
+                  <strong>Prefisso fisso:</strong> "Crea il prompt per generare l'immagine in evidenza dell'articolo..."
+                </p>
+              </div>
               <textarea
                 rows={3}
                 value={generationSettings.prompts?.imagePrompt || ''}
@@ -732,10 +727,10 @@ export default function SettingsPage() {
                   prompts: { ...generationSettings.prompts, imagePrompt: e.target.value }
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Genera un'immagine in evidenza per questo articolo..."
+                placeholder="in stile cartoon. Individua un dettaglio rappresentativo dell'idea base dell'articolo. Non usare scritte né simboli."
               />
               <p className="text-xs text-gray-500 mt-1">
-                Descrive come generare il comando AI per l'immagine in evidenza
+                Specifica lo stile e le caratteristiche dell'immagine da generare (questa parte si aggiunge dopo il prefisso fisso)
               </p>
             </div>
 

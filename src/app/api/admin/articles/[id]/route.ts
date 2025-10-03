@@ -196,7 +196,7 @@ export async function PATCH(
       // Try to extract data from JSON content
       let extractedData = null;
 
-      // Method 1: Try to parse content as JSON
+      // Method 1: Try to parse content as JSON (with truncation recovery)
       if (article.content && (article.content.startsWith('{') || article.content.includes('{"article":'))) {
         try {
           const jsonContent = article.content.trim();
@@ -238,7 +238,56 @@ export async function PATCH(
             });
           }
         } catch (parseError) {
-          console.log(`❌ Failed to parse JSON for article ${articleId}:`, parseError);
+          console.log(`❌ JSON parse failed for ${articleId}, trying truncation recovery:`, parseError.message);
+
+          // TRUNCATION RECOVERY: Try to extract from partial JSON
+          try {
+            const jsonContent = article.content.trim();
+
+            // Extract title from basic_data
+            const titleMatch = jsonContent.match(/"title":\s*"([^"]+)"/);
+            const slugMatch = jsonContent.match(/"slug":\s*"([^"]+)"/);
+            const metaMatch = jsonContent.match(/"meta_description":\s*"([^"]+)"/);
+            const tagsMatch = jsonContent.match(/"tags":\s*\[([^\]]+)\]/);
+            const contentMatch = jsonContent.match(/"content":\s*"([^"]*(?:\\.[^"]*)*)"/);
+            const imagePromptMatch = jsonContent.match(/"ai_prompt":\s*"([^"]+)"/);
+
+            if (titleMatch) {
+              // Extract tags array
+              let tags = [];
+              if (tagsMatch) {
+                try {
+                  const tagsStr = '[' + tagsMatch[1] + ']';
+                  tags = JSON.parse(tagsStr);
+                } catch (e) {
+                  console.log('Failed to parse tags, extracting manually');
+                  tags = tagsMatch[1].split(',').map(t => t.replace(/"/g, '').trim()).filter(Boolean);
+                }
+              }
+
+              // Clean up content (remove escape characters)
+              let cleanContent = contentMatch ? contentMatch[1] : 'Contenuto recuperato da articolo corrotto.';
+              cleanContent = cleanContent.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+
+              extractedData = {
+                title: titleMatch[1],
+                content: cleanContent,
+                slug: slugMatch ? slugMatch[1] : null,
+                meta_description: metaMatch ? metaMatch[1] : null,
+                tags: tags,
+                ai_image_prompt: imagePromptMatch ? imagePromptMatch[1] : null
+              };
+
+              console.log(`🔧 Recovered data from truncated JSON for ${articleId}:`, {
+                title: extractedData.title,
+                contentLength: extractedData.content.length,
+                slug: extractedData.slug,
+                tagsCount: extractedData.tags.length
+              });
+            }
+          } catch (recoveryError) {
+            console.log(`❌ Truncation recovery failed for ${articleId}:`, recoveryError.message);
+          }
         }
       }
 

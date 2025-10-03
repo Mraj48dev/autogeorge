@@ -375,6 +375,14 @@ export class PerplexityService implements AiService {
    * Builds the prompt for article generation
    */
   private buildArticlePrompt(request: ArticleGenerationRequest): string {
+    // 🔧 FIX: If the prompt is already a complete unified prompt (contains JSON structure), use it as-is
+    if (request.prompt && (request.prompt.includes('format JSON') || request.prompt.includes('struttura AVANZATA') || request.prompt.includes('```json'))) {
+      console.log('🎯 [PerplexityService] Using unified prompt AS-IS (detected complete prompt structure)');
+      return request.prompt;
+    }
+
+    // 🔧 LEGACY: Only build prompt for simple requests (backward compatibility)
+    console.log('🔧 [PerplexityService] Building legacy prompt structure');
     let prompt = `Generate a comprehensive article based on the following prompt:\n\n${request.prompt}\n\n`;
 
     if (request.sourceContent) {

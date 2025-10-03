@@ -249,7 +249,9 @@ export async function PATCH(
             const slugMatch = jsonContent.match(/"slug":\s*"([^"]+)"/);
             const metaMatch = jsonContent.match(/"meta_description":\s*"([^"]+)"/);
             const tagsMatch = jsonContent.match(/"tags":\s*\[([^\]]+)\]/);
-            const contentMatch = jsonContent.match(/"content":\s*"([^"]*(?:\\.[^"]*)*)"/);
+            // Use better content extraction that handles HTML and escaped quotes
+            const contentMatch = jsonContent.match(/"content":\s*"(.*?)(?=",[^"]*"[^"]*":)/s) ||
+                                 jsonContent.match(/"content":\s*"([^"]*(?:\\.[^"]*)*)"/);
             const imagePromptMatch = jsonContent.match(/"ai_prompt":\s*"([^"]+)"/);
 
             if (titleMatch) {
@@ -266,7 +268,9 @@ export async function PATCH(
               }
 
               // Clean up content (remove escape characters)
-              let cleanContent = contentMatch ? contentMatch[1] : 'Contenuto recuperato da articolo corrotto.';
+              // Use the first match result if it's an array (from the OR operator)
+              const rawContent = Array.isArray(contentMatch) ? contentMatch[1] : (contentMatch?.[1] || 'Contenuto recuperato da articolo corrotto.');
+              let cleanContent = rawContent;
               cleanContent = cleanContent.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
 
               extractedData = {

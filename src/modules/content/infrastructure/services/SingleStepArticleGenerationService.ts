@@ -203,80 +203,52 @@ ISTRUZIONI:
 2. CONTENUTO: ${fullContentPrompt}
 3. IMMAGINE: ${fullImagePrompt}
 
-Genera un articolo professionale completo in formato JSON con questa struttura AVANZATA e dettagliata:
+Genera SOLO JSON VALIDO con questa struttura:
 
 \`\`\`json
 {
-  "article": {
-    "basic_data": {
-      "title": "",
-      "slug": "",
-      "category": "",
-      "tags": [],
-      "status": "draft"
-    },
-
-    "seo_critical": {
-      "focus_keyword": "",
-      "seo_title": "",
-      "meta_description": "",
-      "h1_tag": ""
-    },
-
-    "content": "",
-
-    "featured_image": {
-      "ai_prompt": "",
-      "alt_text": "",
-      "filename": ""
-    },
-
-    "internal_seo": {
-      "internal_links": [
-        {
-          "anchor_text": "",
-          "url": ""
-        }
-      ],
-      "related_keywords": [],
-      "entities": []
-    },
-
-    "user_engagement": {
-      "reading_time": "",
-      "cta": "",
-      "key_takeaways": []
-    }
-  }
+  "title": "",
+  "content": "",
+  "slug": "",
+  "meta_description": "",
+  "tags": [],
+  "ai_image_prompt": ""
 }
 \`\`\`
 
-ISTRUZIONI COMPATTE:
-- basic_data: title (${fullTitlePrompt}), slug SEO, category, tags, status=draft
-- seo_critical: focus_keyword, seo_title, meta_description (150-160 char), h1_tag
-- content: ${fullContentPrompt} - HTML completo con <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>
-- featured_image: ai_prompt (${fullImagePrompt}), alt_text, filename
-- internal_seo: internal_links con anchor_text, related_keywords, entities
-- user_engagement: reading_time, cta, key_takeaways
+ISTRUZIONI:
+- title: ${fullTitlePrompt}
+- content: ${fullContentPrompt} (HTML con <h2>, <h3>, <p>, <ul>, <li>)
+- slug: SEO-friendly
+- meta_description: 150-160 caratteri
+- tags: 5-8 tag pertinenti
+- ai_image_prompt: ${fullImagePrompt}
 
-STILE: ${settings.language || 'italiano'}, ${settings.tone || 'professionale'}, ${settings.style || 'giornalistico'}
-OUTPUT: Solo JSON valido, contenuti HTML ben formattati, 4000+ parole
+STILE: ${settings.language || 'italiano'}, ${settings.tone || 'professionale'}
+REQUISITO: Rispondi SOLO con JSON valido, niente altro
 
 🎯 GENERA L'ARTICOLO AVANZATO ORA:`;
   }
 
   private extractSeoData(content: string, rawResponse?: any): { metaDescription?: string; seoTags?: string[] } {
-    // ✅ NEW: Extract from advanced structure first
+    // ✅ NEW SIMPLIFIED: Extract from simplified structure first
+    if (rawResponse?.meta_description || rawResponse?.tags) {
+      return {
+        metaDescription: rawResponse.meta_description,
+        seoTags: rawResponse.tags || []
+      };
+    }
+
+    // ✅ LEGACY: Extract from old advanced structure
     if (rawResponse?.article) {
       const article = rawResponse.article;
-
       return {
         metaDescription: article.seo_critical?.meta_description || article.basic_data?.meta_description,
         seoTags: article.basic_data?.tags || article.internal_seo?.related_keywords?.slice(0, 5) || []
       };
     }
 
-    // ✅ LEGACY: Extract from old structure
+    // ✅ OLD LEGACY: Extract from old structure
     if (rawResponse?.metaDescription || rawResponse?.seoTags) {
       return {
         metaDescription: rawResponse.metaDescription,

@@ -74,7 +74,7 @@ export class PerplexityService implements AiService {
             content: prompt
           }
         ],
-        max_tokens: request.parameters?.maxTokens || 8000,
+        max_tokens: request.parameters?.maxTokens || 20000,
         temperature: request.parameters?.temperature || 0.7,
         top_p: request.parameters?.topP || 0.9,
         return_citations: true,

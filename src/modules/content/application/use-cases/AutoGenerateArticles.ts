@@ -191,7 +191,7 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       parameters: {
         model: settings.model || 'sonar-pro',
         temperature: settings.temperature || 0.7,
-        maxTokens: settings.maxTokens || 2000
+        maxTokens: settings.maxTokens || 20000
       },
       metadata: {
         requestId: `auto-gen-${feedItem.id}-${Date.now()}`,

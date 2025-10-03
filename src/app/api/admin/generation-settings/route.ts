@@ -116,7 +116,7 @@ export async function PUT(request: NextRequest) {
         imageStyle: body.imageStyle || 'natural',
         defaultModel: body.modelSettings?.model || 'gpt-4',
         defaultTemperature: body.modelSettings?.temperature || 0.7,
-        defaultMaxTokens: body.modelSettings?.maxTokens || 2000,
+        defaultMaxTokens: body.modelSettings?.maxTokens || 20000,
         defaultLanguage: body.languageSettings?.language || 'it',
         defaultTone: body.languageSettings?.tone || 'professionale',
         defaultStyle: body.languageSettings?.style || 'giornalistico',

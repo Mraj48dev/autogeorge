@@ -209,7 +209,7 @@ model GenerationSettings {
   imageStyle            String   @default("natural")
   defaultModel          String   @default("sonar-pro")
   defaultTemperature    Float    @default(0.7)
-  defaultMaxTokens      Int      @default(2000)
+  defaultMaxTokens      Int      @default(20000)
   defaultLanguage       String   @default("it")
   defaultTone           String   @default("professionale")
   defaultStyle          String   @default("giornalistico")

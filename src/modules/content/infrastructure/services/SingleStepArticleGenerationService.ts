@@ -90,7 +90,7 @@ export class SingleStepArticleGenerationService {
         targetWordCount: request.settings?.maxTokens ? Math.floor(request.settings.maxTokens * 0.75) : 4000,
         parameters: {
           temperature: request.settings?.temperature || 0.7,
-          maxTokens: request.settings?.maxTokens || 16000,
+          maxTokens: request.settings?.maxTokens || 24000,
           model: request.settings?.model || 'sonar-pro'
         },
         metadata: {

@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
         const featuredImage = await prisma.featuredImage.findFirst({
           where: {
             articleId: article.id,
-            status: { in: ['generated', 'uploaded'] }
+            status: { in: ['found', 'generated', 'uploaded'] }
           },
           orderBy: { createdAt: 'desc' }
         });
@@ -141,8 +141,8 @@ export async function GET(request: NextRequest) {
             featuredImageUrl = featuredImage.wordpressUrl || featuredImage.url;
             console.log(`✅ [AutoPublish] Using existing WordPress media ID: ${featuredMediaId}`);
           }
-          // If image generated but not uploaded, upload it now
-          else if (featuredImage.status === 'generated' && featuredImage.url) {
+          // If image generated/found but not uploaded, upload it now
+          else if ((featuredImage.status === 'generated' || featuredImage.status === 'found') && featuredImage.url) {
             console.log(`📤 [AutoPublish] Uploading featured image to WordPress...`);
 
             try {

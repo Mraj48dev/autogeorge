@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
             try {
               // Import WordPress media service
-              const { WordPressMediaService } = await import('@/modules/image/infrastructure/services/WordPressMediaService');
+              const { WordPressMediaService } = await import('@/modules/publishing/infrastructure/services/WordPressMediaService');
               const mediaService = new WordPressMediaService();
 
               // Download the image from DALL-E URL

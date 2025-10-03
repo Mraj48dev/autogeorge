@@ -129,6 +129,8 @@ export class PrismaImageRepository implements ImageRepository {
           status = ${image.status.getValue()},
           "searchQuery" = ${image.searchQuery},
           "errorMessage" = ${image.errorMessage},
+          "wordpressMediaId" = ${image.wordpressMediaId},
+          "wordpressUrl" = ${image.wordpressUrl},
           "updatedAt" = ${image.updatedAt}
         WHERE id = ${image.id.getValue()}
       `;
@@ -186,6 +188,8 @@ export class PrismaImageRepository implements ImageRepository {
       status: ImageStatus.create(prismaImage.status),
       searchQuery: prismaImage.searchQuery,
       errorMessage: prismaImage.errorMessage,
+      wordpressMediaId: prismaImage.wordpressMediaId,
+      wordpressUrl: prismaImage.wordpressUrl,
       createdAt: prismaImage.createdAt,
       updatedAt: prismaImage.updatedAt,
     });

@@ -238,9 +238,20 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
       fullGeneratedObject: generated
     });
 
-    // Extract title and content with explicit null checking and force string conversion
-    const titleValue = String(generated?.title || generated?.fullGenerated?.title || 'Generated Article');
-    const contentValue = String(generated?.content || generated?.fullGenerated?.content || 'Generated content');
+    // 🔧 FIX: Extract from new advanced structure first, then fallback to legacy
+    const advancedData = generated?.rawResponse?.article || generated?.article;
+
+    const titleValue = String(
+      advancedData?.basic_data?.title ||     // New structure
+      generated?.title ||                    // Legacy structure
+      'Generated Article'                    // Fallback
+    );
+
+    const contentValue = String(
+      advancedData?.content ||               // New structure
+      generated?.content ||                  // Legacy structure
+      'Generated content'                    // Fallback
+    );
 
     // 🚨 FINAL DEBUG: What are we actually passing to Value Objects?
     this.logger.info('FINAL VALUE OBJECTS INPUT [DEBUG-v4]', {
@@ -301,61 +312,133 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
   }
 
   private buildPrompt(feedItem: FeedItemData, settings: GenerationSettings): string {
+    // 🔧 FIX: Use new 3-field structure with fixed prefixes + custom suffixes
     const titlePrompt = settings.titlePrompt ||
-      'Crea un titolo accattivante e SEO-friendly per questo articolo';
+      'che sia accattivante, SEO-friendly, chiaro e informativo.';
 
     const contentPrompt = settings.contentPrompt ||
-      'Scrivi un articolo completo e ben strutturato basato su questo contenuto';
+      'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.';
 
-    const seoPrompt = settings.seoPrompt ||
-      'Includi meta description, tags e parole chiave ottimizzate per i motori di ricerca';
+    const imagePrompt = settings.imagePrompt ||
+      'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
+
+    // 🔧 FIX: Build complete prompts with fixed prefixes + custom suffixes
+    const fullTitlePrompt = `Crea il titolo per l'articolo generato a partire dalla source ${titlePrompt}`;
+    const fullContentPrompt = `Crea un articolo generato a partire dalla source ${contentPrompt}`;
+    const fullImagePrompt = `Crea il prompt per generare l'immagine in evidenza dell'articolo ${imagePrompt}`;
 
     return `
-Genera un articolo completo in formato JSON con questa struttura esatta:
-
-\`\`\`json
-{
-  "title": "...",
-  "content": "...",
-  "metaDescription": "...",
-  "seoTags": ["tag1", "tag2", "tag3"]
-}
-\`\`\`
-
-ISTRUZIONI DETTAGLIATE:
-
-TITOLO:
-${titlePrompt}
-
-CONTENUTO:
-${contentPrompt}
-
-SEO E METADATA:
-${seoPrompt}
-
-CONTENUTO SORGENTE DA ELABORARE:
+FONTE DA ELABORARE:
 Titolo originale: ${feedItem.title}
 Contenuto: ${feedItem.content}
 ${feedItem.url ? `URL originale: ${feedItem.url}` : ''}
-Data pubblicazione: ${feedItem.publishedAt}
 
-PARAMETRI DI STILE:
+ISTRUZIONI:
+1. TITOLO: ${fullTitlePrompt}
+2. CONTENUTO: ${fullContentPrompt}
+3. IMMAGINE: ${fullImagePrompt}
+
+Genera un articolo professionale completo in formato JSON con questa struttura AVANZATA e dettagliata:
+
+\`\`\`json
+{
+  "article": {
+    "basic_data": {
+      "title": "",
+      "slug": "",
+      "category": "",
+      "tags": [],
+      "status": "draft"
+    },
+
+    "seo_critical": {
+      "focus_keyword": "",
+      "seo_title": "",
+      "meta_description": "",
+      "h1_tag": ""
+    },
+
+    "content": "",
+
+    "featured_image": {
+      "ai_prompt": "",
+      "alt_text": "",
+      "filename": ""
+    },
+
+    "internal_seo": {
+      "internal_links": [
+        {
+          "anchor_text": "",
+          "url": ""
+        }
+      ],
+      "related_keywords": [],
+      "entities": []
+    },
+
+    "user_engagement": {
+      "reading_time": "",
+      "cta": "",
+      "key_takeaways": []
+    }
+  }
+}
+\`\`\`
+
+📋 ISTRUZIONI DETTAGLIATE PER OGNI SEZIONE:
+
+🎯 BASIC_DATA:
+- title: Applica le istruzioni del titolo fornite sopra
+- slug: Genera uno slug SEO-friendly (es: "danimarca-droni-vertice-ue")
+- category: Determina la categoria più appropriata (es: "Politica", "Cronaca", "Sport")
+- tags: Array di 5-8 tag pertinenti e specifici
+- status: "draft" (predefinito)
+
+🚀 SEO_CRITICAL:
+- focus_keyword: La parola chiave principale per SEO (2-3 parole max)
+- seo_title: Titolo ottimizzato per SERP (50-60 caratteri)
+- meta_description: Descrizione meta ottimizzata (150-160 caratteri)
+- h1_tag: Tag H1 principale dell'articolo
+
+📝 CONTENT:
+- content: Applica le istruzioni del contenuto fornite sopra - Articolo completo in HTML ben strutturato con almeno 3-4 sezioni H2, paragrafi, liste, formattazione semantica.
+
+🖼️ FEATURED_IMAGE:
+- ai_prompt: Applica le istruzioni per l'immagine fornite sopra
+- alt_text: Testo alternativo SEO-friendly per l'immagine
+- filename: Nome file suggerito (es: "articolo-immagine-2025.jpg")
+
+🔗 INTERNAL_SEO:
+- internal_links: Suggerimenti per 3-5 link interni con anchor text
+- related_keywords: 10-15 parole chiave correlate per SEO semantico
+- entities: Entità principali menzionate nell'articolo
+
+👥 USER_ENGAGEMENT:
+- reading_time: Tempo di lettura stimato (es: "5 minuti")
+- cta: Call-to-action finale per coinvolgere il lettore
+- key_takeaways: 3-5 punti chiave dell'articolo
+
+
+⚙️ PARAMETRI DI STILE:
 - Lingua: ${settings.language || 'italiano'}
 - Tono: ${settings.tone || 'professionale'}
 - Stile: ${settings.style || 'giornalistico'}
 - Target audience: ${settings.targetAudience || 'generale'}
+- Lunghezza target: 4000 parole
 
-REQUISITI TECNICI:
-- Rispondi SOLO con il JSON valido
-- Non aggiungere testo prima o dopo il JSON
-- IMPORTANTE: Usa SOLO tag HTML semantici: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>
-- NON usare markdown (*, **, #, ##) - SOLO HTML
-- Il contenuto deve essere formattato ESCLUSIVAMENTE in HTML pulito e semantico
-- La meta description deve essere max 160 caratteri
-- Includi 3-5 tag SEO pertinenti
-- L'articolo deve essere originale e ben strutturato
+🔧 REQUISITI TECNICI AVANZATI:
+- Rispondi SOLO con il JSON valido, senza testo aggiuntivo
+- Tutti i contenuti HTML devono essere completi e ben formattati
+- Usa tag HTML semantici: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>
+- Include div con classi CSS: <div class="intro">, <div class="section">, <div class="conclusion">
+- Ogni sezione deve essere autonoma e ben strutturata
+- Ottimizza per SEO on-page e user experience
+- Includi microdati e structured data quando possibile
+- Focus keyword deve apparire nel titolo, H1, meta description e nel primo paragrafo
+- Related keywords devono essere distribuite naturalmente nel testo
 
-Genera l'articolo ora:`;
+🎯 GENERA L'ARTICOLO AVANZATO ORA:`;
   }
 
 }

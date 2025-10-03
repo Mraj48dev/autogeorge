@@ -224,6 +224,19 @@ export async function GET(request: NextRequest) {
           ...(featuredImageUrl && { featuredImageUrl })
         };
 
+        // ✅ ENHANCED LOGGING: Show exactly what's being published
+        console.log(`📰 [AutoPublish] Publishing article ${article.id} with data:`, {
+          articleId: article.id,
+          title: content.title,
+          contentLength: content.content?.length || 0,
+          hasFeaturedImage: !!featuredImageUrl,
+          featuredImageUrl: featuredImageUrl ? featuredImageUrl.substring(0, 80) + '...' : null,
+          featuredMediaId,
+          metadataKeys: Object.keys(metadata),
+          targetPlatform: publicationTarget.getPlatform(),
+          targetSiteUrl: publicationTarget.getSiteUrl()
+        });
+
         // Attempt to publish
         const publishResult = await publishingService.publish(publicationTarget, content, metadata);
 

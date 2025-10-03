@@ -35,7 +35,7 @@ import { Result } from '../../shared/domain/types/Result';
 export class PerplexityService implements AiService {
   private readonly baseUrl = 'https://api.perplexity.ai';
   private readonly apiKey: string;
-  private readonly defaultModel = 'sonar-pro';
+  private readonly defaultModel = 'llama-3.1-70b-instruct';
 
   constructor(apiKey: string) {
     if (!apiKey) {

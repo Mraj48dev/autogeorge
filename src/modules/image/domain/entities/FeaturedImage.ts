@@ -18,6 +18,8 @@ export interface FeaturedImageProps {
   status: ImageStatus;
   searchQuery?: string;
   errorMessage?: string;
+  wordpressMediaId?: number;
+  wordpressUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,6 +72,14 @@ export class FeaturedImage extends Entity<ImageId> {
 
   get errorMessage(): string | undefined {
     return this.props.errorMessage;
+  }
+
+  get wordpressMediaId(): number | undefined {
+    return this.props.wordpressMediaId;
+  }
+
+  get wordpressUrl(): string | undefined {
+    return this.props.wordpressUrl;
   }
 
   get createdAt(): Date {
@@ -192,15 +202,19 @@ export class FeaturedImage extends Entity<ImageId> {
   markAsUploaded(wordPressMediaId: number, permanentUrl: string): void {
     this.props.url = ImageUrl.create(permanentUrl);
     this.props.status = ImageStatus.create('uploaded');
+    this.props.wordpressMediaId = wordPressMediaId;
+    this.props.wordpressUrl = permanentUrl;
     this.props.updatedAt = new Date();
 
-    // Store WordPress media ID in searchQuery field for reference
+    // Also store WordPress media ID in searchQuery field for backward compatibility
     this.props.searchQuery = `wp_media_id:${wordPressMediaId}`;
 
     console.log('✅ [FeaturedImage] Marked as uploaded:', {
       imageId: this.id.getValue(),
       wordPressMediaId,
-      permanentUrl
+      permanentUrl,
+      wordpressMediaId: this.props.wordpressMediaId,
+      wordpressUrl: this.props.wordpressUrl
     });
   }
 

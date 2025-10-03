@@ -180,15 +180,29 @@ export class SingleStepArticleGenerationService {
 
   private buildUnifiedPrompt(request: SingleStepGenerationRequest): string {
     const {
-      titlePrompt = 'Crea un titolo accattivante e SEO-friendly per questo articolo',
-      contentPrompt = 'Scrivi un articolo completo e ben strutturato basato su questo contenuto',
-      seoPrompt = 'Includi meta description, tags e parole chiave ottimizzate per i motori di ricerca',
-      imagePrompt = 'Genera un\'immagine in evidenza per questo articolo che sia visivamente accattivante e pertinente al contenuto'
+      titlePrompt = 'che sia accattivante, SEO-friendly, chiaro e informativo.',
+      contentPrompt = 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
+      imagePrompt = 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.'
     } = request.customPrompts;
+
+    // Costruisci i prompt completi concatenando la parte fissa con quella personalizzabile
+    const fullTitlePrompt = `Crea il titolo per l'articolo generato a partire dalla source ${titlePrompt}`;
+    const fullContentPrompt = `Crea un articolo generato a partire dalla source ${contentPrompt}`;
+    const fullImagePrompt = `Crea il prompt per generare l'immagine in evidenza dell'articolo ${imagePrompt}`;
 
     const settings = request.settings || {};
 
     return `
+FONTE DA ELABORARE:
+Titolo originale: ${request.feedItemTitle}
+Contenuto: ${request.feedItemContent}
+${request.feedItemUrl ? `URL originale: ${request.feedItemUrl}` : ''}
+
+ISTRUZIONI:
+1. TITOLO: ${fullTitlePrompt}
+2. CONTENUTO: ${fullContentPrompt}
+3. IMMAGINE: ${fullImagePrompt}
+
 Genera un articolo professionale completo in formato JSON con questa struttura AVANZATA e dettagliata:
 
 \`\`\`json
@@ -240,7 +254,7 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
 📋 ISTRUZIONI DETTAGLIATE PER OGNI SEZIONE:
 
 🎯 BASIC_DATA:
-- title: ${titlePrompt}
+- title: Applica le istruzioni del titolo fornite sopra
 - slug: Genera uno slug SEO-friendly (es: "danimarca-droni-vertice-ue")
 - category: Determina la categoria più appropriata (es: "Politica", "Cronaca", "Sport")
 - tags: Array di 5-8 tag pertinenti e specifici
@@ -249,16 +263,16 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
 🚀 SEO_CRITICAL:
 - focus_keyword: La parola chiave principale per SEO (2-3 parole max)
 - seo_title: Titolo ottimizzato per SERP (50-60 caratteri)
-- meta_description: ${seoPrompt} (150-160 caratteri)
+- meta_description: Descrizione meta ottimizzata (150-160 caratteri)
 - h1_tag: Tag H1 principale dell'articolo
 
 📝 CONTENT:
-- content: ${contentPrompt} - Articolo completo in HTML ben strutturato con almeno 3-4 sezioni H2, paragrafi, liste, formattazione semantica. Deve includere introduzione, sviluppo e conclusione in un unico campo HTML.
+- content: Applica le istruzioni del contenuto fornite sopra - Articolo completo in HTML ben strutturato con almeno 3-4 sezioni H2, paragrafi, liste, formattazione semantica.
 
 🖼️ FEATURED_IMAGE:
-- ai_prompt: ${imagePrompt}
+- ai_prompt: Applica le istruzioni per l'immagine fornite sopra
 - alt_text: Testo alternativo SEO-friendly per l'immagine
-- filename: Nome file suggerito (es: "danimarca-droni-vertice-2025.jpg")
+- filename: Nome file suggerito (es: "articolo-immagine-2025.jpg")
 
 🔗 INTERNAL_SEO:
 - internal_links: Suggerimenti per 3-5 link interni con anchor text
@@ -270,10 +284,6 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
 - cta: Call-to-action finale per coinvolgere il lettore
 - key_takeaways: 3-5 punti chiave dell'articolo
 
-📰 CONTENUTO SORGENTE DA ELABORARE:
-Titolo originale: ${request.feedItemTitle}
-Contenuto: ${request.feedItemContent}
-${request.feedItemUrl ? `URL originale: ${request.feedItemUrl}` : ''}
 
 ⚙️ PARAMETRI DI STILE:
 - Lingua: ${settings.language || 'italiano'}

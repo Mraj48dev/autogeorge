@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
       settings = await prisma.generationSettings.create({
         data: {
           userId,
-          titlePrompt: 'Crea un titolo accattivante e SEO-friendly per questo articolo. Il titolo deve essere chiaro, informativo e ottimizzato per i motori di ricerca.',
-          contentPrompt: 'Scrivi un articolo completo e ben strutturato basato su questo contenuto. L\'articolo deve essere originale, coinvolgente e formattato ESCLUSIVAMENTE in HTML semantico con tag <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em> (NO markdown).',
-          seoPrompt: 'Includi meta description (max 160 caratteri), tags pertinenti e parole chiave ottimizzate per i motori di ricerca. Fornisci anche un excerpt di 150 parole.',
+          titlePrompt: 'che sia accattivante, SEO-friendly, chiaro e informativo.',
+          contentPrompt: 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
+          imagePrompt: 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.',
           defaultModel: 'sonar-pro'
         }
       });
@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
     // Use custom prompts if provided, otherwise use default settings
     const titlePrompt = body.customPrompts?.titlePrompt || settings.titlePrompt;
     const contentPrompt = body.customPrompts?.contentPrompt || settings.contentPrompt;
-    const seoPrompt = body.customPrompts?.seoPrompt || settings.seoPrompt;
     const imagePrompt = body.customPrompts?.imagePrompt || settings.imagePrompt;
 
     // Get API key from environment variables (only Perplexity needed)
@@ -121,7 +120,6 @@ export async function POST(request: NextRequest) {
       customPrompts: {
         titlePrompt,
         contentPrompt,
-        seoPrompt,
         imagePrompt
       },
       settings: {
@@ -200,7 +198,6 @@ export async function POST(request: NextRequest) {
         aiPrompts: {
           titlePrompt,
           contentPrompt,
-          seoPrompt,
           imagePrompt,
           feedItemContent: feedItem.content,
           feedItemTitle: feedItem.title,

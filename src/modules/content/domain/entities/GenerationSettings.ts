@@ -6,9 +6,9 @@ import { Result } from '../../shared/domain/types/Result';
  */
 export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
   private _userId: string;
-  private _titlePrompt: string;
-  private _contentPrompt: string;
-  private _seoPrompt: string;
+  private _titlePrompt: string;      // Parte editabile per il titolo
+  private _contentPrompt: string;    // Parte editabile per il contenuto
+  private _imagePrompt: string;      // Parte editabile per le indicazioni immagine
   private _defaultModel: string;
   private _defaultTemperature: number;
   private _defaultMaxTokens: number;
@@ -22,10 +22,10 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     userId: string,
     titlePrompt: string,
     contentPrompt: string,
-    seoPrompt: string,
-    defaultModel: string = 'gpt-4',
+    imagePrompt: string,
+    defaultModel: string = 'sonar-pro',
     defaultTemperature: number = 0.7,
-    defaultMaxTokens: number = 2000,
+    defaultMaxTokens: number = 16000,
     defaultLanguage: string = 'it',
     defaultTone: string = 'professionale',
     defaultStyle: string = 'giornalistico',
@@ -37,7 +37,7 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     this._userId = userId;
     this._titlePrompt = titlePrompt;
     this._contentPrompt = contentPrompt;
-    this._seoPrompt = seoPrompt;
+    this._imagePrompt = imagePrompt;
     this._defaultModel = defaultModel;
     this._defaultTemperature = defaultTemperature;
     this._defaultMaxTokens = defaultMaxTokens;
@@ -53,17 +53,17 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     userId: string,
     titlePrompt?: string,
     contentPrompt?: string,
-    seoPrompt?: string
+    imagePrompt?: string
   ): Result<GenerationSettings> {
     try {
       const defaultTitlePrompt = titlePrompt ||
-        'Crea un titolo accattivante e SEO-friendly per questo articolo. Il titolo deve essere chiaro, informativo e ottimizzato per i motori di ricerca.';
+        'che sia accattivante, SEO-friendly, chiaro e informativo.';
 
       const defaultContentPrompt = contentPrompt ||
-        'Scrivi un articolo completo e ben strutturato basato su questo contenuto. L\'articolo deve essere originale, coinvolgente e ben formattato con paragrafi chiari.';
+        'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.';
 
-      const defaultSeoPrompt = seoPrompt ||
-        'Includi meta description (max 160 caratteri), tags pertinenti e parole chiave ottimizzate per i motori di ricerca. Fornisci anche un excerpt di 150 parole.';
+      const defaultImagePrompt = imagePrompt ||
+        'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
 
       const id = GenerationSettingsId.generate();
 
@@ -72,7 +72,7 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
         userId,
         defaultTitlePrompt,
         defaultContentPrompt,
-        defaultSeoPrompt
+        defaultImagePrompt
       );
 
       return Result.success(settings);
@@ -94,8 +94,8 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     return this._contentPrompt;
   }
 
-  get seoPrompt(): string {
-    return this._seoPrompt;
+  get imagePrompt(): string {
+    return this._imagePrompt;
   }
 
   get defaultModel(): string {
@@ -127,10 +127,10 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
   }
 
   // Update methods
-  updatePrompts(titlePrompt: string, contentPrompt: string, seoPrompt: string): void {
+  updatePrompts(titlePrompt: string, contentPrompt: string, imagePrompt: string): void {
     this._titlePrompt = titlePrompt;
     this._contentPrompt = contentPrompt;
-    this._seoPrompt = seoPrompt;
+    this._imagePrompt = imagePrompt;
     this.markAsUpdated();
     this.validateInvariants();
   }
@@ -168,7 +168,7 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
       prompts: {
         titlePrompt: this._titlePrompt,
         contentPrompt: this._contentPrompt,
-        seoPrompt: this._seoPrompt
+        imagePrompt: this._imagePrompt
       },
       modelSettings: {
         model: this._defaultModel,
@@ -197,8 +197,8 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
       throw new Error('Content prompt must be at least 10 characters long');
     }
 
-    if (!this._seoPrompt || this._seoPrompt.length < 10) {
-      throw new Error('SEO prompt must be at least 10 characters long');
+    if (!this._imagePrompt || this._imagePrompt.length < 10) {
+      throw new Error('Image prompt must be at least 10 characters long');
     }
 
     if (this._defaultTemperature < 0 || this._defaultTemperature > 2) {
@@ -216,7 +216,7 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
       userId: this._userId,
       titlePrompt: this._titlePrompt,
       contentPrompt: this._contentPrompt,
-      seoPrompt: this._seoPrompt,
+      imagePrompt: this._imagePrompt,
       defaultModel: this._defaultModel,
       defaultTemperature: this._defaultTemperature,
       defaultMaxTokens: this._defaultMaxTokens,
@@ -258,7 +258,7 @@ export interface GenerationConfig {
   prompts: {
     titlePrompt: string;
     contentPrompt: string;
-    seoPrompt: string;
+    imagePrompt: string;
   };
   modelSettings: {
     model: string;

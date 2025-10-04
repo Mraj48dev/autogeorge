@@ -187,6 +187,7 @@ export async function POST(request: NextRequest) {
       defaultCategory: body.defaultCategory,
       configuration: body.configuration || {},
       metadata: body.metadata || {},
+      testConnection: body.testConnection || false,
     });
 
     if (result.isFailure()) {

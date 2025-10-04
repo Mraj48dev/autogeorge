@@ -77,6 +77,7 @@ export default function SourcesPage() {
     testConnection: true,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   // WordPress data states
   const [wordpressSites, setWordpressSites] = useState<WordPressSite[]>([]);
@@ -163,13 +164,19 @@ export default function SourcesPage() {
     setSubmitting(true);
 
     try {
+      // Show connection test feedback if enabled
+      if (formData.testConnection && !editingSource) {
+        setTestingConnection(true);
+      }
+
       const url = editingSource ? `/api/admin/sources/${editingSource.id}` : '/api/admin/sources';
       const method = editingSource ? 'PUT' : 'POST';
 
       console.log(`🌐 [Frontend] ${method} ${url}`, {
         formData,
         hasAutoGenerate: formData.configuration?.autoGenerate,
-        configurationKeys: formData.configuration ? Object.keys(formData.configuration) : []
+        configurationKeys: formData.configuration ? Object.keys(formData.configuration) : [],
+        testConnection: formData.testConnection
       });
 
       const response = await fetch(url, {
@@ -192,6 +199,12 @@ export default function SourcesPage() {
 
       if (response.ok) {
         console.log(`✅ [Frontend] Source saved successfully`);
+
+        // Show success message with test result
+        if (formData.testConnection && !editingSource) {
+          alert('✅ Fonte creata con successo!\n🔍 Test di connessione completato con successo.');
+        }
+
         await fetchSources();
         setShowModal(false);
         setEditingSource(null);
@@ -213,13 +226,20 @@ export default function SourcesPage() {
         }
       } else {
         console.error(`❌ [Frontend] Save failed:`, { status: response.status, data });
-        alert('Errore: ' + data.error);
+
+        // Provide specific error message for connection test failures
+        if (data.error?.includes('Source test failed') || data.error?.includes('not reachable')) {
+          alert('❌ Test di connessione fallito!\n\n' + data.error + '\n\nVerifica URL e riprova, oppure disabilita il test di connessione.');
+        } else {
+          alert('Errore: ' + data.error);
+        }
       }
     } catch (error) {
       console.error('💥 [Frontend] Exception during save:', error);
       alert(`Errore durante ${editingSource ? 'l\'aggiornamento' : 'la creazione'} della fonte`);
     } finally {
       setSubmitting(false);
+      setTestingConnection(false);
     }
   };
 
@@ -915,17 +935,26 @@ export default function SourcesPage() {
                 </div>
 
                 {formData.type !== 'calendar' && (
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="testConnection"
-                      checked={formData.testConnection}
-                      onChange={(e) => setFormData({ ...formData, testConnection: e.target.checked })}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="testConnection" className="ml-2 block text-sm text-gray-700">
-                      Testa connessione durante la creazione
-                    </label>
+                  <div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="testConnection"
+                        checked={formData.testConnection}
+                        onChange={(e) => setFormData({ ...formData, testConnection: e.target.checked })}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="testConnection" className="ml-2 block text-sm font-medium text-gray-700">
+                        Testa connessione durante la creazione
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 ml-6">
+                      {formData.testConnection ? (
+                        <>🔍 Verificherà che il feed sia raggiungibile prima di salvare la fonte</>
+                      ) : (
+                        <>⚠️ La fonte verrà salvata senza verificare la connessione</>
+                      )}
+                    </p>
                   </div>
                 )}
 
@@ -940,9 +969,22 @@ export default function SourcesPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
-                    {submitting ? (editingSource ? 'Aggiornamento...' : 'Creazione...') : (editingSource ? 'Aggiorna' : 'Crea')}
+                    {submitting && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    )}
+                    {submitting ? (
+                      testingConnection ? (
+                        'Testando connessione...'
+                      ) : editingSource ? (
+                        'Aggiornamento...'
+                      ) : (
+                        'Creazione...'
+                      )
+                    ) : (
+                      editingSource ? 'Aggiorna' : 'Crea'
+                    )}
                   </button>
                 </div>
               </form>

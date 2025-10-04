@@ -26,6 +26,7 @@ export class PrismaSourceRepository implements SourceRepository {
       console.log(`🔄 [PrismaSourceRepository] Saving source ${source.id.getValue()}`, {
         sourceId: source.id.getValue(),
         sourceName: source.name.getValue(),
+        defaultCategory: source.defaultCategory,
         configuration: source.configuration,
         autoGenerate: source.configuration?.autoGenerate,
         configurationKeys: source.configuration ? Object.keys(source.configuration) : []

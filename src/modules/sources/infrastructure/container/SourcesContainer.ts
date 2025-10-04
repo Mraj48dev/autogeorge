@@ -126,11 +126,13 @@ export class SourcesContainer {
     if (!this._sourceRepository) {
       try {
         // Use Prisma repository now that database is working
-        this.logger.info('Using Prisma repository with PostgreSQL database');
+        this.logger.info('🔄 [SourcesContainer] Using Prisma repository with PostgreSQL database');
         this._sourceRepository = new PrismaSourceRepository(this.prisma);
+        console.log('✅ [SourcesContainer] PrismaSourceRepository initialized successfully');
       } catch (error) {
         // Fallback to in-memory if database fails
         this.logger.warn('Database connection failed, falling back to in-memory repository', { error });
+        console.log('⚠️ [SourcesContainer] Falling back to InMemorySourceRepository due to error:', error);
         this._sourceRepository = new InMemorySourceRepository();
       }
     }

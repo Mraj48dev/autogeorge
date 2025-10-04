@@ -37,6 +37,7 @@ export class PrismaSourceRepository implements SourceRepository {
         type: source.type.getValue(),
         status: source.status.getValue(),
         url: source.url?.getValue(),
+        defaultCategory: source.defaultCategory,
         configuration: source.configuration as any,
         metadata: source.metadata as any,
         lastFetchAt: source.lastFetchAt,
@@ -50,6 +51,7 @@ export class PrismaSourceRepository implements SourceRepository {
 
       console.log(`📝 [PrismaSourceRepository] Data being saved to DB:`, {
         sourceId: data.id,
+        defaultCategory: data.defaultCategory,
         configuration: data.configuration,
         autoGenerate: data.configuration?.autoGenerate
       });
@@ -61,6 +63,7 @@ export class PrismaSourceRepository implements SourceRepository {
           name: data.name,
           status: data.status,
           url: data.url,
+          defaultCategory: data.defaultCategory,
           configuration: data.configuration,
           metadata: data.metadata,
           lastFetchAt: data.lastFetchAt,
@@ -72,6 +75,7 @@ export class PrismaSourceRepository implements SourceRepository {
 
       console.log(`✅ [PrismaSourceRepository] Source saved to DB:`, {
         sourceId: savedSource.id,
+        defaultCategory: savedSource.defaultCategory,
         configuration: savedSource.configuration,
         autoGenerate: (savedSource.configuration as any)?.autoGenerate
       });
@@ -489,7 +493,7 @@ export class PrismaSourceRepository implements SourceRepository {
       type,
       status,
       url,
-      prismaSource.defaultCategory, // <-- MISSING defaultCategory parameter!
+      prismaSource.defaultCategory,
       configuration,
       metadata,
       prismaSource.lastFetchAt,

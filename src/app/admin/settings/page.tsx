@@ -27,6 +27,7 @@ interface GenerationConfig {
 }
 
 interface WordPressSiteConfig {
+  id?: string;
   name: string;
   url: string;
   username: string;
@@ -43,6 +44,15 @@ interface WordPressSiteConfig {
   isActive: boolean;
 }
 
+interface WordPressCategory {
+  id: number;
+  name: string;
+  slug: string;
+  parent: number;
+  count: number;
+  description: string;
+}
+
 export default function SettingsPage() {
   const [generationSettings, setGenerationSettings] = useState<GenerationConfig | null>(null);
   const [wordPressSettings, setWordPressSettings] = useState<WordPressSiteConfig | null>(null);
@@ -56,10 +66,22 @@ export default function SettingsPage() {
   const [errorWordPress, setErrorWordPress] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // WordPress categories state
+  const [wpCategories, setWpCategories] = useState<WordPressCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
   useEffect(() => {
     loadGenerationSettings();
     loadWordPressSettings();
   }, []);
+
+  // Load WordPress categories when WordPress settings are loaded and credentials are available
+  useEffect(() => {
+    if (wordPressSettings?.id && wordPressSettings?.url && wordPressSettings?.username && wordPressSettings?.password) {
+      loadWordPressCategories();
+    }
+  }, [wordPressSettings?.id, wordPressSettings?.url, wordPressSettings?.username, wordPressSettings?.password]);
 
   const loadGenerationSettings = async () => {
     try {
@@ -240,6 +262,34 @@ export default function SettingsPage() {
       console.error('Error saving WordPress settings:', err);
     } finally {
       setSavingWordPress(false);
+    }
+  };
+
+  const loadWordPressCategories = async () => {
+    if (!wordPressSettings?.id || !wordPressSettings?.url || !wordPressSettings?.username || !wordPressSettings?.password) {
+      return;
+    }
+
+    setCategoriesLoading(true);
+    setCategoriesError(null);
+
+    try {
+      // Use the same API endpoint as sources page
+      const response = await fetch(`/api/admin/wordpress/${wordPressSettings.id}/categories`);
+
+      if (response.ok) {
+        const data = await response.json();
+        setWpCategories(data.categories || []);
+      } else {
+        const errorData = await response.json();
+        setCategoriesError(errorData.error || 'Errore nel caricamento categorie');
+        console.error('Error loading WordPress categories:', errorData);
+      }
+    } catch (error) {
+      setCategoriesError('Errore di connessione nel caricamento categorie');
+      console.error('Error loading WordPress categories:', error);
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -489,15 +539,67 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Categoria Predefinita
                   </label>
-                  <input
-                    type="text"
-                    value={wordPressSettings.defaultCategory || ''}
-                    onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Notizie, Blog, etc."
-                  />
+
+                  {/* Categories Dropdown */}
+                  {wordPressSettings?.id && wordPressSettings?.url && wordPressSettings?.username && wordPressSettings?.password ? (
+                    <div>
+                      {categoriesLoading ? (
+                        <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                          <span className="text-gray-600">Caricamento categorie...</span>
+                        </div>
+                      ) : categoriesError ? (
+                        <div className="space-y-2">
+                          <div className="w-full px-3 py-2 border border-red-300 rounded-lg bg-red-50 text-red-700">
+                            Errore: {categoriesError}
+                          </div>
+                          <input
+                            type="text"
+                            value={wordPressSettings.defaultCategory || ''}
+                            onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Inserisci manualmente (es. Tecnologia, Sport...)"
+                          />
+                        </div>
+                      ) : (
+                        <select
+                          value={wordPressSettings.defaultCategory || ''}
+                          onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Nessuna categoria specifica</option>
+                          {wpCategories.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.name} ({category.count} articoli)
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      <input
+                        type="text"
+                        value={wordPressSettings.defaultCategory || ''}
+                        onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
+                        placeholder="Oppure inserisci manualmente (es. Tecnologia, Sport...)"
+                      />
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={wordPressSettings.defaultCategory || ''}
+                      onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Notizie, Blog, etc."
+                    />
+                  )}
+
                   <p className="text-xs text-gray-500 mt-1">
-                    Categoria di default per gli articoli pubblicati
+                    {wordPressSettings?.id && !categoriesError ? (
+                      <>Seleziona una categoria esistente dal tuo sito WordPress o inserisci manualmente una nuova categoria</>
+                    ) : (
+                      <>Categoria di default per gli articoli pubblicati da tutte le sources che non hanno una categoria specifica</>
+                    )}
                   </p>
                 </div>
 

@@ -54,10 +54,10 @@ export class GenerateImage {
         return Result.failure(new Error(`Failed to save image entity: ${saveResult.error.message}`));
       }
 
-      // Step 3: Mark as searching
-      featuredImage.markAsSearching('AI Generation');
+      // Step 3: Mark as searching (only for logging - immediate AI generation)
+      featuredImage.markAsSearching('Direct AI Generation - Auto-Approved');
 
-      // Step 4: Generate image using AI service
+      // Step 4: Execute DIRECT AI image generation (no search, no approval needed)
       const generationRequest: ImageGenerationRequest = {
         articleId: input.articleId,
         title: input.title,
@@ -77,20 +77,22 @@ export class GenerateImage {
         return Result.failure(new Error(`Image generation failed: ${generationResult.error.message}`));
       }
 
-      // Step 5: Mark as found and update with URL
+      // Step 5: Mark as found and AUTO-APPROVE (no manual intervention needed)
       const generatedImage = generationResult.value;
       featuredImage.markAsFound(generatedImage.url);
 
-      console.log('ℹ️ [GenerateImage] DALL-E image generated, URL expires in 24h:', generatedImage.url.substring(0, 80));
+      console.log('✅ [GenerateImage] DALL-E image generated and AUTO-APPROVED');
+      console.log('ℹ️ [GenerateImage] Generated URL (24h expiry):', generatedImage.url.substring(0, 80) + '...');
+      console.log('🎉 [GenerateImage] Image automatically approved - no manual review required');
 
-      // Step 6: Save final state
+      // Step 6: Save final state (image ready for article linking)
       const updateResult = await this.imageRepository.update(featuredImage);
       if (updateResult.isFailure()) {
         return Result.failure(new Error(`Failed to update image entity: ${updateResult.error.message}`));
       }
 
-      console.log('✅ [GenerateImage] Image entity saved, ready for WordPress upload');
-      console.log('⚠️ [GenerateImage] IMPORTANTE: URL DALL-E scade in 24h, usa UploadImageToWordPress per renderlo permanente');
+      console.log('✅ [GenerateImage] Image entity saved and ready for article linking');
+      console.log('📋 [GenerateImage] Next step: Article status will be updated automatically by cron');
 
       // Step 7: Return success result
       return Result.success({

@@ -104,31 +104,27 @@ export async function GET(request: NextRequest) {
         const imageGenerationResult = await generateFeaturedImageWithModule(article);
 
         if (imageGenerationResult.success) {
-          // Update article status to generated_with_image
+          results.successful++;
+          console.log(`✅ [AutoImage CRON] Image generated successfully: ${article.id} → ${imageGenerationResult.imageUrl || 'Generated'}`);
+
+          // ✅ NUOVO FLUSSO SEMPLIFICATO: Immagine auto-approvata e articolo ready
+          // Determina lo status finale basato su enableAutoPublish
+          const finalStatus = wordpressSite.enableAutoPublish ? 'ready_to_publish' : 'generated_with_image';
+
           await prisma.article.update({
             where: { id: article.id },
             data: {
-              status: 'generated_with_image',
+              status: finalStatus,
               featuredMediaUrl: imageGenerationResult.imageUrl
             }
           });
 
-          results.successful++;
-          console.log(`✅ [AutoImage CRON] Image generated successfully: ${article.id} → ${imageGenerationResult.imageUrl || 'Generated'}`);
-
-          // Check if auto-publishing is enabled to determine next step
-          if (wordpressSite.enableAutoPublish) {
-            // Update to ready_to_publish for auto-publishing cron to pick up
-            await prisma.article.update({
-              where: { id: article.id },
-              data: {
-                status: 'ready_to_publish'
-              }
-            });
-            console.log(`🚀 [AutoImage CRON] Article moved to ready_to_publish: ${article.id}`);
+          if (finalStatus === 'ready_to_publish') {
+            console.log(`🚀 [AutoImage CRON] Auto-publish ENABLED → Article ready for publishing: ${article.id}`);
+            console.log(`📋 [AutoImage CRON] Next step: Auto-publishing cron will handle publication`);
           } else {
-            console.log(`✋ [AutoImage CRON] Auto-publish disabled → Article stays in generated_with_image: ${article.id}`);
-            console.log(`🎨 [AutoImage CRON] Workflow complete: Image generated, manual publish required`);
+            console.log(`✋ [AutoImage CRON] Auto-publish DISABLED → Article ready for manual publishing: ${article.id}`);
+            console.log(`🎨 [AutoImage CRON] Workflow complete: Image auto-approved, ready for manual publish`);
           }
 
         } else {
@@ -219,40 +215,53 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate featured image for article using new Image Module
+ * Generate featured image for article using simplified AI-only flow
  */
 async function generateFeaturedImageWithModule(article: any): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
   try {
     console.log(`🎨 [AutoImage Module] Generating featured image for article: ${article.id}`);
 
+    // ✅ STEP 1: Get prompt from GenerationSettings (user's custom prompt)
+    const generationSettings = await getGenerationSettings();
+    const customImagePrompt = generationSettings?.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
+    const imageStyle = generationSettings?.imageStyle || 'natural';
+
+    console.log(`🎯 [AutoImage] Using custom prompt: "${customImagePrompt}"`);
+    console.log(`🎨 [AutoImage] Using style: "${imageStyle}"`);
+
+    // ✅ STEP 2: Create focused AI prompt using title and custom settings
+    const finalPrompt = `${article.title} ${customImagePrompt}`;
+
     // Create Image Module container
     const imageContainer = createImageContainer();
 
-    // Prepare input for Image Module
+    // ✅ STEP 3: Prepare simplified input for direct AI generation
     const imageInput = {
       articleId: article.id,
       title: article.title,
       content: article.content || '',
-      aiPrompt: generateImagePrompt(article.title, article.content),
+      aiPrompt: finalPrompt,
       filename: `featured-${article.id}.png`,
       altText: `Immagine in evidenza per: ${article.title}`,
-      style: 'natural' as const,
+      style: imageStyle as 'natural' | 'vivid',
       size: '1792x1024' as const
     };
 
     console.log(`🎨 [AutoImage Module] Input prepared:`, {
       articleId: imageInput.articleId,
       title: imageInput.title,
+      finalPrompt: finalPrompt.substring(0, 100) + '...',
       filename: imageInput.filename,
       style: imageInput.style,
       size: imageInput.size
     });
 
-    // Execute image generation through Image Module
+    // ✅ STEP 4: Execute DIRECT AI image generation (no search, no manual approval)
+    console.log(`🚀 [AutoImage] Executing DIRECT AI generation - no search, auto-approved`);
     const result = await imageContainer.imageAdminFacade.execute('GenerateImage', imageInput);
 
     if (result.isFailure()) {
-      console.error('❌ [AutoImage Module] Image generation failed:', result.error.message);
+      console.error('❌ [AutoImage Module] AI image generation failed:', result.error.message);
       return {
         success: false,
         error: result.error.message
@@ -260,11 +269,15 @@ async function generateFeaturedImageWithModule(article: any): Promise<{ success:
     }
 
     const generatedImage = result.value;
-    console.log(`✅ [AutoImage Module] Image generated successfully:`, {
+    console.log(`✅ [AutoImage Module] AI image generated and AUTO-APPROVED:`, {
       imageId: generatedImage.imageId,
       url: generatedImage.url,
-      status: generatedImage.status
+      status: generatedImage.status,
+      revisedPrompt: generatedImage.revisedPrompt?.substring(0, 100) + '...'
     });
+
+    // ✅ STEP 5: Image is automatically considered approved (no manual intervention)
+    console.log(`🎉 [AutoImage] Image auto-approved and ready for article linking`);
 
     return {
       success: true,
@@ -281,13 +294,41 @@ async function generateFeaturedImageWithModule(article: any): Promise<{ success:
 }
 
 /**
- * Generate image prompt based on article content
+ * Get Generation Settings from database (user's custom prompts and settings)
+ */
+async function getGenerationSettings(): Promise<{
+  imagePrompt?: string;
+  imageStyle?: string;
+} | null> {
+  try {
+    const settings = await prisma.generationSettings.findFirst({
+      select: {
+        imagePrompt: true,
+        imageStyle: true
+      }
+    });
+
+    console.log(`🔧 [AutoImage] Generation settings loaded:`, {
+      hasImagePrompt: !!settings?.imagePrompt,
+      imageStyle: settings?.imageStyle || 'natural',
+      promptPreview: settings?.imagePrompt?.substring(0, 50) + '...' || 'default'
+    });
+
+    return settings;
+  } catch (error) {
+    console.error(`❌ [AutoImage] Failed to load generation settings:`, error);
+    return null;
+  }
+}
+
+/**
+ * Generate image prompt based on article content (DEPRECATED - now using custom prompts)
  */
 function generateImagePrompt(title: string, content: string): string {
-  // Extract key themes from title and content for image generation
-  const cleanTitle = title.replace(/[^\w\s]/gi, '').toLowerCase();
+  // This function is now deprecated in favor of custom prompts from GenerationSettings
+  // Kept for backward compatibility only
+  console.warn(`⚠️ [AutoImage] generateImagePrompt is deprecated - using custom prompts from settings`);
 
-  // Create a focused prompt for DALL-E
   const prompt = `Create a professional, high-quality featured image for an article titled "${title}".
 The image should be:
 - Modern and clean design

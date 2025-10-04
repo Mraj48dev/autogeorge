@@ -129,7 +129,7 @@ export class RssFetchService {
 
       // Try to fetch a small sample
       const fetchResult = await this.fetchRss(source);
-      const sampleItems = fetchResult.isSuccess() ? fetchResult.value.items.slice(0, 3) : [];
+      const sampleItems = fetchResult.isSuccess() ? fetchResult.value.fetchedItems.slice(0, 3) : [];
 
       return Result.success({
         isReachable: true,

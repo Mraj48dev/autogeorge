@@ -130,8 +130,8 @@ export class Article extends AggregateRoot<ArticleId> {
    */
   static determineInitialStatus(automationSettings?: ArticleAutomationSettings): ArticleStatus {
     if (!automationSettings) {
-      // Default behavior: generated status (manual workflow)
-      return ArticleStatus.generated();
+      // Default behavior: no automation settings = manual image generation workflow
+      return ArticleStatus.generatedImageDraft();
     }
 
     const { enableFeaturedImage, enableAutoPublish } = automationSettings;
@@ -145,8 +145,9 @@ export class Article extends AggregateRoot<ArticleId> {
       // Workflow: ready_to_publish → published
       return ArticleStatus.readyToPublish();
     } else {
-      // Neither flag enabled: generated is the FINAL state (manual workflow)
-      return ArticleStatus.generated();
+      // Neither flag enabled: manual image generation workflow
+      // Workflow: generated_image_draft → generated_with_image → generated (manual final state)
+      return ArticleStatus.generatedImageDraft();
     }
   }
 

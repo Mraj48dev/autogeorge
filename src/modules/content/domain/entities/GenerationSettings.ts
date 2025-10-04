@@ -8,7 +8,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
   private _userId: string;
   private _titlePrompt: string;      // Parte editabile per il titolo
   private _contentPrompt: string;    // Parte editabile per il contenuto
-  private _imagePrompt: string;      // Parte editabile per le indicazioni immagine
   private _defaultModel: string;
   private _defaultTemperature: number;
   private _defaultMaxTokens: number;
@@ -22,7 +21,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     userId: string,
     titlePrompt: string,
     contentPrompt: string,
-    imagePrompt: string,
     defaultModel: string = 'sonar-pro',
     defaultTemperature: number = 0.7,
     defaultMaxTokens: number = 16000,
@@ -37,7 +35,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     this._userId = userId;
     this._titlePrompt = titlePrompt;
     this._contentPrompt = contentPrompt;
-    this._imagePrompt = imagePrompt;
     this._defaultModel = defaultModel;
     this._defaultTemperature = defaultTemperature;
     this._defaultMaxTokens = defaultMaxTokens;
@@ -53,7 +50,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     userId: string,
     titlePrompt?: string,
     contentPrompt?: string,
-    imagePrompt?: string
   ): Result<GenerationSettings> {
     try {
       const defaultTitlePrompt = titlePrompt ||
@@ -62,8 +58,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
       const defaultContentPrompt = contentPrompt ||
         'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.';
 
-      const defaultImagePrompt = imagePrompt ||
-        'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
 
       const id = GenerationSettingsId.generate();
 
@@ -71,8 +65,7 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
         id,
         userId,
         defaultTitlePrompt,
-        defaultContentPrompt,
-        defaultImagePrompt
+        defaultContentPrompt
       );
 
       return Result.success(settings);
@@ -94,9 +87,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     return this._contentPrompt;
   }
 
-  get imagePrompt(): string {
-    return this._imagePrompt;
-  }
 
   get defaultModel(): string {
     return this._defaultModel;
@@ -127,10 +117,9 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
   }
 
   // Update methods
-  updatePrompts(titlePrompt: string, contentPrompt: string, imagePrompt: string): void {
+  updatePrompts(titlePrompt: string, contentPrompt: string): void {
     this._titlePrompt = titlePrompt;
     this._contentPrompt = contentPrompt;
-    this._imagePrompt = imagePrompt;
     this.markAsUpdated();
     this.validateInvariants();
   }
@@ -167,8 +156,7 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
     return {
       prompts: {
         titlePrompt: this._titlePrompt,
-        contentPrompt: this._contentPrompt,
-        imagePrompt: this._imagePrompt
+        contentPrompt: this._contentPrompt
       },
       modelSettings: {
         model: this._defaultModel,
@@ -197,9 +185,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
       throw new Error('Content prompt must be at least 10 characters long');
     }
 
-    if (!this._imagePrompt || this._imagePrompt.length < 10) {
-      throw new Error('Image prompt must be at least 10 characters long');
-    }
 
     if (this._defaultTemperature < 0 || this._defaultTemperature > 2) {
       throw new Error('Temperature must be between 0 and 2');
@@ -216,7 +201,6 @@ export class GenerationSettings extends AggregateRoot<GenerationSettingsId> {
       userId: this._userId,
       titlePrompt: this._titlePrompt,
       contentPrompt: this._contentPrompt,
-      imagePrompt: this._imagePrompt,
       defaultModel: this._defaultModel,
       defaultTemperature: this._defaultTemperature,
       defaultMaxTokens: this._defaultMaxTokens,
@@ -258,7 +242,6 @@ export interface GenerationConfig {
   prompts: {
     titlePrompt: string;
     contentPrompt: string;
-    imagePrompt: string;
   };
   modelSettings: {
     model: string;

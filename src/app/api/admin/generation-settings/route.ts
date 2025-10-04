@@ -22,8 +22,7 @@ export async function GET(request: NextRequest) {
         data: {
           userId,
           titlePrompt: 'che sia accattivante, SEO-friendly, chiaro e informativo.',
-          contentPrompt: 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
-          imagePrompt: 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.'
+          contentPrompt: 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.'
         }
       });
     }
@@ -47,8 +46,7 @@ export async function GET(request: NextRequest) {
       settings: {
         prompts: {
           titlePrompt: settings.titlePrompt,
-          contentPrompt: settings.contentPrompt,
-          imagePrompt: settings.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.'
+          contentPrompt: settings.contentPrompt
         },
         modelSettings: {
           model: settings.defaultModel,
@@ -98,8 +96,6 @@ export async function PUT(request: NextRequest) {
       update: {
         titlePrompt: body.titlePrompt || undefined,
         contentPrompt: body.contentPrompt || undefined,
-        imagePrompt: body.imagePrompt || undefined,
-        imageStyle: body.imageStyle || undefined,
         defaultModel: body.modelSettings?.model || undefined,
         defaultTemperature: body.modelSettings?.temperature || undefined,
         defaultMaxTokens: body.modelSettings?.maxTokens || undefined,
@@ -112,8 +108,6 @@ export async function PUT(request: NextRequest) {
         userId,
         titlePrompt: body.titlePrompt || 'che sia accattivante, SEO-friendly, chiaro e informativo.',
         contentPrompt: body.contentPrompt || 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
-        imagePrompt: body.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.',
-        imageStyle: body.imageStyle || 'natural',
         defaultModel: body.modelSettings?.model || 'gpt-4',
         defaultTemperature: body.modelSettings?.temperature || 0.7,
         defaultMaxTokens: body.modelSettings?.maxTokens || 20000,
@@ -130,10 +124,8 @@ export async function PUT(request: NextRequest) {
         settings: {
           prompts: {
             titlePrompt: settings.titlePrompt,
-            contentPrompt: settings.contentPrompt,
-            imagePrompt: settings.imagePrompt
+            contentPrompt: settings.contentPrompt
           },
-          imageStyle: settings.imageStyle,
           modelSettings: {
             model: settings.defaultModel,
             temperature: settings.defaultTemperature,

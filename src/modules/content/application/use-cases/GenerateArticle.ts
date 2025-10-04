@@ -122,12 +122,6 @@ export class GenerateArticle extends CommandUseCase<
               meta_description: generatedContent.rawResponse.metaDescription || ""
             },
             contenuto: generatedContent.content,
-            immagine_principale: {
-              comando_ai: generatedContent.rawResponse.imagePrompt || "",
-              alt_text: "",
-              caption: "",
-              nome_file: ""
-            },
             link_interni: [],
             perplexity_raw: generatedContent.rawResponse // ✅ Store for JSON viewer
           }
@@ -247,22 +241,19 @@ export class GenerateArticle extends CommandUseCase<
   private buildStructuredPrompt(input: GenerateArticleInput): string {
     const titlePrompt = input.titlePrompt || 'Genera un titolo accattivante e SEO-friendly';
     const articlePrompt = input.articlePrompt || 'Scrivi un articolo ben strutturato e informatico';
-    const imagePrompt = input.imagePrompt || 'Genera un\'\'immagine in evidenza per questo articolo';
     const sourceContent = input.sourceContent || 'contenuto della fonte';
 
     return `Genera un articolo completo basato su: ${sourceContent}
 
 Indicazioni per il titolo: ${titlePrompt}
 Indicazioni per il contenuto: ${articlePrompt}
-Indicazioni per l'immagine: ${imagePrompt}
 
 Rispondi SOLO con questo JSON puro (senza markdown code blocks o altri formati):
 {
   "title": "[titolo ottimizzato SEO]",
   "content": "[articolo completo in HTML semantico con tag <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>]",
   "metaDescription": "[meta description 150-160 caratteri]",
-  "seoTags": ["tag1", "tag2", "tag3"],
-  "imagePrompt": "[prompt dettagliato per generare immagine in evidenza]"
+  "seoTags": ["tag1", "tag2", "tag3"]
 }`;
   }
 
@@ -358,8 +349,6 @@ export interface GenerateArticleInput {
   /** Specific prompt for article content generation */
   articlePrompt?: string;
 
-  /** Specific prompt for image generation */
-  imagePrompt?: string;
 
   // AI Generation parameters
   /** Temperature for randomness (0.0-2.0) */

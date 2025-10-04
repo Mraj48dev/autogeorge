@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
     // Use custom prompts if provided, otherwise use default settings
     const titlePrompt = body.customPrompts?.titlePrompt || settings.titlePrompt;
     const contentPrompt = body.customPrompts?.contentPrompt || settings.contentPrompt;
-    const imagePrompt = body.customPrompts?.imagePrompt || settings.imagePrompt;
 
     // Get API key from environment variables (only Perplexity needed)
     const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
@@ -119,8 +118,7 @@ export async function POST(request: NextRequest) {
       feedItemUrl: feedItem.url,
       customPrompts: {
         titlePrompt,
-        contentPrompt,
-        imagePrompt
+        contentPrompt
       },
       settings: {
         model: body.settings?.model || settings.defaultModel,
@@ -198,7 +196,6 @@ export async function POST(request: NextRequest) {
         aiPrompts: {
           titlePrompt,
           contentPrompt,
-          imagePrompt,
           feedItemContent: feedItem.content,
           feedItemTitle: feedItem.title,
           feedItemUrl: feedItem.url,

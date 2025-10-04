@@ -6,9 +6,7 @@ interface GenerationConfig {
   prompts: {
     titlePrompt: string;
     contentPrompt: string;
-    imagePrompt: string;
   };
-  imageStyle: string;
   modelSettings: {
     model: string;
     temperature: number;
@@ -79,10 +77,8 @@ export default function SettingsPage() {
         const completeSettings = {
           prompts: {
             titlePrompt: settings.prompts?.titlePrompt || 'che sia accattivante, SEO-friendly, chiaro e informativo.',
-            contentPrompt: settings.prompts?.contentPrompt || 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
-            imagePrompt: settings.prompts?.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.'
+            contentPrompt: settings.prompts?.contentPrompt || 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.'
           },
-          imageStyle: settings.imageStyle || 'natural',
           modelSettings: {
             model: settings.modelSettings?.model || 'sonar-pro',
             temperature: settings.modelSettings?.temperature ?? 0.7,
@@ -171,8 +167,6 @@ export default function SettingsPage() {
         body: JSON.stringify({
           titlePrompt: generationSettings.prompts.titlePrompt,
           contentPrompt: generationSettings.prompts.contentPrompt,
-          imagePrompt: generationSettings.prompts.imagePrompt,
-          imageStyle: generationSettings.imageStyle,
           modelSettings: generationSettings.modelSettings,
           languageSettings: generationSettings.languageSettings
         })
@@ -711,49 +705,6 @@ export default function SettingsPage() {
             </div>
 
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Indicazioni per l'Immagine in Evidenza
-              </label>
-              <div className="mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-700">
-                  <strong>Prefisso fisso:</strong> "Crea il prompt per generare l'immagine in evidenza dell'articolo..."
-                </p>
-              </div>
-              <textarea
-                rows={3}
-                value={generationSettings.prompts?.imagePrompt || ''}
-                onChange={(e) => updateGenerationSettings({
-                  prompts: { ...generationSettings.prompts, imagePrompt: e.target.value }
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="in stile cartoon. Individua un dettaglio rappresentativo dell'idea base dell'articolo. Non usare scritte né simboli."
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Specifica lo stile e le caratteristiche dell'immagine da generare (questa parte si aggiunge dopo il prefisso fisso)
-              </p>
-            </div>
-
-            {/* Image Style */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                🎨 Stile Immagine (DALL-E)
-              </label>
-              <select
-                value={generationSettings.imageStyle || 'natural'}
-                onChange={(e) => setGenerationSettings({
-                  ...generationSettings,
-                  imageStyle: e.target.value
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="natural">🌿 Natural - Più naturale, meno saturato</option>
-                <option value="vivid">✨ Vivid - Colori drammatici, iperrealistici</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Controlla lo stile visivo delle immagini generate da DALL-E
-              </p>
-            </div>
           </div>
         </div>
 

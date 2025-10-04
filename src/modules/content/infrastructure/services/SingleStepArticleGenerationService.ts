@@ -12,7 +12,6 @@ export interface SingleStepGenerationRequest {
     titlePrompt?: string;
     contentPrompt?: string;
     seoPrompt?: string;
-    imagePrompt?: string;
   };
   settings?: {
     model?: string;
@@ -181,14 +180,12 @@ export class SingleStepArticleGenerationService {
   private buildUnifiedPrompt(request: SingleStepGenerationRequest): string {
     const {
       titlePrompt = 'che sia accattivante, SEO-friendly, chiaro e informativo.',
-      contentPrompt = 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
-      imagePrompt = 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.'
+      contentPrompt = 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.'
     } = request.customPrompts;
 
     // Costruisci i prompt completi concatenando la parte fissa con quella personalizzabile
     const fullTitlePrompt = `Crea il titolo per l'articolo generato a partire dalla source ${titlePrompt}`;
     const fullContentPrompt = `Crea un articolo generato a partire dalla source ${contentPrompt}`;
-    const fullImagePrompt = `Crea il prompt per generare l'immagine in evidenza dell'articolo ${imagePrompt}`;
 
     const settings = request.settings || {};
 
@@ -201,7 +198,6 @@ ${request.feedItemUrl ? `URL originale: ${request.feedItemUrl}` : ''}
 ISTRUZIONI:
 1. TITOLO: ${fullTitlePrompt}
 2. CONTENUTO: ${fullContentPrompt}
-3. IMMAGINE: ${fullImagePrompt}
 
 Genera SOLO JSON VALIDO con questa struttura:
 
@@ -211,8 +207,7 @@ Genera SOLO JSON VALIDO con questa struttura:
   "content": "",
   "slug": "",
   "meta_description": "",
-  "tags": [],
-  "ai_image_prompt": ""
+  "tags": []
 }
 \`\`\`
 
@@ -222,7 +217,6 @@ ISTRUZIONI:
 - slug: SEO-friendly
 - meta_description: 150-160 caratteri
 - tags: 5-8 tag pertinenti
-- ai_image_prompt: ${fullImagePrompt}
 
 STILE: ${settings.language || 'italiano'}, ${settings.tone || 'professionale'}
 REQUISITO: Rispondi SOLO con JSON valido, niente altro

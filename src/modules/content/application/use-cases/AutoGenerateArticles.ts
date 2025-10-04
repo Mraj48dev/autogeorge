@@ -319,13 +319,9 @@ export class AutoGenerateArticles implements UseCase<AutoGenerateRequest, AutoGe
     const contentPrompt = settings.contentPrompt ||
       'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.';
 
-    const imagePrompt = settings.imagePrompt ||
-      'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
-
     // 🔧 FIX: Build complete prompts with fixed prefixes + custom suffixes
     const fullTitlePrompt = `Crea il titolo per l'articolo generato a partire dalla source ${titlePrompt}`;
     const fullContentPrompt = `Crea un articolo generato a partire dalla source ${contentPrompt}`;
-    const fullImagePrompt = `Crea il prompt per generare l'immagine in evidenza dell'articolo ${imagePrompt}`;
 
     return `
 FONTE DA ELABORARE:
@@ -336,7 +332,6 @@ ${feedItem.url ? `URL originale: ${feedItem.url}` : ''}
 ISTRUZIONI:
 1. TITOLO: ${fullTitlePrompt}
 2. CONTENUTO: ${fullContentPrompt}
-3. IMMAGINE: ${fullImagePrompt}
 
 Genera un articolo professionale completo in formato JSON con questa struttura AVANZATA e dettagliata:
 
@@ -359,12 +354,6 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
     },
 
     "content": "",
-
-    "featured_image": {
-      "ai_prompt": "",
-      "alt_text": "",
-      "filename": ""
-    },
 
     "internal_seo": {
       "internal_links": [

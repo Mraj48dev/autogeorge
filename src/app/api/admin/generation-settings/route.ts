@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
           titlePrompt: 'che sia accattivante, SEO-friendly, chiaro e informativo.',
           contentPrompt: 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
           imagePrompt: 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.',  // ✅ AGGIUNTO: Default imagePrompt
-          imageStyle: 'natural'  // ✅ AGGIUNTO: Default imageStyle
+          imageStyle: 'natural',  // ✅ AGGIUNTO: Default imageStyle
+          imageModel: 'dall-e-3',  // ✅ AGGIUNTO: Default imageModel
+          imageSize: '1792x1024'   // ✅ AGGIUNTO: Default imageSize
         }
       });
     }
@@ -63,7 +65,9 @@ export async function GET(request: NextRequest) {
           targetAudience: settings.defaultTargetAudience
         },
         imageSettings: {
-          style: settings.imageStyle  // ✅ AGGIUNTO: Includi imageStyle nella risposta
+          defaultModel: settings.imageModel,  // ✅ AGGIUNTO: Includi imageModel nella risposta
+          defaultStyle: settings.imageStyle,  // ✅ AGGIUNTO: Includi imageStyle nella risposta
+          defaultSize: settings.imageSize     // ✅ AGGIUNTO: Includi imageSize nella risposta
         }
       },
       wordpressSites,
@@ -103,7 +107,9 @@ export async function PUT(request: NextRequest) {
         titlePrompt: body.titlePrompt || undefined,
         contentPrompt: body.contentPrompt || undefined,
         imagePrompt: body.imagePrompt || undefined,  // ✅ AGGIUNTO: Salva imagePrompt
-        imageStyle: body.imageSettings?.style || undefined,  // ✅ AGGIUNTO: Salva imageStyle
+        imageStyle: body.imageSettings?.defaultStyle || undefined,  // ✅ AGGIUNTO: Salva imageStyle
+        imageModel: body.imageSettings?.defaultModel || undefined,  // ✅ AGGIUNTO: Salva imageModel
+        imageSize: body.imageSettings?.defaultSize || undefined,    // ✅ AGGIUNTO: Salva imageSize
         defaultModel: body.modelSettings?.model || undefined,
         defaultTemperature: body.modelSettings?.temperature || undefined,
         defaultMaxTokens: body.modelSettings?.maxTokens || undefined,
@@ -117,7 +123,9 @@ export async function PUT(request: NextRequest) {
         titlePrompt: body.titlePrompt || 'che sia accattivante, SEO-friendly, chiaro e informativo.',
         contentPrompt: body.contentPrompt || 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
         imagePrompt: body.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.',  // ✅ AGGIUNTO: Crea con imagePrompt
-        imageStyle: body.imageSettings?.style || 'natural',  // ✅ AGGIUNTO: Crea con imageStyle
+        imageStyle: body.imageSettings?.defaultStyle || 'natural',  // ✅ AGGIUNTO: Crea con imageStyle
+        imageModel: body.imageSettings?.defaultModel || 'dall-e-3',  // ✅ AGGIUNTO: Crea con imageModel
+        imageSize: body.imageSettings?.defaultSize || '1792x1024',   // ✅ AGGIUNTO: Crea con imageSize
         defaultModel: body.modelSettings?.model || 'gpt-4',
         defaultTemperature: body.modelSettings?.temperature || 0.7,
         defaultMaxTokens: body.modelSettings?.maxTokens || 20000,
@@ -149,7 +157,9 @@ export async function PUT(request: NextRequest) {
             targetAudience: settings.defaultTargetAudience
           },
           imageSettings: {
-            style: settings.imageStyle  // ✅ AGGIUNTO: Includi imageStyle nella risposta PUT
+            defaultModel: settings.imageModel,  // ✅ AGGIUNTO: Includi imageModel nella risposta PUT
+            defaultStyle: settings.imageStyle,  // ✅ AGGIUNTO: Includi imageStyle nella risposta PUT
+            defaultSize: settings.imageSize     // ✅ AGGIUNTO: Includi imageSize nella risposta PUT
           }
         }
       }

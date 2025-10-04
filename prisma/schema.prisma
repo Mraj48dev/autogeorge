@@ -207,6 +207,8 @@ model GenerationSettings {
   contentPrompt         String
   imagePrompt           String   @default("in stile cartoon. Individua un dettaglio rappresentativo dell'idea base dell'articolo. Non usare scritte né simboli.")
   imageStyle            String   @default("natural")
+  imageModel            String   @default("dall-e-3")
+  imageSize             String   @default("1792x1024")
   defaultModel          String   @default("sonar-pro")
   defaultTemperature    Float    @default(0.7)
   defaultMaxTokens      Int      @default(20000)

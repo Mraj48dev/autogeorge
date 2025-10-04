@@ -722,35 +722,43 @@ export class WordPressPublishingService implements PublishingService {
    * @returns Array of category IDs
    */
   private async resolveCategoryIds(categories: (string | number)[], target: PublicationTarget): Promise<number[]> {
+    console.log(`🔍 [WordPress-CategoryResolve] Starting resolution for categories:`, categories);
     const categoryIds: number[] = [];
 
     for (const category of categories) {
+      console.log(`🔍 [WordPress-CategoryResolve] Processing category:`, { category, type: typeof category });
+
       // If it's already a number, use it directly
       if (typeof category === 'number') {
         categoryIds.push(category);
+        console.log(`✅ [WordPress-CategoryResolve] Category ${category} is already ID`);
         continue;
       }
 
       // If it's a string that looks like a number, convert it
       if (typeof category === 'string' && /^\d+$/.test(category)) {
-        categoryIds.push(parseInt(category, 10));
+        const id = parseInt(category, 10);
+        categoryIds.push(id);
+        console.log(`✅ [WordPress-CategoryResolve] Converted "${category}" to ID ${id}`);
         continue;
       }
 
       // It's a category name, need to resolve to ID
       try {
+        console.log(`🔍 [WordPress-CategoryResolve] Resolving name "${category}" to ID...`);
         const categoryId = await this.getCategoryIdByName(category, target);
         if (categoryId) {
           categoryIds.push(categoryId);
-          console.log(`📂 [WordPress] Resolved category "${category}" to ID ${categoryId}`);
+          console.log(`✅ [WordPress-CategoryResolve] Resolved category "${category}" to ID ${categoryId}`);
         } else {
-          console.warn(`⚠️ [WordPress] Category "${category}" not found, skipping`);
+          console.warn(`⚠️ [WordPress-CategoryResolve] Category "${category}" not found, skipping`);
         }
       } catch (error) {
-        console.error(`❌ [WordPress] Failed to resolve category "${category}":`, error);
+        console.error(`❌ [WordPress-CategoryResolve] Failed to resolve category "${category}":`, error);
       }
     }
 
+    console.log(`🔍 [WordPress-CategoryResolve] Final category IDs:`, categoryIds);
     return categoryIds;
   }
 
@@ -765,6 +773,8 @@ export class WordPressPublishingService implements PublishingService {
       const auth = Buffer.from(`${target.configuration.username}:${target.configuration.password}`).toString('base64');
       const url = `${target.siteUrl}/wp-json/wp/v2/categories?search=${encodeURIComponent(categoryName)}&per_page=10`;
 
+      console.log(`🔍 [WordPress-CategoryAPI] Calling:`, { url, categoryName });
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -772,12 +782,22 @@ export class WordPressPublishingService implements PublishingService {
         }
       });
 
+      console.log(`📡 [WordPress-CategoryAPI] Response:`, {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
       if (!response.ok) {
-        console.error(`❌ [WordPress] Categories API error: ${response.status}`);
+        console.error(`❌ [WordPress-CategoryAPI] Categories API error: ${response.status} ${response.statusText}`);
         return null;
       }
 
       const categories = await response.json();
+      console.log(`📊 [WordPress-CategoryAPI] Found categories:`, categories.map((cat: any) => ({
+        id: cat.id,
+        name: cat.name
+      })));
 
       // Look for exact match first
       const exactMatch = categories.find((cat: any) =>
@@ -785,6 +805,7 @@ export class WordPressPublishingService implements PublishingService {
       );
 
       if (exactMatch) {
+        console.log(`✅ [WordPress-CategoryAPI] Exact match found:`, { id: exactMatch.id, name: exactMatch.name });
         return exactMatch.id;
       }
 
@@ -793,10 +814,16 @@ export class WordPressPublishingService implements PublishingService {
         cat.name.toLowerCase().includes(categoryName.toLowerCase())
       );
 
-      return partialMatch ? partialMatch.id : null;
+      if (partialMatch) {
+        console.log(`✅ [WordPress-CategoryAPI] Partial match found:`, { id: partialMatch.id, name: partialMatch.name });
+        return partialMatch.id;
+      }
+
+      console.log(`❌ [WordPress-CategoryAPI] No match found for "${categoryName}"`);
+      return null;
 
     } catch (error) {
-      console.error(`❌ [WordPress] Error fetching categories:`, error);
+      console.error(`❌ [WordPress-CategoryAPI] Error fetching categories:`, error);
       return null;
     }
   }

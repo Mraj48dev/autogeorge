@@ -333,80 +333,20 @@ ISTRUZIONI:
 1. TITOLO: ${fullTitlePrompt}
 2. CONTENUTO: ${fullContentPrompt}
 
-Genera un articolo professionale completo in formato JSON con questa struttura AVANZATA e dettagliata:
+✅ FORMATO SEMPLIFICATO - Genera un articolo professionale completo in formato JSON con questa struttura ESSENZIALE:
 
 \`\`\`json
 {
-  "article": {
-    "basic_data": {
-      "title": "",
-      "slug": "",
-      "category": "",
-      "tags": [],
-      "status": "draft"
-    },
-
-    "seo_critical": {
-      "focus_keyword": "",
-      "seo_title": "",
-      "meta_description": "",
-      "h1_tag": ""
-    },
-
-    "content": "",
-
-    "internal_seo": {
-      "internal_links": [
-        {
-          "anchor_text": "",
-          "url": ""
-        }
-      ],
-      "related_keywords": [],
-      "entities": []
-    },
-
-    "user_engagement": {
-      "reading_time": "",
-      "cta": "",
-      "key_takeaways": []
-    }
-  }
+  "title": "",
+  "content": ""
 }
 \`\`\`
 
-📋 ISTRUZIONI DETTAGLIATE PER OGNI SEZIONE:
+📋 ISTRUZIONI SEMPLICI:
 
-🎯 BASIC_DATA:
-- title: Applica le istruzioni del titolo fornite sopra
-- slug: Genera uno slug SEO-friendly (es: "danimarca-droni-vertice-ue")
-- category: Determina la categoria più appropriata (es: "Politica", "Cronaca", "Sport")
-- tags: Array di 5-8 tag pertinenti e specifici
-- status: "draft" (predefinito)
+🎯 **TITLE**: Applica le istruzioni del titolo fornite sopra.
 
-🚀 SEO_CRITICAL:
-- focus_keyword: La parola chiave principale per SEO (2-3 parole max)
-- seo_title: Titolo ottimizzato per SERP (50-60 caratteri)
-- meta_description: Descrizione meta ottimizzata (150-160 caratteri)
-- h1_tag: Tag H1 principale dell'articolo
-
-📝 CONTENT:
-- content: Applica le istruzioni del contenuto fornite sopra - Articolo completo in HTML ben strutturato con almeno 3-4 sezioni H2, paragrafi, liste, formattazione semantica.
-
-🖼️ FEATURED_IMAGE:
-- ai_prompt: Applica le istruzioni per l'immagine fornite sopra
-- alt_text: Testo alternativo SEO-friendly per l'immagine
-- filename: Nome file suggerito (es: "articolo-immagine-2025.jpg")
-
-🔗 INTERNAL_SEO:
-- internal_links: Suggerimenti per 3-5 link interni con anchor text
-- related_keywords: 10-15 parole chiave correlate per SEO semantico
-- entities: Entità principali menzionate nell'articolo
-
-👥 USER_ENGAGEMENT:
-- reading_time: Tempo di lettura stimato (es: "5 minuti")
-- cta: Call-to-action finale per coinvolgere il lettore
-- key_takeaways: 3-5 punti chiave dell'articolo
+📝 **CONTENT**: Applica le istruzioni del contenuto fornite sopra. Crea un articolo completo in HTML ben strutturato con almeno 3-4 sezioni H2, paragrafi chiari, liste quando appropriato, e formattazione semantica (strong, em, ecc.).
 
 
 ⚙️ PARAMETRI DI STILE:
@@ -414,20 +354,13 @@ Genera un articolo professionale completo in formato JSON con questa struttura A
 - Tono: ${settings.tone || 'professionale'}
 - Stile: ${settings.style || 'giornalistico'}
 - Target audience: ${settings.targetAudience || 'generale'}
-- Lunghezza target: 4000 parole
 
-🔧 REQUISITI TECNICI AVANZATI:
+🔧 REQUISITI ESSENZIALI:
 - Rispondi SOLO con il JSON valido, senza testo aggiuntivo
-- Tutti i contenuti HTML devono essere completi e ben formattati
-- Usa tag HTML semantici: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>
-- Include div con classi CSS: <div class="intro">, <div class="section">, <div class="conclusion">
-- Ogni sezione deve essere autonoma e ben strutturata
-- Ottimizza per SEO on-page e user experience
-- Includi microdati e structured data quando possibile
-- Focus keyword deve apparire nel titolo, H1, meta description e nel primo paragrafo
-- Related keywords devono essere distribuite naturalmente nel testo
+- Usa HTML semantico: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <li>
+- Articolo di almeno 1500 parole, ben strutturato
 
-🎯 GENERA L'ARTICOLO AVANZATO ORA:`;
+🎯 GENERA L'ARTICOLO ORA:`;
   }
 
 }

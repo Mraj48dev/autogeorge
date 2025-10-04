@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
         data: {
           userId,
           titlePrompt: 'che sia accattivante, SEO-friendly, chiaro e informativo.',
-          contentPrompt: 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.'
+          contentPrompt: 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
+          imagePrompt: 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.',  // ✅ AGGIUNTO: Default imagePrompt
+          imageStyle: 'natural'  // ✅ AGGIUNTO: Default imageStyle
         }
       });
     }

@@ -462,7 +462,7 @@ export class PerplexityService implements AiService {
   private getSystemPrompt(type: string): string {
     switch (type) {
       case 'article_generation':
-        return `You are an expert content writer and researcher. Generate well-researched, engaging articles with proper structure, citations, and SEO optimization. Always provide accurate, up-to-date information with proper sourcing.`;
+        return `You are an expert content writer and researcher. You MUST respond with ONLY valid JSON in the exact format requested by the user. Never add any explanatory text before or after the JSON. Generate well-researched, engaging articles with proper HTML structure. Always provide accurate, up-to-date information.`;
 
       case 'seo_generation':
         return `You are an SEO expert. Generate optimized metadata that improves search engine rankings while maintaining readability and user engagement.`;

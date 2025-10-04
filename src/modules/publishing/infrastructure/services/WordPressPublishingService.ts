@@ -50,7 +50,7 @@ export class WordPressPublishingService implements PublishingService {
       }
 
       // Prepare WordPress post data
-      const postData = this.preparePostData(content, metadata, config);
+      const postData = await this.preparePostData(content, metadata, config, target);
 
       // Create the post
       const response = await this.makeWordPressRequest(
@@ -158,7 +158,7 @@ export class WordPressPublishingService implements PublishingService {
         });
       }
 
-      const postData = this.preparePostData(content, metadata, config);
+      const postData = await this.preparePostData(content, metadata, config, target);
 
       const response = await this.makeWordPressRequest(
         target.getSiteUrl(),
@@ -485,11 +485,12 @@ export class WordPressPublishingService implements PublishingService {
   /**
    * Prepares WordPress post data
    */
-  private preparePostData(
+  private async preparePostData(
     content: PublishingContent,
     metadata: PublicationMetadata,
-    config: WordPressConfig
-  ): any {
+    config: WordPressConfig,
+    target: PublicationTarget
+  ): Promise<any> {
     const postData: any = {
       title: metadata.title || content.title,
       content: content.content,

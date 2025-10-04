@@ -211,6 +211,16 @@ export async function GET(request: NextRequest) {
           include: { source: true }
         });
 
+        // 🔍 DEBUG: Log detailed source information
+        console.log(`🔍 [AutoPublish-DEBUG] Article ${article.id} source details:`, {
+          hasSource: !!articleWithSource?.source,
+          sourceId: articleWithSource?.source?.id,
+          sourceName: articleWithSource?.source?.name,
+          sourceDefaultCategory: articleWithSource?.source?.defaultCategory,
+          wordpressSiteDefaultCategory: wordpressSite.defaultCategory,
+          articleSourceId: article.sourceId
+        });
+
         // ✅ ENHANCED: Determine categories with proper priority (Source > WordPress Site > None)
         const articleCategories = determineArticleCategories(
           articleWithSource?.source?.defaultCategory,

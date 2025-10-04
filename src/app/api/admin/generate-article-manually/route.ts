@@ -281,6 +281,15 @@ export async function POST(request: NextRequest) {
           slug: articleSlug
         };
 
+        // 🔍 DEBUG: Log detailed source information
+        console.log(`🔍 [GenerateArticle-DEBUG] FeedItem ${body.feedItemId} source details:`, {
+          hasSource: !!feedItem.source,
+          sourceId: feedItem.source?.id,
+          sourceName: feedItem.source?.name,
+          sourceDefaultCategory: feedItem.source?.defaultCategory,
+          wordpressSiteDefaultCategory: wordpressSite.defaultCategory
+        });
+
         // ✅ ENHANCED: Determine categories with proper priority (Source > WordPress Site > None)
         const articleCategories = determineArticleCategories(
           feedItem.source?.defaultCategory,

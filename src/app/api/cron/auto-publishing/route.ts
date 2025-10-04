@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { determineArticleCategories, getCategorySource } from '@/shared/utils/categoryUtils';
 
 /**
  * GET /api/cron/auto-publish
@@ -204,12 +205,30 @@ export async function GET(request: NextRequest) {
           console.log(`ℹ️ [AutoPublish] No featured image found for article: ${article.id}`);
         }
 
+        // ✅ ENHANCED: Get source information for category determination
+        const articleWithSource = await prisma.article.findUnique({
+          where: { id: article.id },
+          include: { source: true }
+        });
+
+        // ✅ ENHANCED: Determine categories with proper priority (Source > WordPress Site > None)
+        const articleCategories = determineArticleCategories(
+          articleWithSource?.source?.defaultCategory,
+          wordpressSite.defaultCategory
+        );
+        const categorySource = getCategorySource(
+          articleWithSource?.source?.defaultCategory,
+          wordpressSite.defaultCategory
+        );
+
+        console.log(`📂 [AutoPublish-CategoryLogic] Article ${article.id} using categories from ${categorySource}:`, articleCategories);
+
         // ✅ STEP 2: Prepare content and metadata with featured image info
         const content = {
           title: article.title,
           content: article.content,
           excerpt: article.title.substring(0, 150),
-          categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
+          categories: articleCategories,
           tags: [],
           featuredImage: featuredImageUrl || null,
           customFields: {}

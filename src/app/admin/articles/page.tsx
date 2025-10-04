@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ManualImageGenerationModal from '@/components/admin/ManualImageGenerationModal';
+import { determineArticleCategories, getCategorySource } from '@/shared/utils/categoryUtils';
 
 interface ArticleSummary {
   id: string;
@@ -500,6 +501,18 @@ export default function ArticlesBySourcePage() {
         }
       }
 
+      // ✅ ENHANCED: Determine categories with proper priority (Source > WordPress Site > None)
+      const articleCategories = determineArticleCategories(
+        articleDetail?.article.source?.defaultCategory,
+        site.defaultCategory
+      );
+      const categorySource = getCategorySource(
+        articleDetail?.article.source?.defaultCategory,
+        site.defaultCategory
+      );
+
+      console.log(`📂 [ManualPublish-CategoryLogic] Article ${article.id} using categories from ${categorySource}:`, articleCategories);
+
       // Prepare publication data with featured image
       const publicationData = {
         articleId: article.id,
@@ -520,7 +533,7 @@ export default function ArticlesBySourcePage() {
           slug: articleDetail?.article.slug
         },
         metadata: {
-          categories: site.defaultCategory ? [site.defaultCategory] : [],
+          categories: articleCategories,
           tags: [], // ✅ SIMPLIFIED: Empty tags to avoid WordPress errors
           author: site.defaultAuthor,
           slug: articleDetail?.article.slug,

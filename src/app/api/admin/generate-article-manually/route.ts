@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
 import { SingleStepArticleGenerationService } from '@/modules/content/infrastructure/services/SingleStepArticleGenerationService';
 import { Article } from '@/modules/content/domain/entities/Article';
+import { determineArticleCategories, getCategorySource } from '@/shared/utils/categoryUtils';
 
 /**
  * POST /api/admin/generate-article-manually
@@ -280,11 +281,23 @@ export async function POST(request: NextRequest) {
           slug: articleSlug
         };
 
+        // ✅ ENHANCED: Determine categories with proper priority (Source > WordPress Site > None)
+        const articleCategories = determineArticleCategories(
+          feedItem.source?.defaultCategory,
+          wordpressSite.defaultCategory
+        );
+        const categorySource = getCategorySource(
+          feedItem.source?.defaultCategory,
+          wordpressSite.defaultCategory
+        );
+
+        console.log(`📂 [CategoryLogic] Using categories from ${categorySource}:`, articleCategories);
+
         // ✅ SIMPLIFIED: Minimal metadata for WordPress with Yoast SEO
         const publishingMetadata = {
           title: articleTitle,
           excerpt: articleMetaDescription || articleTitle.substring(0, 150), // ✅ YOAST: Consistent with content
-          categories: wordpressSite.defaultCategory ? [wordpressSite.defaultCategory] : [],
+          categories: articleCategories,
           tags: [], // ✅ EMPTY TAGS TO AVOID ERRORS
           author: wordpressSite.defaultAuthor,
           slug: articleSlug,

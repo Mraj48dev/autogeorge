@@ -28,7 +28,8 @@ export async function GET(
             id: true,
             name: true,
             type: true,
-            url: true
+            url: true,
+            defaultCategory: true
           }
         }
       }
@@ -112,7 +113,8 @@ export async function GET(
           id: article.source.id,
           name: article.source.name,
           type: article.source.type,
-          url: article.source.url
+          url: article.source.url,
+          defaultCategory: article.source.defaultCategory
         } : null,
         feedItem: feedItem ? {
           id: feedItem.id,

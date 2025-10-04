@@ -26,6 +26,23 @@ interface Source {
   };
 }
 
+interface WordPressSite {
+  id: string;
+  name: string;
+  url: string;
+  username: string;
+  password: string;
+}
+
+interface WordPressCategory {
+  id: number;
+  name: string;
+  slug: string;
+  parent: number;
+  count: number;
+  description: string;
+}
+
 interface CreateSourceRequest {
   name: string;
   type: string;
@@ -61,9 +78,24 @@ export default function SourcesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // WordPress data states
+  const [wordpressSites, setWordpressSites] = useState<WordPressSite[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+  const [wpCategories, setWpCategories] = useState<WordPressCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
   useEffect(() => {
     fetchSources();
+    loadWordPressSites();
   }, []);
+
+  // Load WordPress categories when site is selected
+  useEffect(() => {
+    if (selectedSiteId) {
+      loadWordPressCategories(selectedSiteId);
+    }
+  }, [selectedSiteId]);
 
   const fetchSources = async () => {
     try {
@@ -79,6 +111,50 @@ export default function SourcesPage() {
       console.error('Error fetching sources:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWordPressSites = async () => {
+    try {
+      const response = await fetch('/api/admin/sites');
+      if (response.ok) {
+        const data = await response.json();
+        const sitesData = data.sites || [];
+        setWordpressSites(sitesData);
+
+        // Auto-select the first site if there's only one
+        if (sitesData.length === 1) {
+          setSelectedSiteId(sitesData[0].id);
+        } else if (sitesData.length > 0) {
+          // Select the first active site
+          const activeSite = sitesData.find((site: WordPressSite) => site.id) || sitesData[0];
+          setSelectedSiteId(activeSite.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading WordPress sites:', error);
+    }
+  };
+
+  const loadWordPressCategories = async (siteId: string) => {
+    setCategoriesLoading(true);
+    setCategoriesError(null);
+
+    try {
+      const response = await fetch(`/api/admin/wordpress/${siteId}/categories`);
+      if (response.ok) {
+        const data = await response.json();
+        setWpCategories(data.categories || []);
+      } else {
+        const errorData = await response.json();
+        setCategoriesError(errorData.error || 'Errore nel caricamento categorie');
+        console.error('Error loading WordPress categories:', errorData);
+      }
+    } catch (error) {
+      setCategoriesError('Errore di connessione nel caricamento categorie');
+      console.error('Error loading WordPress categories:', error);
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -162,6 +238,8 @@ export default function SourcesPage() {
       },
       testConnection: true,
     });
+    // Reset categories error when opening modal
+    setCategoriesError(null);
     setShowModal(true);
   };
 
@@ -180,6 +258,8 @@ export default function SourcesPage() {
       },
       testConnection: false,
     });
+    // Reset categories error when opening modal
+    setCategoriesError(null);
     setShowModal(true);
   };
 
@@ -677,15 +757,91 @@ export default function SourcesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Categoria di pubblicazione (opzionale)
                   </label>
-                  <input
-                    type="text"
-                    value={formData.defaultCategory || ''}
-                    onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="es. Tecnologia, Sport, Attualità..."
-                  />
+
+                  {/* WordPress Site Selector */}
+                  {wordpressSites.length > 1 && (
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Sito WordPress
+                      </label>
+                      <select
+                        value={selectedSiteId}
+                        onChange={(e) => setSelectedSiteId(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Seleziona sito...</option>
+                        {wordpressSites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {site.name} ({site.url})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Categories Dropdown */}
+                  {selectedSiteId ? (
+                    <div>
+                      {categoriesLoading ? (
+                        <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                          <span className="text-gray-500 text-sm">Caricamento categorie...</span>
+                        </div>
+                      ) : categoriesError ? (
+                        <div>
+                          <div className="w-full px-3 py-2 border border-red-300 rounded-lg bg-red-50 text-red-700 text-sm mb-2">
+                            ⚠️ {categoriesError}
+                          </div>
+                          <input
+                            type="text"
+                            value={formData.defaultCategory || ''}
+                            onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Inserisci manualmente (es. Tecnologia, Sport...)"
+                          />
+                        </div>
+                      ) : (
+                        <select
+                          value={formData.defaultCategory || ''}
+                          onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Nessuna categoria specifica</option>
+                          {wpCategories.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.name} ({category.count} articoli)
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {wordpressSites.length === 0 ? (
+                        <div className="w-full px-3 py-2 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-700 text-sm mb-2">
+                          ⚠️ Nessun sito WordPress configurato. Configura prima un sito nelle impostazioni.
+                        </div>
+                      ) : (
+                        <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm">
+                          Seleziona un sito WordPress per vedere le categorie disponibili
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        value={formData.defaultCategory || ''}
+                        onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
+                        placeholder="Oppure inserisci manualmente (es. Tecnologia, Sport...)"
+                      />
+                    </div>
+                  )}
+
                   <p className="text-xs text-gray-500 mt-1">
-                    Specifica la categoria predefinita in cui verranno pubblicati gli articoli generati da questa fonte
+                    {selectedSiteId && !categoriesError ? (
+                      <>Seleziona una categoria esistente dal tuo sito WordPress o lascia vuoto per nessuna categoria</>
+                    ) : (
+                      <>Specifica la categoria predefinita in cui verranno pubblicati gli articoli generati da questa fonte</>
+                    )}
                   </p>
                 </div>
 

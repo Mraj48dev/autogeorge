@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import ManualImageGenerationModal from '@/components/admin/ManualImageGenerationModal';
 
 interface ArticleSummary {
   id: string;
@@ -119,6 +120,8 @@ export default function ArticlesBySourcePage() {
     dateTo: ''
   });
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
+  const [showManualImageModal, setShowManualImageModal] = useState(false);
+  const [selectedArticleForImage, setSelectedArticleForImage] = useState<ArticleSummary | null>(null);
 
   useEffect(() => {
     loadArticlesBySource();
@@ -581,6 +584,10 @@ export default function ArticlesBySourcePage() {
     switch (status) {
       case 'generated':
         return 'bg-green-100 text-green-800';
+      case 'generated_image_draft':
+        return 'bg-orange-100 text-orange-800';
+      case 'generated_with_image':
+        return 'bg-green-100 text-green-800';
       case 'published':
         return 'bg-blue-100 text-blue-800';
       case 'ready_to_publish':
@@ -598,6 +605,10 @@ export default function ArticlesBySourcePage() {
     switch (status) {
       case 'generated':
         return 'Generato';
+      case 'generated_image_draft':
+        return 'In attesa immagine';
+      case 'generated_with_image':
+        return 'Generato con immagine';
       case 'published':
         return 'Pubblicato';
       case 'ready_to_publish':
@@ -609,6 +620,31 @@ export default function ArticlesBySourcePage() {
       default:
         return status;
     }
+  };
+
+  const handleOpenManualImageModal = (article: ArticleSummary) => {
+    setSelectedArticleForImage(article);
+    setShowManualImageModal(true);
+  };
+
+  const handleCloseManualImageModal = () => {
+    setShowManualImageModal(false);
+    setSelectedArticleForImage(null);
+  };
+
+  const handleImageGenerated = (imageData: any) => {
+    console.log('🎨 [Frontend] Manual image generated:', imageData);
+
+    // Refresh the articles list to show updated status
+    loadArticlesBySource();
+
+    // Close the modal
+    handleCloseManualImageModal();
+  };
+
+  const shouldShowManualImageButton = (article: ArticleSummary) => {
+    // Show manual image generation button only for articles in generated_image_draft status
+    return article.status === 'generated_image_draft';
   };
 
   if (loading) {
@@ -766,6 +802,8 @@ export default function ArticlesBySourcePage() {
               <option value="">Tutti gli stati</option>
               <option value="draft">Bozza</option>
               <option value="generated">Generato</option>
+              <option value="generated_image_draft">In attesa immagine</option>
+              <option value="generated_with_image">Generato con immagine</option>
               <option value="ready_to_publish">Pronto per pubblicazione</option>
               <option value="published">Pubblicato</option>
               <option value="failed">Fallito</option>
@@ -903,6 +941,19 @@ export default function ArticlesBySourcePage() {
                             </div>
 
                             <div className="flex items-center space-x-2 ml-4">
+                              {/* Manual Image Generation Button */}
+                              {shouldShowManualImageButton(article) && (
+                                <button
+                                  onClick={() => handleOpenManualImageModal(article)}
+                                  className="p-2 text-purple-400 hover:text-purple-600 transition-colors"
+                                  title="Genera immagine manualmente"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => handleViewArticle(article)}
                                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -1411,6 +1462,21 @@ export default function ArticlesBySourcePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Manual Image Generation Modal */}
+      {selectedArticleForImage && (
+        <ManualImageGenerationModal
+          isOpen={showManualImageModal}
+          onClose={handleCloseManualImageModal}
+          article={{
+            id: selectedArticleForImage.id,
+            title: selectedArticleForImage.title,
+            content: selectedArticleForImage.excerpt,
+            status: selectedArticleForImage.status
+          }}
+          onImageGenerated={handleImageGenerated}
+        />
       )}
     </div>
   );

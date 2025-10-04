@@ -37,7 +37,7 @@ export default function ManualImageGenerationModal({
   onImageGenerated
 }: ManualImageGenerationModalProps) {
   const [step, setStep] = useState<'prompt' | 'generating' | 'preview'>('prompt');
-  const [prompt, setPrompt] = useState('Crea un\\'immagine in evidenza per un articolo dal titolo "{title}" che parli di: {article}');
+  const [prompt, setPrompt] = useState("Crea un'immagine in evidenza per un articolo dal titolo \"{title}\" che parli di: {article}");
   const [style, setStyle] = useState<'natural' | 'vivid'>('natural');
   const [size, setSize] = useState<'1792x1024' | '1024x1024' | '1024x1792'>('1792x1024');
   const [generating, setGenerating] = useState(false);
@@ -165,7 +165,7 @@ export default function ManualImageGenerationModal({
 
   const resetModal = () => {
     setStep('prompt');
-    setPrompt('Crea un\\'immagine in evidenza per un articolo dal titolo "{title}" che parli di: {article}');
+    setPrompt("Crea un'immagine in evidenza per un articolo dal titolo \"{title}\" che parli di: {article}");
     setStyle('natural');
     setSize('1792x1024');
     setGenerating(false);
@@ -232,7 +232,7 @@ export default function ManualImageGenerationModal({
                   onChange={(e) => setPrompt(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={4}
-                  placeholder='Esempio: Crea un\\'immagine in evidenza per un articolo dal titolo "{title}" che parli di: {article}'
+                  placeholder="Esempio: Crea un'immagine in evidenza per un articolo dal titolo \"{title}\" che parli di: {article}"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Usa i placeholder per personalizzare il prompt in base all'articolo

@@ -6,6 +6,7 @@ interface GenerationConfig {
   prompts: {
     titlePrompt: string;
     contentPrompt: string;
+    imagePrompt: string;
   };
   modelSettings: {
     model: string;
@@ -17,6 +18,11 @@ interface GenerationConfig {
     tone: string;
     style: string;
     targetAudience: string;
+  };
+  imageSettings: {
+    defaultModel: string;
+    defaultStyle: string;
+    defaultSize: string;
   };
 }
 
@@ -77,7 +83,8 @@ export default function SettingsPage() {
         const completeSettings = {
           prompts: {
             titlePrompt: settings.prompts?.titlePrompt || 'che sia accattivante, SEO-friendly, chiaro e informativo.',
-            contentPrompt: settings.prompts?.contentPrompt || 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.'
+            contentPrompt: settings.prompts?.contentPrompt || 'che sia completo, ben strutturato, originale e coinvolgente. Usa paragrafi chiari, evita strutture troppo rigide e non inserire i nomi "introduzione" e "conclusione". Tra un h2 e l\'altro inserisci almeno 500 parole.',
+            imagePrompt: settings.prompts?.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.'
           },
           modelSettings: {
             model: settings.modelSettings?.model || 'sonar-pro',
@@ -89,6 +96,11 @@ export default function SettingsPage() {
             tone: settings.languageSettings?.tone || 'professionale',
             style: settings.languageSettings?.style || 'giornalistico',
             targetAudience: settings.languageSettings?.targetAudience || 'generale'
+          },
+          imageSettings: {
+            defaultModel: settings.imageSettings?.defaultModel || 'dall-e-3',
+            defaultStyle: settings.imageSettings?.defaultStyle || 'natural',
+            defaultSize: settings.imageSettings?.defaultSize || '1792x1024'
           }
         };
         setGenerationSettings(completeSettings);
@@ -167,8 +179,10 @@ export default function SettingsPage() {
         body: JSON.stringify({
           titlePrompt: generationSettings.prompts.titlePrompt,
           contentPrompt: generationSettings.prompts.contentPrompt,
+          imagePrompt: generationSettings.prompts.imagePrompt,
           modelSettings: generationSettings.modelSettings,
-          languageSettings: generationSettings.languageSettings
+          languageSettings: generationSettings.languageSettings,
+          imageSettings: generationSettings.imageSettings
         })
       });
 
@@ -237,7 +251,8 @@ export default function SettingsPage() {
       ...updates,
       prompts: { ...prev!.prompts, ...updates.prompts },
       modelSettings: { ...prev!.modelSettings, ...updates.modelSettings },
-      languageSettings: { ...prev!.languageSettings, ...updates.languageSettings }
+      languageSettings: { ...prev!.languageSettings, ...updates.languageSettings },
+      imageSettings: { ...prev!.imageSettings, ...updates.imageSettings }
     }));
   };
 
@@ -704,6 +719,119 @@ export default function SettingsPage() {
               </p>
             </div>
 
+          </div>
+        </div>
+
+        {/* Image Generation Settings */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            🎨 Configurazione Generazione Immagini
+          </h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Configura le impostazioni predefinite per la generazione automatica delle immagini in evidenza.
+          </p>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prompt per Immagine Predefinito
+              </label>
+              <div className="mb-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">📋 Placeholder Disponibili</h4>
+                <div className="space-y-1 text-sm text-blue-800">
+                  <div><code className="bg-blue-100 px-2 py-1 rounded text-xs">{'{title}'}</code> - Titolo dell'articolo</div>
+                  <div><code className="bg-blue-100 px-2 py-1 rounded text-xs">{'{article}'}</code> - Contenuto dell'articolo (troncato a 500 caratteri)</div>
+                </div>
+              </div>
+              <textarea
+                rows={3}
+                value={generationSettings.prompts?.imagePrompt || ''}
+                onChange={(e) => updateGenerationSettings({
+                  prompts: { ...generationSettings.prompts, imagePrompt: e.target.value }
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="in stile cartoon. Individua un dettaglio rappresentativo dell'idea base dell'articolo. Non usare scritte né simboli."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Questo prompt verrà usato di default per la generazione automatica delle immagini. Puoi usare i placeholder per personalizzare.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🤖 Modello AI Predefinito
+                </label>
+                <select
+                  value={generationSettings.imageSettings?.defaultModel || 'dall-e-3'}
+                  onChange={(e) => updateGenerationSettings({
+                    imageSettings: { ...generationSettings.imageSettings, defaultModel: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="dall-e-3">DALL-E 3</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Altri modelli verranno aggiunti in futuro
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🎨 Stile Predefinito
+                </label>
+                <select
+                  value={generationSettings.imageSettings?.defaultStyle || 'natural'}
+                  onChange={(e) => updateGenerationSettings({
+                    imageSettings: { ...generationSettings.imageSettings, defaultStyle: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="natural">Natural - Più naturale, meno saturato</option>
+                  <option value="vivid">Vivid - Colori drammatici, iperrealistici</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  📐 Dimensioni Predefinite
+                </label>
+                <select
+                  value={generationSettings.imageSettings?.defaultSize || '1792x1024'}
+                  onChange={(e) => updateGenerationSettings({
+                    imageSettings: { ...generationSettings.imageSettings, defaultSize: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="1792x1024">1792×1024 (Landscape)</option>
+                  <option value="1024x1024">1024×1024 (Square)</option>
+                  <option value="1024x1792">1024×1792 (Portrait)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Preview Image Settings */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">📊 Anteprima Configurazione Immagini</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Modello:</span>
+                  <div className="font-medium">{generationSettings.imageSettings?.defaultModel || 'dall-e-3'}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Stile:</span>
+                  <div className="font-medium">{generationSettings.imageSettings?.defaultStyle || 'natural'}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Dimensioni:</span>
+                  <div className="font-medium">{generationSettings.imageSettings?.defaultSize || '1792x1024'}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Prompt:</span>
+                  <div className="font-medium text-xs">{generationSettings.prompts?.imagePrompt?.substring(0, 30) || 'Non configurato'}...</div>
+                </div>
+              </div>
+            </div>
 
           </div>
         </div>

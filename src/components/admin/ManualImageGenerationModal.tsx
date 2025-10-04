@@ -40,6 +40,7 @@ export default function ManualImageGenerationModal({
   const [prompt, setPrompt] = useState(`Crea un'immagine in evidenza per un articolo dal titolo "{title}" che parli di: {article}`);
   const [style, setStyle] = useState<'natural' | 'vivid'>('natural');
   const [size, setSize] = useState<'1792x1024' | '1024x1024' | '1024x1792'>('1792x1024');
+  const [model, setModel] = useState<'dall-e-3'>('dall-e-3');
   const [generating, setGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImageData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +67,7 @@ export default function ManualImageGenerationModal({
           prompt: prompt.trim(),
           style,
           size,
-          model: 'dall-e-3'
+          model
         })
       });
 
@@ -168,6 +169,7 @@ export default function ManualImageGenerationModal({
     setPrompt(`Crea un'immagine in evidenza per un articolo dal titolo "{title}" che parli di: {article}`);
     setStyle('natural');
     setSize('1792x1024');
+    setModel('dall-e-3');
     setGenerating(false);
     setGeneratedImage(null);
     setError(null);
@@ -225,7 +227,7 @@ export default function ManualImageGenerationModal({
               {/* Prompt Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🖼️ Prompt per DALL-E 3
+                  🖼️ Prompt per l'AI
                 </label>
                 <textarea
                   value={prompt}
@@ -239,8 +241,8 @@ export default function ManualImageGenerationModal({
                 </p>
               </div>
 
-              {/* Style Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Configuration Options */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     🎨 Stile
@@ -268,6 +270,22 @@ export default function ManualImageGenerationModal({
                     <option value="1024x1024">1024×1024 (Square)</option>
                     <option value="1024x1792">1024×1792 (Portrait)</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🤖 Modello AI
+                  </label>
+                  <select
+                    value={model}
+                    onChange={(e) => setModel(e.target.value as 'dall-e-3')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="dall-e-3">DALL-E 3</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Altri modelli verranno aggiunti in futuro
+                  </p>
                 </div>
               </div>
 
@@ -313,7 +331,7 @@ export default function ManualImageGenerationModal({
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               <h3 className="mt-4 text-lg font-medium text-gray-900">Generazione in corso...</h3>
               <p className="text-gray-600 mt-2">
-                DALL-E 3 sta creando la tua immagine personalizzata
+                L'AI sta creando la tua immagine personalizzata
               </p>
               <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
                 <p className="text-sm text-yellow-800">

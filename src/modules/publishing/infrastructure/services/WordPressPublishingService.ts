@@ -508,16 +508,13 @@ export class WordPressPublishingService implements PublishingService {
       postData.excerpt = content.excerpt || metadata.excerpt;
     }
 
-    // ✅ ENHANCED: Handle categories (can be IDs or names)
+    // ✅ ENHANCED: Handle categories (convert names to IDs if needed)
     if (metadata.categories && metadata.categories.length > 0) {
-      postData.categories = metadata.categories;
-    }
-
-    // ✅ NEW: Handle category by name (WordPress will handle creation/lookup)
-    if (metadata.category_name && !metadata.categories) {
-      // Note: For category names, WordPress typically requires a separate API call
-      // or you can try to include it as a string in categories array
-      postData.categories_names = [metadata.category_name];
+      // Check if categories are names (strings) or IDs (numbers)
+      const categoryIds = await this.resolveCategoryIds(metadata.categories, target);
+      if (categoryIds.length > 0) {
+        postData.categories = categoryIds;
+      }
     }
 
     // ✅ FIXED: Handle tags properly for WordPress REST API
@@ -580,6 +577,7 @@ export class WordPressPublishingService implements PublishingService {
       tags: postData.tags,
       categoriesCount: postData.categories?.length || 0,
       categories: postData.categories,
+      originalCategories: metadata.categories,
       hasSlug: !!postData.slug,
       hasExcerpt: !!postData.excerpt,
       // ✅ YOAST SEO: Debug info for meta fields
@@ -714,5 +712,91 @@ export class WordPressPublishingService implements PublishingService {
    */
   private isRetryableHttpError(status: number): boolean {
     return status >= 500 || status === 429 || status === 408;
+  }
+
+  /**
+   * Resolves category names to IDs using WordPress REST API
+   * @param categories Array of category names or IDs
+   * @param target Publication target with WordPress credentials
+   * @returns Array of category IDs
+   */
+  private async resolveCategoryIds(categories: (string | number)[], target: PublicationTarget): Promise<number[]> {
+    const categoryIds: number[] = [];
+
+    for (const category of categories) {
+      // If it's already a number, use it directly
+      if (typeof category === 'number') {
+        categoryIds.push(category);
+        continue;
+      }
+
+      // If it's a string that looks like a number, convert it
+      if (typeof category === 'string' && /^\d+$/.test(category)) {
+        categoryIds.push(parseInt(category, 10));
+        continue;
+      }
+
+      // It's a category name, need to resolve to ID
+      try {
+        const categoryId = await this.getCategoryIdByName(category, target);
+        if (categoryId) {
+          categoryIds.push(categoryId);
+          console.log(`📂 [WordPress] Resolved category "${category}" to ID ${categoryId}`);
+        } else {
+          console.warn(`⚠️ [WordPress] Category "${category}" not found, skipping`);
+        }
+      } catch (error) {
+        console.error(`❌ [WordPress] Failed to resolve category "${category}":`, error);
+      }
+    }
+
+    return categoryIds;
+  }
+
+  /**
+   * Gets category ID by name from WordPress API
+   * @param categoryName The category name to search for
+   * @param target Publication target with WordPress credentials
+   * @returns Category ID or null if not found
+   */
+  private async getCategoryIdByName(categoryName: string, target: PublicationTarget): Promise<number | null> {
+    try {
+      const auth = Buffer.from(`${target.configuration.username}:${target.configuration.password}`).toString('base64');
+      const url = `${target.siteUrl}/wp-json/wp/v2/categories?search=${encodeURIComponent(categoryName)}&per_page=10`;
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`❌ [WordPress] Categories API error: ${response.status}`);
+        return null;
+      }
+
+      const categories = await response.json();
+
+      // Look for exact match first
+      const exactMatch = categories.find((cat: any) =>
+        cat.name.toLowerCase() === categoryName.toLowerCase()
+      );
+
+      if (exactMatch) {
+        return exactMatch.id;
+      }
+
+      // If no exact match, try case-insensitive partial match
+      const partialMatch = categories.find((cat: any) =>
+        cat.name.toLowerCase().includes(categoryName.toLowerCase())
+      );
+
+      return partialMatch ? partialMatch.id : null;
+
+    } catch (error) {
+      console.error(`❌ [WordPress] Error fetching categories:`, error);
+      return null;
+    }
   }
 }

@@ -537,6 +537,14 @@ export class PerplexityService implements AiService {
       results.push({ method: 'regex-extraction', extractedContent: jsonMatch[0] });
     }
 
+    // ✅ Method 4: Try to repair truncated JSON
+    if (jsonMatch) {
+      const repairedJson = this.repairTruncatedJson(jsonMatch[0]);
+      if (repairedJson !== jsonMatch[0]) {
+        results.push({ method: 'truncated-repair', extractedContent: repairedJson });
+      }
+    }
+
     // Method 4: Look for quoted JSON strings (when AI wraps JSON in quotes)
     const quotedJsonRegex = /"\{[\s\S]*\}"/;
     const quotedMatch = content.match(quotedJsonRegex);
@@ -672,11 +680,20 @@ export class PerplexityService implements AiService {
   private smartTextExtraction(content: string): { title: string; content: string; rawResponse?: any } {
     console.log('🔄 [PerplexityService] Starting smart text extraction...');
 
-    // Try to find title patterns in the text
+    // ✅ IMPROVED: Try to find title patterns, especially in truncated JSON
     const titlePatterns = [
-      /(?:^|\n)#+\s*(.+?)(?:\n|$)/,  // Markdown headers
+      // Pattern for JSON structure with title field
+      /"title":\s*"([^"]+)"/i,
+      // Pattern for seo_title in JSON
+      /"seo_title":\s*"([^"]+)"/i,
+      // Pattern for h1_tag in JSON
+      /"h1_tag":\s*"([^"]+)"/i,
+      // Markdown headers
+      /(?:^|\n)#+\s*(.+?)(?:\n|$)/,
+      // Title: format
       /(?:^|\n)Title[:\s]*(.+?)(?:\n|$)/i,
-      /(?:^|\n)(.{10,100})(?:\n\n|\n[^\n]{100})/,  // First substantial line
+      // First substantial line (fallback)
+      /(?:^|\n)(.{10,100})(?:\n\n|\n[^\n]{100})/,
     ];
 
     let extractedTitle = '';
@@ -690,9 +707,34 @@ export class PerplexityService implements AiService {
       }
     }
 
-    // Extract content (everything after title, or full content if no title found)
+    // ✅ IMPROVED: Extract content from JSON or text
     let extractedContent = content;
-    if (extractedTitle) {
+
+    // Try to extract content from JSON structure first
+    const contentPatterns = [
+      /"content":\s*"([^"]+(?:\\.[^"]*)*)"/, // JSON content field with escaped quotes
+      /"body":\s*"([^"]+(?:\\.[^"]*)*)"/, // JSON body field
+      /"text":\s*"([^"]+(?:\\.[^"]*)*)"/, // JSON text field
+    ];
+
+    let foundContentInJson = false;
+    for (const pattern of contentPatterns) {
+      const match = content.match(pattern);
+      if (match && match[1] && match[1].length > 100) {
+        // Unescape JSON content
+        extractedContent = match[1]
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, '\n')
+          .replace(/\\t/g, '\t')
+          .replace(/\\\\/g, '\\');
+        foundContentInJson = true;
+        console.log('✅ [PerplexityService] Found content in JSON structure');
+        break;
+      }
+    }
+
+    // Fallback: extract content after title if not found in JSON
+    if (!foundContentInJson && extractedTitle) {
       const titleIndex = content.indexOf(extractedTitle);
       if (titleIndex >= 0) {
         extractedContent = content.substring(titleIndex + extractedTitle.length).trim();
@@ -870,5 +912,87 @@ export class PerplexityService implements AiService {
         isAvailable: true,
       },
     ];
+  }
+
+  /**
+   * ✅ NEW: Attempts to repair truncated JSON by closing open structures
+   */
+  private repairTruncatedJson(jsonString: string): string {
+    try {
+      // First try to parse as-is
+      JSON.parse(jsonString);
+      return jsonString; // Already valid
+    } catch (error) {
+      console.log('🔧 [PerplexityService] Attempting to repair truncated JSON...');
+
+      let repaired = jsonString.trim();
+
+      // Strategy 1: Count braces and close missing ones
+      let openBraces = 0;
+      let openBrackets = 0;
+      let inString = false;
+      let escaped = false;
+
+      for (let i = 0; i < repaired.length; i++) {
+        const char = repaired[i];
+
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+
+        if (char === '\\') {
+          escaped = true;
+          continue;
+        }
+
+        if (char === '"') {
+          inString = !inString;
+          continue;
+        }
+
+        if (!inString) {
+          if (char === '{') openBraces++;
+          else if (char === '}') openBraces--;
+          else if (char === '[') openBrackets++;
+          else if (char === ']') openBrackets--;
+        }
+      }
+
+      // Strategy 2: Remove incomplete last field if it looks cut off
+      const incompleteFieldRegex = /,\s*"[^"]*":\s*"[^"]*$/;
+      if (incompleteFieldRegex.test(repaired)) {
+        repaired = repaired.replace(incompleteFieldRegex, '');
+        console.log('🔧 [PerplexityService] Removed incomplete field at end');
+      }
+
+      // Strategy 3: Close open string if we end in the middle of one
+      if (inString) {
+        repaired += '"';
+        console.log('🔧 [PerplexityService] Closed open string');
+      }
+
+      // Strategy 4: Close missing braces and brackets
+      for (let i = 0; i < openBrackets; i++) {
+        repaired += ']';
+      }
+      for (let i = 0; i < openBraces; i++) {
+        repaired += '}';
+      }
+
+      if (openBraces > 0 || openBrackets > 0) {
+        console.log(`🔧 [PerplexityService] Closed ${openBraces} braces and ${openBrackets} brackets`);
+      }
+
+      // Strategy 5: Try to validate the repaired JSON
+      try {
+        JSON.parse(repaired);
+        console.log('✅ [PerplexityService] JSON repair successful');
+        return repaired;
+      } catch (e) {
+        console.log('❌ [PerplexityService] JSON repair failed, returning original');
+        return jsonString;
+      }
+    }
   }
 }

@@ -821,18 +821,31 @@ export default function SourcesPage() {
                           />
                         </div>
                       ) : (
-                        <select
-                          value={formData.defaultCategory || ''}
-                          onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">Nessuna categoria specifica</option>
-                          {wpCategories.map((category) => (
-                            <option key={category.id} value={category.name}>
-                              {category.name} ({category.count} articoli)
-                            </option>
-                          ))}
-                        </select>
+                        <div>
+                          <select
+                            value={formData.defaultCategory || ''}
+                            onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">Nessuna categoria specifica</option>
+                            {wpCategories.map((category) => (
+                              <option key={category.id} value={category.name}>
+                                {category.name} ({category.count} articoli)
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* Campo di sola lettura per mostrare la categoria selezionata */}
+                          {formData.defaultCategory && (
+                            <input
+                              type="text"
+                              value={formData.defaultCategory}
+                              readOnly
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 mt-2 cursor-not-allowed"
+                              placeholder="Categoria selezionata"
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -846,19 +859,12 @@ export default function SourcesPage() {
                           Seleziona un sito WordPress per vedere le categorie disponibili
                         </div>
                       )}
-                      <input
-                        type="text"
-                        value={formData.defaultCategory || ''}
-                        onChange={(e) => setFormData({ ...formData, defaultCategory: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
-                        placeholder="Oppure inserisci manualmente (es. Tecnologia, Sport...)"
-                      />
                     </div>
                   )}
 
                   <p className="text-xs text-gray-500 mt-1">
                     {selectedSiteId && !categoriesError ? (
-                      <>Seleziona una categoria esistente dal tuo sito WordPress o lascia vuoto per nessuna categoria</>
+                      <>Seleziona una categoria esistente dal tuo sito WordPress</>
                     ) : (
                       <>Specifica la categoria predefinita in cui verranno pubblicati gli articoli generati da questa fonte</>
                     )}

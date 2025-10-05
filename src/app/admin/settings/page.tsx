@@ -562,27 +562,32 @@ export default function SettingsPage() {
                           />
                         </div>
                       ) : (
-                        <select
-                          value={wordPressSettings.defaultCategory || ''}
-                          onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">Nessuna categoria specifica</option>
-                          {wpCategories.map((category) => (
-                            <option key={category.id} value={category.name}>
-                              {category.name} ({category.count} articoli)
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                        <div>
+                          <select
+                            value={wordPressSettings.defaultCategory || ''}
+                            onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">Nessuna categoria specifica</option>
+                            {wpCategories.map((category) => (
+                              <option key={category.id} value={category.name}>
+                                {category.name} ({category.count} articoli)
+                              </option>
+                            ))}
+                          </select>
 
-                      <input
-                        type="text"
-                        value={wordPressSettings.defaultCategory || ''}
-                        onChange={(e) => updateWordPressSettings({ defaultCategory: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
-                        placeholder="Oppure inserisci manualmente (es. Tecnologia, Sport...)"
-                      />
+                          {/* Campo di sola lettura per mostrare la categoria selezionata */}
+                          {wordPressSettings.defaultCategory && (
+                            <input
+                              type="text"
+                              value={wordPressSettings.defaultCategory}
+                              readOnly
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 mt-2 cursor-not-allowed"
+                              placeholder="Categoria selezionata"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <input
@@ -596,7 +601,7 @@ export default function SettingsPage() {
 
                   <p className="text-xs text-gray-500 mt-1">
                     {wordPressSettings?.id && !categoriesError ? (
-                      <>Seleziona una categoria esistente dal tuo sito WordPress o inserisci manualmente una nuova categoria</>
+                      <>Seleziona una categoria esistente dal tuo sito WordPress</>
                     ) : (
                       <>Categoria di default per gli articoli pubblicati da tutte le sources che non hanno una categoria specifica</>
                     )}

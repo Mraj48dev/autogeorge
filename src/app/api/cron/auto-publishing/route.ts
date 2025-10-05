@@ -249,6 +249,7 @@ export async function GET(request: NextRequest) {
           sourceId: article.sourceId || '',
           generatedAt: new Date(),
           autoPublished: true,
+          categories: articleCategories, // ✅ FIX: Aggiungi categorie nel metadata!
           ...(featuredMediaId && { featuredMediaId }),
           ...(featuredImageUrl && { featuredImageUrl })
         };

@@ -510,12 +510,23 @@ export class WordPressPublishingService implements PublishingService {
     }
 
     // ✅ ENHANCED: Handle categories (convert names to IDs if needed)
+    console.log(`🔍 [WordPress-CategoryFlow] Metadata categories check:`, {
+      hasCategories: !!metadata.categories,
+      categories: metadata.categories,
+      categoriesLength: metadata.categories?.length || 0
+    });
+
     if (metadata.categories && metadata.categories.length > 0) {
       // Check if categories are names (strings) or IDs (numbers)
       const categoryIds = await this.resolveCategoryIds(metadata.categories, target);
       if (categoryIds.length > 0) {
         postData.categories = categoryIds;
+        console.log(`✅ [WordPress-CategoryFlow] Categories assigned to postData:`, categoryIds);
+      } else {
+        console.log(`⚠️ [WordPress-CategoryFlow] No category IDs resolved, skipping`);
       }
+    } else {
+      console.log(`❌ [WordPress-CategoryFlow] No categories in metadata or empty array`);
     }
 
     // ✅ FIXED: Handle tags properly for WordPress REST API

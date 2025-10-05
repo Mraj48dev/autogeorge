@@ -24,6 +24,11 @@ interface GenerationConfig {
     defaultStyle: string;
     defaultSize: string;
   };
+  imageGenerationMode: string;
+  enablePromptEngineering: boolean;
+  promptTemplate: string;
+  allowPromptEditing: boolean;
+  promptEngineeringModel: string;
 }
 
 interface WordPressSiteConfig {
@@ -123,7 +128,12 @@ export default function SettingsPage() {
             defaultModel: settings.imageSettings?.defaultModel || 'dall-e-3',
             defaultStyle: settings.imageSettings?.defaultStyle || 'natural',
             defaultSize: settings.imageSettings?.defaultSize || '1792x1024'
-          }
+          },
+          imageGenerationMode: settings.imageGenerationMode || 'manual',
+          enablePromptEngineering: settings.enablePromptEngineering ?? false,
+          promptTemplate: settings.promptTemplate || 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}',
+          allowPromptEditing: settings.allowPromptEditing ?? true,
+          promptEngineeringModel: settings.promptEngineeringModel || 'gpt-4'
         };
         setGenerationSettings(completeSettings);
       } else {
@@ -204,7 +214,12 @@ export default function SettingsPage() {
           imagePrompt: generationSettings.prompts.imagePrompt,
           modelSettings: generationSettings.modelSettings,
           languageSettings: generationSettings.languageSettings,
-          imageSettings: generationSettings.imageSettings
+          imageSettings: generationSettings.imageSettings,
+          imageGenerationMode: generationSettings.imageGenerationMode,
+          enablePromptEngineering: generationSettings.enablePromptEngineering,
+          promptTemplate: generationSettings.promptTemplate,
+          allowPromptEditing: generationSettings.allowPromptEditing,
+          promptEngineeringModel: generationSettings.promptEngineeringModel
         })
       });
 
@@ -839,6 +854,96 @@ export default function SettingsPage() {
           </p>
 
           <div className="space-y-6">
+            {/* Image Generation Mode Selection */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-900 mb-3">🚀 Modalità Generazione Immagini</h4>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="mode_manual"
+                    name="imageGenerationMode"
+                    value="manual"
+                    checked={generationSettings.imageGenerationMode === 'manual'}
+                    onChange={(e) => updateGenerationSettings({ imageGenerationMode: e.target.value })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <label htmlFor="mode_manual" className="ml-3">
+                    <div className="text-sm font-medium text-blue-900">✏️ Modalità Manuale</div>
+                    <div className="text-xs text-blue-700">Il prompt viene scritto manualmente dall'utente con i placeholder {'{title}'} e {'{article}'}</div>
+                  </label>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="mode_full_auto"
+                    name="imageGenerationMode"
+                    value="full_auto"
+                    checked={generationSettings.imageGenerationMode === 'full_auto'}
+                    onChange={(e) => updateGenerationSettings({ imageGenerationMode: e.target.value })}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                  />
+                  <label htmlFor="mode_full_auto" className="ml-3">
+                    <div className="text-sm font-medium text-green-900">🤖 Modalità Completamente Automatica</div>
+                    <div className="text-xs text-green-700">ChatGPT genera automaticamente il prompt ottimizzato per DALL-E analizzando l'articolo</div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Prompt Engineering Settings - only show when full_auto mode is selected */}
+            {generationSettings.imageGenerationMode === 'full_auto' && (
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <h4 className="text-sm font-medium text-green-900 mb-3">🧠 Configurazione Prompt Engineering</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-green-800 mb-2">
+                      Template per ChatGPT
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={generationSettings.promptTemplate}
+                      onChange={(e) => updateGenerationSettings({ promptTemplate: e.target.value })}
+                      className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                      placeholder="Template per istruire ChatGPT su come generare prompt ottimizzati..."
+                    />
+                    <p className="text-xs text-green-600 mt-1">
+                      Questo template viene inviato a ChatGPT per generare prompt ottimizzati. Usa {'{title}'} e {'{article}'} come placeholder.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-green-800 mb-2">
+                        Modello ChatGPT
+                      </label>
+                      <select
+                        value={generationSettings.promptEngineeringModel}
+                        onChange={(e) => updateGenerationSettings({ promptEngineeringModel: e.target.value })}
+                        className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                      >
+                        <option value="gpt-4">GPT-4 (Consigliato - Più preciso)</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Più veloce ed economico)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="enablePromptEngineering"
+                        checked={generationSettings.enablePromptEngineering}
+                        onChange={(e) => updateGenerationSettings({ enablePromptEngineering: e.target.checked })}
+                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="enablePromptEngineering" className="ml-2 text-sm text-green-800">
+                        Abilita prompt engineering automatico
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Prompt per Immagine Predefinito
@@ -920,7 +1025,13 @@ export default function SettingsPage() {
             {/* Preview Image Settings */}
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="text-sm font-medium text-gray-900 mb-3">📊 Anteprima Configurazione Immagini</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Modalità:</span>
+                  <div className="font-medium">
+                    {generationSettings.imageGenerationMode === 'manual' ? '✏️ Manuale' : '🤖 Auto'}
+                  </div>
+                </div>
                 <div>
                   <span className="text-gray-600">Modello:</span>
                   <div className="font-medium">{generationSettings.imageSettings?.defaultModel || 'dall-e-3'}</div>
@@ -935,9 +1046,29 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <span className="text-gray-600">Prompt:</span>
-                  <div className="font-medium text-xs">{generationSettings.prompts?.imagePrompt?.substring(0, 30) || 'Non configurato'}...</div>
+                  <div className="font-medium text-xs">
+                    {generationSettings.imageGenerationMode === 'full_auto' ?
+                      'Generato da AI' :
+                      (generationSettings.prompts?.imagePrompt?.substring(0, 30) || 'Non configurato') + '...'}
+                  </div>
                 </div>
               </div>
+
+              {/* Additional info for full_auto mode */}
+              {generationSettings.imageGenerationMode === 'full_auto' && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">AI Model:</span>
+                      <div className="font-medium">{generationSettings.promptEngineeringModel || 'gpt-4'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Prompt Engineering:</span>
+                      <div className="font-medium">{generationSettings.enablePromptEngineering ? '✅ Attivo' : '❌ Disattivo'}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

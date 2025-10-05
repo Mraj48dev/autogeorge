@@ -209,6 +209,14 @@ model GenerationSettings {
   imageStyle            String   @default("natural")
   imageModel            String   @default("dall-e-3")
   imageSize             String   @default("1792x1024")
+
+  // Nuovi campi per gestione modalità generazione immagini
+  imageGenerationMode   String   @default("manual") // 'manual' | 'ai_assisted' | 'full_auto'
+  enablePromptEngineering Boolean @default(false)
+  promptTemplate        String?  // Template per ChatGPT
+  allowPromptEditing    Boolean  @default(true)   // Per ai_assisted mode
+  promptEngineeringModel String  @default("gpt-4") // Modello AI per prompt engineering
+
   defaultModel          String   @default("sonar-pro")
   defaultTemperature    Float    @default(0.7)
   defaultMaxTokens      Int      @default(20000)
@@ -355,6 +363,26 @@ model FeaturedImage {
   @@index([createdAt])
   @@index([wordpressMediaId])
   @@map("featured_images")
+}
+
+model ImagePrompt {
+  id               String   @id @default(cuid())
+  articleId        String   // Riferimento all'articolo
+  articleTitle     String   // Titolo dell'articolo per context
+  articleExcerpt   String   // Estratto del contenuto per context
+  generatedPrompt  String   // Prompt generato dall'AI
+  originalTemplate String   // Template originale utilizzato
+  aiModel          String   // Modello AI utilizzato (gpt-4, gpt-3.5-turbo)
+  status           String   // pending, generated, validated, failed
+  metadata         String?  // Metadati aggiuntivi in JSON (tokens, confidence, etc.)
+  errorMessage     String?  // Messaggio di errore se fallimento
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([articleId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("image_prompts")
 }
 
 

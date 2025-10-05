@@ -29,6 +29,15 @@ import { PerplexityService } from '../modules/content/infrastructure/services/Pe
 import { GenerateArticle } from '../modules/content/application/use-cases/GenerateArticle';
 import { ContentAdminFacade } from '../modules/content/admin/ContentAdminFacade';
 
+// PromptEngineer Module
+import { IPromptEngineeringService } from '../modules/prompt-engineer/application/ports/IPromptEngineeringService';
+import { IImagePromptRepository } from '../modules/prompt-engineer/application/ports/IImagePromptRepository';
+import { ChatGptPromptService } from '../modules/prompt-engineer/infrastructure/ChatGptPromptService';
+import { PrismaImagePromptRepository } from '../modules/prompt-engineer/infrastructure/PrismaImagePromptRepository';
+import { GenerateImagePrompt } from '../modules/prompt-engineer/application/use-cases/GenerateImagePrompt';
+import { ValidateImagePrompt } from '../modules/prompt-engineer/application/use-cases/ValidateImagePrompt';
+import { PromptEngineerFacade } from '../modules/prompt-engineer/admin/PromptEngineerFacade';
+
 // Automation Module REMOVED - Architecture simplified
 
 // Configuration
@@ -48,6 +57,13 @@ export class Container {
   private _aiService: AiService | null = null;
   private _generateArticle: GenerateArticle | null = null;
   private _contentAdminFacade: ContentAdminFacade | null = null;
+
+  // PromptEngineer module dependencies
+  private _promptEngineeringService: IPromptEngineeringService | null = null;
+  private _imagePromptRepository: IImagePromptRepository | null = null;
+  private _generateImagePrompt: GenerateImagePrompt | null = null;
+  private _validateImagePrompt: ValidateImagePrompt | null = null;
+  private _promptEngineerFacade: PromptEngineerFacade | null = null;
 
   // Automation module REMOVED - Simplified architecture
 
@@ -154,6 +170,56 @@ export class Container {
       );
     }
     return this._contentAdminFacade;
+  }
+
+  // =============================================
+  // PromptEngineer Module Dependencies
+  // =============================================
+
+  get promptEngineeringService(): IPromptEngineeringService {
+    if (!this._promptEngineeringService) {
+      if (!this._config.ai.openaiApiKey) {
+        throw new Error('OpenAI API key is required for prompt engineering service');
+      }
+      this._promptEngineeringService = new ChatGptPromptService(this._config.ai.openaiApiKey);
+    }
+    return this._promptEngineeringService;
+  }
+
+  get imagePromptRepository(): IImagePromptRepository {
+    if (!this._imagePromptRepository) {
+      this._imagePromptRepository = new PrismaImagePromptRepository();
+    }
+    return this._imagePromptRepository;
+  }
+
+  get generateImagePrompt(): GenerateImagePrompt {
+    if (!this._generateImagePrompt) {
+      this._generateImagePrompt = new GenerateImagePrompt(
+        this.promptEngineeringService,
+        this.imagePromptRepository
+      );
+    }
+    return this._generateImagePrompt;
+  }
+
+  get validateImagePrompt(): ValidateImagePrompt {
+    if (!this._validateImagePrompt) {
+      this._validateImagePrompt = new ValidateImagePrompt(
+        this.imagePromptRepository
+      );
+    }
+    return this._validateImagePrompt;
+  }
+
+  get promptEngineerFacade(): PromptEngineerFacade {
+    if (!this._promptEngineerFacade) {
+      this._promptEngineerFacade = new PromptEngineerFacade(
+        this.generateImagePrompt,
+        this.validateImagePrompt
+      );
+    }
+    return this._promptEngineerFacade;
   }
 
   // =============================================

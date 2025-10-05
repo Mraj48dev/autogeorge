@@ -7,6 +7,10 @@ export interface ImageGenerationRequest {
   aiPrompt?: string;
   style?: 'natural' | 'vivid';
   size?: '1024x1024' | '1792x1024' | '1024x1792';
+
+  // Nuovi campi per gestione modalità
+  generationMode?: 'manual' | 'ai_assisted' | 'full_auto';
+  promptId?: string; // ID del prompt generato (per ai_assisted/full_auto)
 }
 
 export interface GeneratedImageResponse {
@@ -27,6 +31,7 @@ export interface ImageGenerationError {
  * Port for AI Image Generation Service (DALL-E)
  *
  * Handles generation of featured images using AI based on article content
+ * with support for multiple generation modes (manual, ai_assisted, full_auto)
  */
 export interface ImageGenerationService {
   /**
@@ -37,12 +42,20 @@ export interface ImageGenerationService {
   ): Promise<Result<GeneratedImageResponse, ImageGenerationError>>;
 
   /**
+   * Generate image with AI-engineered prompt (full_auto or ai_assisted mode)
+   */
+  generateImageWithAiPrompt(
+    request: ImageGenerationRequest,
+    aiGeneratedPrompt: string
+  ): Promise<Result<GeneratedImageResponse, ImageGenerationError>>;
+
+  /**
    * Test the image generation service connection
    */
   testConnection(): Promise<Result<{ available: boolean; model: string }, ImageGenerationError>>;
 
   /**
-   * Build an optimized prompt for image generation
+   * Build an optimized prompt for image generation (legacy method for manual mode)
    */
   buildPrompt(title: string, content?: string, customPrompt?: string): string;
 }

@@ -55,7 +55,7 @@ export class UploadImageToWordPress {
         return Result.failure(new Error('Image already uploaded to WordPress'));
       }
 
-      // Step 2: Download the DALL-E image
+      // Step 2: Download the DALL-E image with timeout
       const imageUrl = featuredImage.url?.getValue();
       if (!imageUrl) {
         return Result.failure(new Error('No image URL available'));
@@ -63,19 +63,45 @@ export class UploadImageToWordPress {
 
       console.log('📥 [WordPress Upload] Downloading DALL-E image:', imageUrl);
 
-      const imageResponse = await fetch(imageUrl);
+      // Download with timeout
+      const downloadController = new AbortController();
+      const downloadTimeout = setTimeout(() => downloadController.abort(), 30000); // 30 seconds
+
+      let imageResponse;
+      try {
+        imageResponse = await fetch(imageUrl, {
+          signal: downloadController.signal,
+          headers: {
+            'User-Agent': 'AutoGeorge/1.0 (Image Downloader)'
+          }
+        });
+        clearTimeout(downloadTimeout);
+      } catch (error) {
+        clearTimeout(downloadTimeout);
+        if (error instanceof Error && error.name === 'AbortError') {
+          return Result.failure(new Error('Image download timed out after 30 seconds'));
+        }
+        throw error;
+      }
+
       if (!imageResponse.ok) {
-        return Result.failure(new Error(`Failed to download image: ${imageResponse.status}`));
+        return Result.failure(new Error(`Failed to download image: ${imageResponse.status} ${imageResponse.statusText}`));
       }
 
       const imageBuffer = await imageResponse.arrayBuffer();
-      const imageBlob = new Blob([imageBuffer], { type: 'image/png' });
+      const imageSizeKB = Math.round(imageBuffer.byteLength / 1024);
+      console.log(`📊 [WordPress Upload] Downloaded image size: ${imageSizeKB}KB`);
 
       // Create File object for WordPress upload
+      const imageBlob = new Blob([imageBuffer], { type: 'image/png' });
       const imageFile = new File([imageBlob], featuredImage.filename.getValue(), { type: 'image/png' });
 
-      // Step 3: Upload to WordPress media library
-      console.log('📤 [WordPress Upload] Uploading to WordPress media library');
+      console.log(`📋 [WordPress Upload] Prepared file: ${imageFile.name} (${Math.round(imageFile.size / 1024)}KB)`);
+
+      // Step 3: Upload to WordPress media library with enhanced logging
+      console.log('📤 [WordPress Upload] Starting WordPress media library upload');
+      console.log(`🎯 [WordPress Upload] Target: ${input.wordPressConfig.siteUrl}`);
+      console.log(`📏 [WordPress Upload] File size: ${Math.round(imageFile.size / 1024)}KB`);
 
       const platformConfig: PlatformConfig = {
         siteUrl: input.wordPressConfig.siteUrl,
@@ -83,21 +109,25 @@ export class UploadImageToWordPress {
         password: input.wordPressConfig.password
       };
 
+      const uploadStartTime = Date.now();
       const uploadResult = await this.wordPressMediaService.uploadMedia(platformConfig, {
         file: imageFile,
         title: featuredImage.altText.getValue(),
         alt_text: featuredImage.altText.getValue(),
         caption: featuredImage.altText.getValue()
       });
+      const uploadDuration = Date.now() - uploadStartTime;
 
       if (uploadResult.isFailure()) {
+        console.error(`❌ [WordPress Upload] Upload failed after ${uploadDuration}ms:`, uploadResult.error);
         return Result.failure(new Error(`WordPress upload failed: ${uploadResult.error.message}`));
       }
 
       const mediaResult = uploadResult.value;
-      console.log('✅ [WordPress Upload] Upload successful:', {
+      console.log(`✅ [WordPress Upload] Upload successful in ${uploadDuration}ms:`, {
         mediaId: mediaResult.id,
-        url: mediaResult.url
+        url: mediaResult.url,
+        title: mediaResult.title
       });
 
       // Step 4: Update FeaturedImage with WordPress URL

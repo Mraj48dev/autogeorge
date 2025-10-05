@@ -221,16 +221,83 @@ async function generateFeaturedImageWithModule(article: any): Promise<{ success:
   try {
     console.log(`🎨 [AutoImage Module] Generating featured image for article: ${article.id}`);
 
-    // ✅ STEP 1: Get prompt from GenerationSettings (user's custom prompt)
+    // ✅ STEP 1: Get prompt from GenerationSettings
     const generationSettings = await getGenerationSettings();
-    const customImagePrompt = generationSettings?.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
     const imageStyle = generationSettings?.imageStyle || 'natural';
+    const imageGenerationMode = generationSettings?.imageGenerationMode || 'manual';
+    const enablePromptEngineering = generationSettings?.enablePromptEngineering || false;
 
-    console.log(`🎯 [AutoImage] Using custom prompt: "${customImagePrompt}"`);
+    // ✅ STEP 2: Generate prompt based on mode
+    let finalPrompt: string;
+    let promptSource: string;
+
+    if (imageGenerationMode === 'full_auto' && enablePromptEngineering) {
+      // Mode: Full Auto with ChatGPT prompt engineering
+      try {
+        // Check for cached prompt first
+        const existingPrompt = await prisma.imagePrompt.findFirst({
+          where: {
+            articleId: article.id,
+            status: 'generated'
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        if (existingPrompt) {
+          finalPrompt = existingPrompt.generatedPrompt;
+          promptSource = 'cached-chatgpt';
+          console.log('💾 [AutoImage CRON] Using cached ChatGPT prompt to save tokens');
+        } else {
+          // Generate new prompt with ChatGPT
+          const template = generationSettings?.promptTemplate || 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}';
+          const model = generationSettings?.promptEngineeringModel || 'gpt-4';
+
+          finalPrompt = await generatePromptWithChatGPT(
+            article.title,
+            article.content || '',
+            template,
+            model
+          );
+
+          // Save generated prompt to database
+          await prisma.imagePrompt.create({
+            data: {
+              id: `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+              articleId: article.id,
+              articleTitle: article.title,
+              articleExcerpt: (article.content || '').substring(0, 200),
+              generatedPrompt: finalPrompt,
+              originalTemplate: template,
+              aiModel: model,
+              status: 'generated',
+              metadata: JSON.stringify({
+                generatedAt: new Date().toISOString(),
+                source: 'cron-chatgpt',
+                mode: 'full_auto'
+              })
+            }
+          });
+
+          promptSource = 'chatgpt-generated';
+          console.log('🤖 [AutoImage CRON] Generated NEW ChatGPT prompt and saved to DB');
+        }
+      } catch (error) {
+        console.warn('⚠️ [AutoImage CRON] ChatGPT failed, falling back to manual prompt:', error);
+        const customImagePrompt = generationSettings?.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
+        finalPrompt = `${article.title} ${customImagePrompt}`;
+        promptSource = 'manual-fallback';
+      }
+    } else {
+      // Mode: Manual with user-defined template
+      const customImagePrompt = generationSettings?.imagePrompt || 'in stile cartoon. Individua un dettaglio rappresentativo dell\'idea base dell\'articolo. Non usare scritte né simboli.';
+      finalPrompt = customImagePrompt.replace(/{title}/g, article.title).replace(/{article}/g, (article.content || '').substring(0, 500));
+      promptSource = 'manual-template';
+      console.log('✏️ [AutoImage CRON] Using manual prompt template');
+    }
+
+    console.log(`🎯 [AutoImage] Final prompt: "${finalPrompt.substring(0, 100)}..."`);
+    console.log(`🎨 [AutoImage] Prompt source: ${promptSource}`);
     console.log(`🎨 [AutoImage] Using style: "${imageStyle}"`);
-
-    // ✅ STEP 2: Create focused AI prompt using title and custom settings
-    const finalPrompt = `${article.title} ${customImagePrompt}`;
 
     // Create Image Module container
     const imageContainer = createImageContainer();
@@ -294,23 +361,34 @@ async function generateFeaturedImageWithModule(article: any): Promise<{ success:
 }
 
 /**
- * Get Generation Settings from database (user's custom prompts and settings)
+ * Get Generation Settings from database (including prompt engineering settings)
  */
 async function getGenerationSettings(): Promise<{
   imagePrompt?: string;
   imageStyle?: string;
+  imageGenerationMode?: string;
+  enablePromptEngineering?: boolean;
+  promptTemplate?: string;
+  promptEngineeringModel?: string;
 } | null> {
   try {
     const settings = await prisma.generationSettings.findFirst({
       select: {
         imagePrompt: true,
-        imageStyle: true
+        imageStyle: true,
+        imageGenerationMode: true,
+        enablePromptEngineering: true,
+        promptTemplate: true,
+        promptEngineeringModel: true
       }
     });
 
     console.log(`🔧 [AutoImage] Generation settings loaded:`, {
       hasImagePrompt: !!settings?.imagePrompt,
       imageStyle: settings?.imageStyle || 'natural',
+      imageGenerationMode: settings?.imageGenerationMode || 'manual',
+      enablePromptEngineering: settings?.enablePromptEngineering || false,
+      promptTemplate: settings?.promptTemplate ? 'configured' : 'default',
       promptPreview: settings?.imagePrompt?.substring(0, 50) + '...' || 'default'
     });
 
@@ -318,6 +396,71 @@ async function getGenerationSettings(): Promise<{
   } catch (error) {
     console.error(`❌ [AutoImage] Failed to load generation settings:`, error);
     return null;
+  }
+}
+
+/**
+ * Generate AI-optimized prompt using ChatGPT
+ */
+async function generatePromptWithChatGPT(
+  title: string,
+  content: string,
+  template: string,
+  model: string
+): Promise<string> {
+  try {
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY not configured');
+    }
+
+    // Replace placeholders in template
+    const processedTemplate = template
+      .replace(/{title}/g, title)
+      .replace(/{article}/g, content.substring(0, 500)); // Limit content length
+
+    console.log('🎯 [AutoImage CRON] Calling ChatGPT for prompt generation...');
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at creating DALL-E prompts that avoid content policy violations while being creative and descriptive.'
+          },
+          {
+            role: 'user',
+            content: processedTemplate
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`ChatGPT API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const generatedPrompt = data.choices?.[0]?.message?.content?.trim();
+
+    if (!generatedPrompt) {
+      throw new Error('ChatGPT did not return a valid prompt');
+    }
+
+    console.log('✅ [AutoImage CRON] ChatGPT generated prompt successfully');
+    return generatedPrompt;
+
+  } catch (error) {
+    console.error('❌ [AutoImage CRON] Failed to generate prompt with ChatGPT:', error);
+    throw error;
   }
 }
 

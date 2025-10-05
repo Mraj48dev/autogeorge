@@ -144,7 +144,6 @@ export async function POST(request: NextRequest) {
       select: {
         imageStyle: true,
         imageGenerationMode: true,
-        enablePromptEngineering: true,
         promptTemplate: true,
         promptEngineeringModel: true,
         imagePrompt: true
@@ -153,7 +152,6 @@ export async function POST(request: NextRequest) {
 
     const imageStyle = userSettings?.imageStyle || 'natural';
     const imageGenerationMode = userSettings?.imageGenerationMode || 'manual';
-    const enablePromptEngineering = userSettings?.enablePromptEngineering || false;
 
     // Generate image directly with DALL-E
     const openaiApiKey = process.env.OPENAI_API_KEY;
@@ -169,7 +167,7 @@ export async function POST(request: NextRequest) {
     let dallePrompt: string;
     let promptSource: string;
 
-    if (imageGenerationMode === 'full_auto' && enablePromptEngineering) {
+    if (imageGenerationMode === 'full_auto') {
       // Mode: Full Auto with ChatGPT prompt engineering
       try {
         // Prima controlla se esiste già un prompt salvato per questo articolo
@@ -307,8 +305,7 @@ export async function POST(request: NextRequest) {
         keywords: [],
         promptSource: promptSource,
         usedPrompt: dallePrompt,
-        imageGenerationMode: imageGenerationMode,
-        promptEngineering: enablePromptEngineering
+        imageGenerationMode: imageGenerationMode
       }
     };
 

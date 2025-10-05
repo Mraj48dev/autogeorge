@@ -25,7 +25,6 @@ interface GenerationConfig {
     defaultSize: string;
   };
   imageGenerationMode: string;
-  enablePromptEngineering: boolean;
   promptTemplate: string;
   allowPromptEditing: boolean;
   promptEngineeringModel: string;
@@ -130,7 +129,6 @@ export default function SettingsPage() {
             defaultSize: settings.imageSettings?.defaultSize || '1792x1024'
           },
           imageGenerationMode: settings.imageGenerationMode || 'manual',
-          enablePromptEngineering: settings.enablePromptEngineering ?? false,
           promptTemplate: settings.promptTemplate || 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}',
           allowPromptEditing: settings.allowPromptEditing ?? true,
           promptEngineeringModel: settings.promptEngineeringModel || 'gpt-4'
@@ -216,7 +214,6 @@ export default function SettingsPage() {
           languageSettings: generationSettings.languageSettings,
           imageSettings: generationSettings.imageSettings,
           imageGenerationMode: generationSettings.imageGenerationMode,
-          enablePromptEngineering: generationSettings.enablePromptEngineering,
           promptTemplate: generationSettings.promptTemplate,
           allowPromptEditing: generationSettings.allowPromptEditing,
           promptEngineeringModel: generationSettings.promptEngineeringModel
@@ -928,18 +925,6 @@ export default function SettingsPage() {
                       </select>
                     </div>
 
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="enablePromptEngineering"
-                        checked={generationSettings.enablePromptEngineering}
-                        onChange={(e) => updateGenerationSettings({ enablePromptEngineering: e.target.checked })}
-                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="enablePromptEngineering" className="ml-2 text-sm text-green-800">
-                        Abilita prompt engineering automatico
-                      </label>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1063,8 +1048,8 @@ export default function SettingsPage() {
                       <div className="font-medium">{generationSettings.promptEngineeringModel || 'gpt-4'}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Prompt Engineering:</span>
-                      <div className="font-medium">{generationSettings.enablePromptEngineering ? '✅ Attivo' : '❌ Disattivo'}</div>
+                      <span className="text-gray-600">Modalità:</span>
+                      <div className="font-medium">{generationSettings.imageGenerationMode === 'full_auto' ? '🤖 Auto (ChatGPT)' : '✏️ Manuale'}</div>
                     </div>
                   </div>
                 </div>

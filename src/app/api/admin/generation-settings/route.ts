@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
           imageSize: '1792x1024',   // ✅ AGGIUNTO: Default imageSize
           // ✅ AGGIUNTO: Default per nuovi campi prompt engineering
           imageGenerationMode: 'manual',
-          enablePromptEngineering: false,
           promptTemplate: 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}',
           allowPromptEditing: true,
           promptEngineeringModel: 'gpt-4'
@@ -77,7 +76,6 @@ export async function GET(request: NextRequest) {
         },
         // ✅ AGGIUNTO: Nuovi campi prompt engineering
         imageGenerationMode: settings.imageGenerationMode,
-        enablePromptEngineering: settings.enablePromptEngineering,
         promptTemplate: settings.promptTemplate,
         allowPromptEditing: settings.allowPromptEditing,
         promptEngineeringModel: settings.promptEngineeringModel
@@ -131,7 +129,6 @@ export async function PUT(request: NextRequest) {
         defaultTargetAudience: body.languageSettings?.targetAudience || undefined,
         // ✅ AGGIUNTO: Salva nuovi campi prompt engineering
         imageGenerationMode: body.imageGenerationMode || undefined,
-        enablePromptEngineering: body.enablePromptEngineering !== undefined ? body.enablePromptEngineering : undefined,
         promptTemplate: body.promptTemplate || undefined,
         allowPromptEditing: body.allowPromptEditing !== undefined ? body.allowPromptEditing : undefined,
         promptEngineeringModel: body.promptEngineeringModel || undefined
@@ -153,7 +150,6 @@ export async function PUT(request: NextRequest) {
         defaultTargetAudience: body.languageSettings?.targetAudience || 'generale',
         // ✅ AGGIUNTO: Crea con nuovi campi prompt engineering
         imageGenerationMode: body.imageGenerationMode || 'manual',
-        enablePromptEngineering: body.enablePromptEngineering ?? false,
         promptTemplate: body.promptTemplate || 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}',
         allowPromptEditing: body.allowPromptEditing ?? true,
         promptEngineeringModel: body.promptEngineeringModel || 'gpt-4'
@@ -187,7 +183,6 @@ export async function PUT(request: NextRequest) {
           },
           // ✅ AGGIUNTO: Nuovi campi prompt engineering nella risposta PUT
           imageGenerationMode: settings.imageGenerationMode,
-          enablePromptEngineering: settings.enablePromptEngineering,
           promptTemplate: settings.promptTemplate,
           allowPromptEditing: settings.allowPromptEditing,
           promptEngineeringModel: settings.promptEngineeringModel

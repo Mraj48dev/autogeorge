@@ -225,13 +225,12 @@ async function generateFeaturedImageWithModule(article: any): Promise<{ success:
     const generationSettings = await getGenerationSettings();
     const imageStyle = generationSettings?.imageStyle || 'natural';
     const imageGenerationMode = generationSettings?.imageGenerationMode || 'manual';
-    const enablePromptEngineering = generationSettings?.enablePromptEngineering || false;
 
     // ✅ STEP 2: Generate prompt based on mode
     let finalPrompt: string;
     let promptSource: string;
 
-    if (imageGenerationMode === 'full_auto' && enablePromptEngineering) {
+    if (imageGenerationMode === 'full_auto') {
       // Mode: Full Auto with ChatGPT prompt engineering
       try {
         // Check for cached prompt first
@@ -367,7 +366,6 @@ async function getGenerationSettings(): Promise<{
   imagePrompt?: string;
   imageStyle?: string;
   imageGenerationMode?: string;
-  enablePromptEngineering?: boolean;
   promptTemplate?: string;
   promptEngineeringModel?: string;
 } | null> {
@@ -377,7 +375,6 @@ async function getGenerationSettings(): Promise<{
         imagePrompt: true,
         imageStyle: true,
         imageGenerationMode: true,
-        enablePromptEngineering: true,
         promptTemplate: true,
         promptEngineeringModel: true
       }
@@ -387,7 +384,6 @@ async function getGenerationSettings(): Promise<{
       hasImagePrompt: !!settings?.imagePrompt,
       imageStyle: settings?.imageStyle || 'natural',
       imageGenerationMode: settings?.imageGenerationMode || 'manual',
-      enablePromptEngineering: settings?.enablePromptEngineering || false,
       promptTemplate: settings?.promptTemplate ? 'configured' : 'default',
       promptPreview: settings?.imagePrompt?.substring(0, 50) + '...' || 'default'
     });

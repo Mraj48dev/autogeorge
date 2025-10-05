@@ -172,18 +172,55 @@ export async function POST(request: NextRequest) {
     if (imageGenerationMode === 'full_auto' && enablePromptEngineering) {
       // Mode: Full Auto with ChatGPT prompt engineering
       try {
-        const template = userSettings?.promptTemplate || 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}';
-        const model = userSettings?.promptEngineeringModel || 'gpt-4';
+        // Prima controlla se esiste già un prompt salvato per questo articolo
+        const existingPrompt = await prisma.imagePrompt.findFirst({
+          where: {
+            articleId: articleId,
+            status: 'generated'
+          },
+          orderBy: { createdAt: 'desc' }
+        });
 
-        dallePrompt = await generatePromptWithChatGPT(
-          articleTitle,
-          articleContent,
-          template,
-          model,
-          openaiApiKey
-        );
-        promptSource = 'chatgpt-generated';
-        console.log('🤖 [Full Auto] Using ChatGPT-generated prompt');
+        if (existingPrompt) {
+          // Riusa il prompt esistente per evitare di bruciare token
+          dallePrompt = existingPrompt.generatedPrompt;
+          promptSource = 'cached-chatgpt';
+          console.log('💾 [Full Auto] Using cached ChatGPT prompt to save tokens');
+        } else {
+          // Genera nuovo prompt con ChatGPT
+          const template = userSettings?.promptTemplate || 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}';
+          const model = userSettings?.promptEngineeringModel || 'gpt-4';
+
+          dallePrompt = await generatePromptWithChatGPT(
+            articleTitle,
+            articleContent,
+            template,
+            model,
+            openaiApiKey
+          );
+
+          // Salva il prompt generato nel database per riutilizzo futuro
+          await prisma.imagePrompt.create({
+            data: {
+              id: `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+              articleId: articleId,
+              articleTitle: articleTitle,
+              articleExcerpt: articleContent.substring(0, 200),
+              generatedPrompt: dallePrompt,
+              originalTemplate: template,
+              aiModel: model,
+              status: 'generated',
+              metadata: JSON.stringify({
+                generatedAt: new Date().toISOString(),
+                source: 'chatgpt-api',
+                userId: userId
+              })
+            }
+          });
+
+          promptSource = 'chatgpt-generated';
+          console.log('🤖 [Full Auto] Generated NEW ChatGPT prompt and saved to DB');
+        }
       } catch (error) {
         console.warn('⚠️ [Full Auto] ChatGPT failed, falling back to legacy prompt:', error);
         dallePrompt = createLegacyPrompt(articleTitle, articleContent);

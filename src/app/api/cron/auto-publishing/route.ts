@@ -113,6 +113,17 @@ export async function GET(request: NextRequest) {
           config
         );
 
+        // 🔍 DEBUG: Verify PublicationTarget after creation
+        console.log(`🎯 [AutoPublish-TargetDebug] PublicationTarget created:`, {
+          platform: publicationTarget.getPlatform(),
+          siteId: publicationTarget.getSiteId(),
+          siteUrl: publicationTarget.getSiteUrl(),
+          hasConfiguration: !!publicationTarget.getConfiguration(),
+          configurationKeys: publicationTarget.getConfiguration() ? Object.keys(publicationTarget.getConfiguration()) : [],
+          wordPressConfig: publicationTarget.getWordPressConfig(),
+          isWordPress: publicationTarget.isWordPress()
+        });
+
         // ✅ STEP 1: Check for featured image and upload to WordPress if needed
         let featuredMediaId: number | undefined;
         let featuredImageUrl: string | undefined;
@@ -265,6 +276,19 @@ export async function GET(request: NextRequest) {
           metadataKeys: Object.keys(metadata),
           targetPlatform: publicationTarget.getPlatform(),
           targetSiteUrl: publicationTarget.getSiteUrl()
+        });
+
+        // 🔍 DEBUG: Verify PublicationTarget before calling publish()
+        console.log(`🎯 [AutoPublish-BeforePublish] PublicationTarget state:`, {
+          platform: publicationTarget.getPlatform(),
+          siteId: publicationTarget.getSiteId(),
+          siteUrl: publicationTarget.getSiteUrl(),
+          hasConfiguration: !!publicationTarget.getConfiguration(),
+          configurationKeys: publicationTarget.getConfiguration() ? Object.keys(publicationTarget.getConfiguration()) : [],
+          wordPressConfig: publicationTarget.getWordPressConfig(),
+          isWordPress: publicationTarget.isWordPress(),
+          targetType: typeof publicationTarget,
+          targetConstructor: publicationTarget.constructor.name
         });
 
         // Attempt to publish

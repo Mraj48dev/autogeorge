@@ -30,6 +30,19 @@ export class WordPressPublishingService implements PublishingService {
     metadata: PublicationMetadata
   ): Promise<Result<PublishingResult, PublishingError>> {
     try {
+      // 🔍 DEBUG: Check PublicationTarget at entry of publish method
+      console.log(`🎯 [WordPressService-Publish] Target received at entry:`, {
+        targetType: typeof target,
+        targetConstructor: target ? target.constructor.name : 'undefined',
+        platform: target ? target.getPlatform() : 'undefined',
+        siteId: target ? target.getSiteId() : 'undefined',
+        siteUrl: target ? target.getSiteUrl() : 'undefined',
+        hasConfiguration: target ? !!target.getConfiguration() : false,
+        configurationKeys: target && target.getConfiguration() ? Object.keys(target.getConfiguration()) : [],
+        wordPressConfig: target ? target.getWordPressConfig() : 'undefined',
+        isWordPress: target ? target.isWordPress() : false
+      });
+
       if (!this.isPlatformSupported(target.getPlatform())) {
         return Result.failure({
           code: 'UNSUPPORTED_FEATURE',

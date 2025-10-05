@@ -1,5 +1,4 @@
 import { ValueObject } from '../../../../shared/domain/base/ValueObject';
-import { v4 as uuidv4 } from 'uuid';
 
 export class PromptId extends ValueObject<string> {
   constructor(value: string) {
@@ -12,7 +11,7 @@ export class PromptId extends ValueObject<string> {
   }
 
   static generate(): PromptId {
-    return new PromptId(uuidv4());
+    return new PromptId(crypto.randomUUID());
   }
 
   protected validate(): void {

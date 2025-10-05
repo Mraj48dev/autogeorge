@@ -11,9 +11,77 @@ interface GenerateOnlyRequest {
 }
 
 /**
- * Create optimized DALL-E prompt based on article content
+ * Generate AI-optimized prompt using ChatGPT
  */
-function createDallePrompt(title: string, content: string): string {
+async function generatePromptWithChatGPT(
+  title: string,
+  content: string,
+  template: string,
+  model: string,
+  openaiApiKey: string
+): Promise<string> {
+  try {
+    // Replace placeholders in template
+    const processedTemplate = template
+      .replace(/{title}/g, title)
+      .replace(/{article}/g, content.substring(0, 500)); // Limit content length
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at creating DALL-E prompts that avoid content policy violations while being creative and descriptive.'
+          },
+          {
+            role: 'user',
+            content: processedTemplate
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`ChatGPT API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const generatedPrompt = data.choices?.[0]?.message?.content?.trim();
+
+    if (!generatedPrompt) {
+      throw new Error('ChatGPT did not return a valid prompt');
+    }
+
+    console.log('✅ [Prompt Engineering] ChatGPT generated prompt:', generatedPrompt);
+    return generatedPrompt;
+
+  } catch (error) {
+    console.error('❌ [Prompt Engineering] Failed to generate prompt with ChatGPT:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create manual prompt with placeholders replaced
+ */
+function createManualPrompt(title: string, content: string, template: string): string {
+  return template
+    .replace(/{title}/g, title)
+    .replace(/{article}/g, content.substring(0, 500));
+}
+
+/**
+ * Legacy fallback prompt (kept for compatibility)
+ */
+function createLegacyPrompt(title: string, content: string): string {
   const titleLower = title.toLowerCase();
 
   // Detect topic and create appropriate prompt
@@ -69,13 +137,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user settings for imageStyle
+    // Get user settings for image generation
     const userId = request.headers.get('x-user-id') || 'demo-user';
     const userSettings = await prisma.generationSettings.findUnique({
       where: { userId },
-      select: { imageStyle: true }
+      select: {
+        imageStyle: true,
+        imageGenerationMode: true,
+        enablePromptEngineering: true,
+        promptTemplate: true,
+        promptEngineeringModel: true,
+        imagePrompt: true
+      }
     });
+
     const imageStyle = userSettings?.imageStyle || 'natural';
+    const imageGenerationMode = userSettings?.imageGenerationMode || 'manual';
+    const enablePromptEngineering = userSettings?.enablePromptEngineering || false;
 
     // Generate image directly with DALL-E
     const openaiApiKey = process.env.OPENAI_API_KEY;
@@ -87,10 +165,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create DALL-E optimized prompt
-    const dallePrompt = createDallePrompt(articleTitle, articleContent);
-    console.log('🎨 [AI Generation] Generated prompt:', dallePrompt);
-    console.log('🎨 [AI Generation] Using style:', imageStyle);
+    // Determine which prompt to use based on settings
+    let dallePrompt: string;
+    let promptSource: string;
+
+    if (imageGenerationMode === 'full_auto' && enablePromptEngineering) {
+      // Mode: Full Auto with ChatGPT prompt engineering
+      try {
+        const template = userSettings?.promptTemplate || 'Analizza questo articolo e genera un prompt per DALL-E che sia ottimizzato per evitare contenuto che viola le policy. Il prompt deve descrivere un\'immagine che rappresenti il tema dell\'articolo in modo creativo e sicuro:\n\nTitolo: {title}\nContenuto: {article}';
+        const model = userSettings?.promptEngineeringModel || 'gpt-4';
+
+        dallePrompt = await generatePromptWithChatGPT(
+          articleTitle,
+          articleContent,
+          template,
+          model,
+          openaiApiKey
+        );
+        promptSource = 'chatgpt-generated';
+        console.log('🤖 [Full Auto] Using ChatGPT-generated prompt');
+      } catch (error) {
+        console.warn('⚠️ [Full Auto] ChatGPT failed, falling back to legacy prompt:', error);
+        dallePrompt = createLegacyPrompt(articleTitle, articleContent);
+        promptSource = 'legacy-fallback';
+      }
+    } else if (imageGenerationMode === 'manual' && userSettings?.imagePrompt) {
+      // Mode: Manual with user-defined template
+      dallePrompt = createManualPrompt(articleTitle, articleContent, userSettings.imagePrompt);
+      promptSource = 'manual-template';
+      console.log('✏️ [Manual] Using user-defined prompt template');
+    } else {
+      // Fallback: Legacy hardcoded logic
+      dallePrompt = createLegacyPrompt(articleTitle, articleContent);
+      promptSource = 'legacy-fallback';
+      console.log('🔄 [Fallback] Using legacy prompt logic');
+    }
+
+    console.log('🎨 [Image Generation] Final prompt:', dallePrompt);
+    console.log('🎨 [Image Generation] Prompt source:', promptSource);
+    console.log('🎨 [Image Generation] Using style:', imageStyle);
 
     // Call OpenAI DALL-E API for image generation
     const dalleResponse = await fetch('https://api.openai.com/v1/images/generations', {
@@ -154,7 +267,11 @@ export async function POST(request: NextRequest) {
         provider: 'openai-dall-e-3',
         searchTime: Date.now(),
         totalTime: Date.now(),
-        keywords: []
+        keywords: [],
+        promptSource: promptSource,
+        usedPrompt: dallePrompt,
+        imageGenerationMode: imageGenerationMode,
+        promptEngineering: enablePromptEngineering
       }
     };
 

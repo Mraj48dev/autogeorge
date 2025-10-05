@@ -491,6 +491,14 @@ export class WordPressPublishingService implements PublishingService {
     config: WordPressConfig,
     target: PublicationTarget
   ): Promise<any> {
+    // 🔍 DEBUG: Log target in preparePostData
+    console.log(`🔍 [WordPress-PreparePost] Target received:`, {
+      siteUrl: target.siteUrl,
+      platform: target.getPlatform(),
+      hasConfiguration: !!target.configuration,
+      configType: typeof target.configuration,
+      configKeys: target.configuration ? Object.keys(target.configuration) : []
+    });
     const postData: any = {
       title: metadata.title || content.title,
       content: content.content,
@@ -781,6 +789,21 @@ export class WordPressPublishingService implements PublishingService {
    */
   private async getCategoryIdByName(categoryName: string, target: PublicationTarget): Promise<number | null> {
     try {
+      // 🔍 DEBUG: Log target structure
+      console.log(`🔍 [WordPress-CategoryAPI] Target structure:`, {
+        siteUrl: target.siteUrl,
+        platform: target.getPlatform(),
+        hasConfiguration: !!target.configuration,
+        configKeys: target.configuration ? Object.keys(target.configuration) : [],
+        username: target.configuration?.username,
+        password: target.configuration?.password ? '[SET]' : '[MISSING]'
+      });
+
+      if (!target.configuration?.username || !target.configuration?.password) {
+        console.error(`❌ [WordPress-CategoryAPI] Missing credentials in target.configuration`);
+        return null;
+      }
+
       const auth = Buffer.from(`${target.configuration.username}:${target.configuration.password}`).toString('base64');
       const url = `${target.siteUrl}/wp-json/wp/v2/categories?search=${encodeURIComponent(categoryName)}&per_page=10`;
 

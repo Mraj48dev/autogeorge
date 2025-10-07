@@ -121,6 +121,37 @@ export async function GET(request: NextRequest) {
         }, { status: 500 });
       }
     }
+
+    // Reset source error status utility
+    if (searchParams.get('fix') === 'reset-error') {
+      const { prisma } = await import('@/shared/database/prisma');
+
+      try {
+        // Reset error status for sources that have error status but working URLs
+        const updated = await prisma.source.updateMany({
+          where: {
+            status: 'error'
+          },
+          data: {
+            status: 'active',
+            lastError: null,
+            lastErrorAt: null
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: `Reset error status for ${updated.count} sources`,
+          sourcesFixed: updated.count
+        });
+      } catch (error) {
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    }
+
     // Initialize the sources container
     const container = createSourcesContainer();
     const sourcesAdminFacade = container.sourcesAdminFacade;

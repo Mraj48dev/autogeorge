@@ -20,7 +20,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
 
   try {
-    console.log('🔍 Starting CRON monitoring check...');
+    console.log('🔍 Starting CRON monitoring check v2...');
 
     // 1. Execute comprehensive health check
     const baseUrl = process.env.VERCEL_URL ?

@@ -64,7 +64,13 @@ fi
 
 # 3. Database Connection Test
 echo "🗄️  Testing database connection..."
-if timeout 10 node -e "
+# Use gtimeout on macOS or timeout on Linux
+TIMEOUT_CMD="timeout"
+if command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout"
+fi
+
+if $TIMEOUT_CMD 10 node -e "
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 prisma.\$queryRaw\`SELECT 1\`.then(() => {

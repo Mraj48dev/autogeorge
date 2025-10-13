@@ -127,47 +127,86 @@ async function checkDatabase(checks: HealthCheckResult[]): Promise<void> {
 }
 
 async function checkCriticalEndpoints(checks: HealthCheckResult[]): Promise<void> {
-  const endpoints = [
-    { name: 'health-basic', path: '/api/health' },
-    { name: 'admin-sources', path: '/api/admin/sources' },
-    { name: 'cron-poll', path: '/api/cron/poll-feeds' }
-  ];
+  const start = Date.now();
 
-  for (const endpoint of endpoints) {
-    const start = Date.now();
+  try {
+    // Instead of calling protected endpoints, test core functionality directly
 
-    try {
-      const baseUrl = process.env.VERCEL_URL ?
-        `https://${process.env.VERCEL_URL}` :
-        'https://autogeorge.vercel.app';
+    // Test Sources functionality by checking database directly
+    const sourcesCount = await prisma.source.count();
+    const activeSources = await prisma.source.count({ where: { isActive: true } });
 
-      const response = await fetch(`${baseUrl}${endpoint.path}`, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'AutoGeorge-Health-Check',
-        },
-        signal: AbortSignal.timeout(10000) // 10 second timeout
-      });
-
-      const status = response.ok ? 'healthy' : 'degraded';
-
-      checks.push({
-        service: endpoint.name,
-        status,
-        responseTime: Date.now() - start,
-        details: {
-          httpStatus: response.status,
-          url: endpoint.path
+    // Test Articles functionality
+    const articlesCount = await prisma.article.count();
+    const recentArticles = await prisma.article.count({
+      where: {
+        createdAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
         }
-      });
-    } catch (error) {
-      checks.push({
-        service: endpoint.name,
-        status: 'unhealthy',
-        responseTime: Date.now() - start,
-        error: error instanceof Error ? error.message : 'Endpoint unreachable'
-      });
-    }
+      }
+    });
+
+    // Test FeedItems functionality
+    const feedItemsCount = await prisma.feedItem.count();
+    const recentFeedItems = await prisma.feedItem.count({
+      where: {
+        fetchedAt: {
+          gte: new Date(Date.now() - 60 * 60 * 1000) // Last hour
+        }
+      }
+    });
+
+    checks.push({
+      service: 'core-functionality',
+      status: 'healthy',
+      responseTime: Date.now() - start,
+      details: {
+        sources: { total: sourcesCount, active: activeSources },
+        articles: { total: articlesCount, recent24h: recentArticles },
+        feedItems: { total: feedItemsCount, recentHour: recentFeedItems }
+      }
+    });
+
+  } catch (error) {
+    checks.push({
+      service: 'core-functionality',
+      status: 'unhealthy',
+      responseTime: Date.now() - start,
+      error: error instanceof Error ? error.message : 'Core functionality check failed'
+    });
+  }
+
+  // Test basic HTTP health endpoint (non-protected)
+  const httpStart = Date.now();
+  try {
+    const baseUrl = process.env.VERCEL_URL ?
+      `https://${process.env.VERCEL_URL}` :
+      'https://autogeorge.vercel.app';
+
+    const response = await fetch(`${baseUrl}/api/health`, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'AutoGeorge-Health-Check',
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+
+    checks.push({
+      service: 'basic-http-endpoint',
+      status: response.ok ? 'healthy' : 'degraded',
+      responseTime: Date.now() - httpStart,
+      details: {
+        httpStatus: response.status,
+        endpoint: '/api/health'
+      }
+    });
+  } catch (error) {
+    checks.push({
+      service: 'basic-http-endpoint',
+      status: 'unhealthy',
+      responseTime: Date.now() - httpStart,
+      error: error instanceof Error ? error.message : 'HTTP endpoint unreachable'
+    });
   }
 }
 

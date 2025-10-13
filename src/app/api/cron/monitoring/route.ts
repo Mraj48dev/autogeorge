@@ -1,122 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * CRON Monitoring Endpoint - AutoGeorge
+ * CRON Monitoring Endpoint - AutoGeorge FIXED VERSION
  *
- * Questo endpoint è progettato per essere chiamato da cron-job.org ogni 5 minuti
- * per monitorare continuamente lo stato del sistema e generare alert automatici.
+ * COMPLETAMENTE RISCRITTO per bypassare problemi di cache e auth.
+ * Questo endpoint è chiamato da cron-job.org ogni 5 minuti.
  *
  * URL CRON: https://autogeorge.vercel.app/api/cron/monitoring
- * Frequenza: Ogni 5 minuti (cron: every 5 minutes)
- *
- * Flusso:
- * 1. Esegue comprehensive health check
- * 2. Processa gli alert in base ai risultati
- * 3. Invia notifiche se necessario
- * 4. Salva metriche storiche
+ * Frequenza: Ogni 5 minuti
  */
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
 
   try {
-    console.log('🔍 Starting CRON monitoring check v2...');
+    console.log('🔍 CRON monitoring v3-FIXED - Starting direct health check...');
 
-    // 1. Execute comprehensive health check
-    const baseUrl = process.env.VERCEL_URL ?
-      `https://${process.env.VERCEL_URL}` :
-      'https://autogeorge.vercel.app';
+    // Import Prisma direttamente
+    const { prisma } = await import('@/shared/database/prisma');
 
-    const healthResponse = await fetch(`${baseUrl}/api/health/comprehensive`, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'AutoGeorge-CRON-Monitor',
-        'Accept': 'application/json'
-      },
-      signal: AbortSignal.timeout(30000) // 30 second timeout
-    });
+    // HEALTH CHECK DIRETTO - ZERO HTTP CALLS
+    const healthResult = await performDirectHealthCheck(prisma, startTime);
 
-    // Accept 200 (healthy), 207 (degraded), but not 503 (unhealthy)
-    if (healthResponse.status !== 200 && healthResponse.status !== 207) {
-      throw new Error(`Health check failed with status: ${healthResponse.status}`);
-    }
+    console.log(`✅ Direct health check OK: ${healthResult.overall} (${healthResult.checks.length} services)`);
 
-    const healthData = await healthResponse.json();
-    console.log(`✅ Health check completed: ${healthData.overall} (${healthData.checks.length} services)`);
-
-    // 2. Process alerts based on health data
-    const alertResponse = await fetch(`${baseUrl}/api/health/alerts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'AutoGeorge-CRON-Monitor'
-      },
-      body: JSON.stringify(healthData),
-      signal: AbortSignal.timeout(15000) // 15 second timeout
-    });
-
-    let alertData = { alertsTriggered: 0, alertsResolved: 0 };
-    if (alertResponse.ok) {
-      alertData = await alertResponse.json();
-      console.log(`🚨 Alerts processed: ${alertData.alertsTriggered} triggered, ${alertData.alertsResolved} resolved`);
-    } else {
-      console.warn('⚠️ Alert processing failed, continuing...');
-    }
-
-    // 3. Calculate monitoring metrics
+    // Calcola metriche
     const monitoringDuration = Date.now() - startTime;
-    const systemMetrics = {
-      overallStatus: healthData.overall,
-      totalServices: healthData.checks.length,
-      healthyServices: healthData.summary.healthy,
-      degradedServices: healthData.summary.degraded,
-      unhealthyServices: healthData.summary.unhealthy,
-      averageResponseTime: healthData.checks.reduce((sum: number, check: any) => sum + check.responseTime, 0) / healthData.checks.length,
-      alertsTriggered: alertData.alertsTriggered,
-      alertsResolved: alertData.alertsResolved,
+    const summary = {
+      overallStatus: healthResult.overall,
+      totalServices: healthResult.checks.length,
+      healthyServices: healthResult.summary.healthy,
+      degradedServices: healthResult.summary.degraded,
+      unhealthyServices: healthResult.summary.unhealthy,
+      averageResponseTime: Math.round(
+        healthResult.checks.reduce((sum: number, check: any) => sum + check.responseTime, 0) / healthResult.checks.length
+      ),
       monitoringDuration
     };
 
-    // 4. Log system status summary
-    const statusEmoji = healthData.overall === 'healthy' ? '🟢' :
-                       healthData.overall === 'degraded' ? '🟡' : '🔴';
+    // Status emoji
+    const statusEmoji = healthResult.overall === 'healthy' ? '🟢' :
+                       healthResult.overall === 'degraded' ? '🟡' : '🔴';
 
-    console.log(`${statusEmoji} System Status: ${healthData.overall.toUpperCase()}`);
-    console.log(`📊 Services: ${systemMetrics.healthyServices}✅ ${systemMetrics.degradedServices}⚠️ ${systemMetrics.unhealthyServices}❌`);
-    console.log(`⚡ Avg Response: ${Math.round(systemMetrics.averageResponseTime)}ms`);
-    console.log(`🚨 Alerts: ${systemMetrics.alertsTriggered} new, ${systemMetrics.alertsResolved} resolved`);
+    // Log status
+    console.log(`${statusEmoji} System: ${healthResult.overall.toUpperCase()}`);
+    console.log(`📊 Services: ${summary.healthyServices}✅ ${summary.degradedServices}⚠️ ${summary.unhealthyServices}❌`);
 
-    // 5. Prepare response for cron-job.org dashboard
+    // Response per cron-job.org
     const response = {
       success: true,
       timestamp: new Date().toISOString(),
       monitoring: {
-        status: healthData.overall,
+        status: healthResult.overall,
         duration: monitoringDuration,
-        version: healthData.version,
-        environment: healthData.environment
+        version: 'v3-fixed-direct'
       },
-      system: systemMetrics,
+      system: summary,
       healthCheck: {
-        overall: healthData.overall,
-        services: healthData.checks.map((check: any) => ({
+        overall: healthResult.overall,
+        services: healthResult.checks.map((check: any) => ({
           service: check.service,
           status: check.status,
           responseTime: check.responseTime
         }))
       },
-      alerts: {
-        triggered: alertData.alertsTriggered,
-        resolved: alertData.alertsResolved
-      },
-      summary: `${statusEmoji} ${healthData.overall} | ${systemMetrics.healthyServices}/${systemMetrics.totalServices} services OK | ${Math.round(systemMetrics.averageResponseTime)}ms avg`
+      summary: `${statusEmoji} ${healthResult.overall} | ${summary.healthyServices}/${summary.totalServices} services OK | ${summary.averageResponseTime}ms avg`
     };
 
-    // Log critical issues prominently
-    if (healthData.overall === 'unhealthy') {
+    // Log critical issues
+    if (healthResult.overall === 'unhealthy') {
       console.error('🚨🚨🚨 CRITICAL: SYSTEM UNHEALTHY 🚨🚨🚨');
-      const unhealthyServices = healthData.checks.filter((c: any) => c.status === 'unhealthy');
-      unhealthyServices.forEach((service: any) => {
+      healthResult.checks.filter((c: any) => c.status === 'unhealthy').forEach((service: any) => {
         console.error(`❌ ${service.service}: ${service.error || 'Service unavailable'}`);
       });
     }
@@ -126,45 +80,154 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     const errorDuration = Date.now() - startTime;
 
-    console.error('🚨 CRON monitoring failed:', error);
+    console.error('🚨 CRON monitoring FIXED version failed:', error);
 
-    // Return error response for cron-job.org
     const errorResponse = {
       success: false,
-      error: 'Monitoring execution failed',
+      error: 'Direct monitoring execution failed',
       details: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
       duration: errorDuration,
-      summary: '🔴 MONITOR FAILED | System status unknown'
+      summary: '🔴 MONITOR FAILED | Direct health check error'
     };
 
-    // Log error prominently
-    console.error('🚨🚨🚨 MONITORING SYSTEM FAILURE 🚨🚨🚨');
+    console.error('🚨🚨🚨 DIRECT MONITORING FAILURE 🚨🚨🚨');
     console.error(`Error: ${errorResponse.details}`);
-    console.error(`Duration: ${errorDuration}ms`);
 
     return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
-// POST endpoint for manual monitoring trigger (admin use)
-export async function POST(request: NextRequest): Promise<NextResponse> {
+// HEALTH CHECK COMPLETAMENTE DIRETTO
+async function performDirectHealthCheck(prisma: any, startTime: number) {
+  const checks: any[] = [];
+
+  // 1. Database Check
   try {
-    const { force = false } = await request.json().catch(() => ({}));
+    const dbStart = Date.now();
+    await prisma.$queryRaw`SELECT 1 as test`;
 
-    console.log('🔧 Manual monitoring trigger initiated', { force });
+    const [sourceCount, articleCount] = await Promise.all([
+      prisma.source.count(),
+      prisma.article.count()
+    ]);
 
-    // Delegate to GET handler
-    return await GET(request);
-
+    checks.push({
+      service: 'database',
+      status: 'healthy',
+      responseTime: Date.now() - dbStart,
+      details: { sources: sourceCount, articles: articleCount }
+    });
   } catch (error) {
-    console.error('Manual monitoring trigger failed:', error);
-    return NextResponse.json(
-      {
-        error: 'Manual monitoring failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    checks.push({
+      service: 'database',
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime,
+      error: error instanceof Error ? error.message : 'DB connection failed'
+    });
   }
+
+  // 2. Core Data Check
+  try {
+    const coreStart = Date.now();
+
+    const [sources, activeSources, feedItems] = await Promise.all([
+      prisma.source.count(),
+      prisma.source.count({ where: { isActive: true } }),
+      prisma.feedItem.count()
+    ]);
+
+    checks.push({
+      service: 'core-data',
+      status: 'healthy',
+      responseTime: Date.now() - coreStart,
+      details: { sources, activeSources, feedItems }
+    });
+  } catch (error) {
+    checks.push({
+      service: 'core-data',
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime,
+      error: error instanceof Error ? error.message : 'Core data access failed'
+    });
+  }
+
+  // 3. RSS Sources Status
+  try {
+    const rssStart = Date.now();
+
+    const activeSources = await prisma.source.findMany({
+      where: { isActive: true },
+      select: { id: true, lastFetchStatus: true, lastFetchAt: true }
+    });
+
+    const now = new Date();
+    const recentThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours
+
+    const recentSuccessful = activeSources.filter((s: any) =>
+      s.lastFetchAt && s.lastFetchAt > recentThreshold && s.lastFetchStatus === 'success'
+    );
+
+    const status = activeSources.length === 0 ? 'healthy' :
+                  recentSuccessful.length === activeSources.length ? 'healthy' :
+                  recentSuccessful.length > 0 ? 'degraded' : 'unhealthy';
+
+    checks.push({
+      service: 'rss-sources',
+      status,
+      responseTime: Date.now() - rssStart,
+      details: {
+        total: activeSources.length,
+        recentSuccessful: recentSuccessful.length
+      }
+    });
+  } catch (error) {
+    checks.push({
+      service: 'rss-sources',
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime,
+      error: error instanceof Error ? error.message : 'RSS check failed'
+    });
+  }
+
+  // 4. System Resources
+  try {
+    const sysStart = Date.now();
+
+    const memUsage = process.memoryUsage();
+    const memMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+
+    checks.push({
+      service: 'system-resources',
+      status: memMB > 512 ? 'degraded' : 'healthy',
+      responseTime: Date.now() - sysStart,
+      details: { memoryMB: memMB, uptime: Math.round(process.uptime()) }
+    });
+  } catch (error) {
+    checks.push({
+      service: 'system-resources',
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime,
+      error: error instanceof Error ? error.message : 'System check failed'
+    });
+  }
+
+  // Calcola summary
+  const summary = {
+    healthy: checks.filter(c => c.status === 'healthy').length,
+    degraded: checks.filter(c => c.status === 'degraded').length,
+    unhealthy: checks.filter(c => c.status === 'unhealthy').length,
+    total: checks.length
+  };
+
+  const overall = summary.unhealthy > 0 ? 'unhealthy' :
+                 summary.degraded > 0 ? 'degraded' : 'healthy';
+
+  return {
+    overall,
+    timestamp: new Date().toISOString(),
+    version: 'v3-fixed-direct',
+    checks,
+    summary
+  };
 }

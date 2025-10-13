@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# AutoGeorge Pre-Push Hook - Backup Database
+echo "💾 Creating safety backup before push..."
+
+# Create backup
+if ./scripts/backup-database.sh; then
+  echo "✅ Database backup completed"
+else
+  echo "⚠️  Database backup failed (continuing push)"
+fi
+
+# Create git tag for this push
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+COMMIT_HASH=$(git rev-parse --short HEAD)
+TAG_NAME="pre-push-backup-$TIMESTAMP-$COMMIT_HASH"
+
+git tag -a "$TAG_NAME" -m "Pre-push backup: $TIMESTAMP"
+echo "🏷️  Created backup tag: $TAG_NAME"
+
+echo "🚀 Push safety backup completed"

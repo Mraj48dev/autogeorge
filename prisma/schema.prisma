@@ -115,8 +115,10 @@ model Source {
   configuration   Json?
   metadata        Json?
   lastFetchAt     DateTime?
+  lastFetchStatus String?    // success, error, pending
   lastErrorAt     DateTime?
   lastError       String?
+  isActive        Boolean    @default(true)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   articles        Article[]
@@ -383,6 +385,59 @@ model ImagePrompt {
   @@index([status])
   @@index([createdAt])
   @@map("image_prompts")
+}
+
+model HealthCheck {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  status       String   // healthy, degraded, unhealthy
+  responseTime Int      // Response time in milliseconds
+  details      Json     // Full health check response
+  version      String?  // Application version (git commit)
+  environment  String?  // production, development, etc.
+
+  // Alert tracking
+  alertSent    Boolean  @default(false)
+  alertType    String?  // email, slack, webhook
+
+  createdAt    DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([status])
+  @@index([alertSent])
+  @@map("health_checks")
+}
+
+model SystemAlert {
+  id           String   @id @default(cuid())
+  type         String   // service_down, performance_degraded, error_rate_high, etc.
+  service      String   // database, api, rss-sources, etc.
+  severity     String   // low, medium, high, critical
+  status       String   // active, acknowledged, resolved
+  title        String   // Alert title/summary
+  message      String   // Detailed alert message
+  details      Json?    // Additional context data
+
+  // Timestamps
+  triggeredAt  DateTime @default(now())
+  resolvedAt   DateTime?
+  acknowledgedAt DateTime?
+
+  // Notification tracking
+  notificationsSent Json? // Array of sent notifications with timestamps
+
+  // Metrics
+  occurrenceCount Int    @default(1)
+  lastOccurrence  DateTime @default(now())
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([type, service])
+  @@index([severity])
+  @@index([status])
+  @@index([triggeredAt])
+  @@map("system_alerts")
 }
 
 

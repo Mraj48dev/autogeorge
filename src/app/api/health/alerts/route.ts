@@ -198,7 +198,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 async function sendAlertNotification(alert: any, action: 'triggered' | 'resolved'): Promise<void> {
   try {
-    // Import notification service dynamically to avoid circular deps
+    // Solo invia email per alert critici o quando si risolvono
+    const shouldSendEmail = (alert.severity === 'critical' || alert.severity === 'high') ||
+                           (action === 'resolved' && alert.severity !== 'low');
+
+    if (!shouldSendEmail) {
+      console.log(`📬 Skipping email for ${alert.severity} ${action} alert (${alert.service})`);
+      return;
+    }
+
+    // Import notification service dynamically
     const { createNotificationService } = await import('@/shared/services/notification-service');
     const notificationService = createNotificationService();
 
@@ -206,38 +215,46 @@ async function sendAlertNotification(alert: any, action: 'triggered' | 'resolved
     const notificationPayload = {
       type: action === 'triggered' ? 'alert_triggered' as const : 'alert_resolved' as const,
       severity: alert.severity,
-      title: action === 'triggered' ? alert.title : `RESOLVED: ${alert.title}`,
+      title: action === 'triggered' ?
+        `🚨 ALERT: ${alert.title}` :
+        `✅ RESOLVED: ${alert.title}`,
       message: action === 'triggered' ?
-        alert.message :
-        `Alert has been resolved. Original issue: ${alert.message}`,
+        `⚠️ Sistema AutoGeorge ha rilevato: ${alert.message}` :
+        `✅ Alert risolto automaticamente. Problema originale: ${alert.message}`,
       service: alert.service,
       timestamp: new Date().toISOString(),
       details: {
         alertId: alert.id,
         alertType: alert.type,
         occurrenceCount: alert.occurrenceCount,
+        service: alert.service,
+        severity: alert.severity,
+        triggeredAt: alert.triggeredAt,
         duration: action === 'resolved' && alert.resolvedAt ?
           Math.round((alert.resolvedAt.getTime() - alert.triggeredAt.getTime()) / (1000 * 60)) :
-          Math.round((Date.now() - alert.triggeredAt.getTime()) / (1000 * 60))
+          Math.round((Date.now() - alert.triggeredAt.getTime()) / (1000 * 60)),
+        instructions: action === 'triggered' ?
+          'Controlla i log su Vercel o usa gli script di rollback se necessario' :
+          'Sistema ripristinato automaticamente. Nessuna azione richiesta.',
+        dashboardUrl: 'https://autogeorge.vercel.app/admin'
       }
     };
 
-    // Send notification through all configured channels
+    // Send notification (email only for critical/high alerts)
     const result = await notificationService.sendNotification(notificationPayload);
 
     // Track notification results
     const notificationData = {
       timestamp: new Date().toISOString(),
       action,
-      result,
+      emailSent: result.success,
+      channels: result.successfulChannels,
       alert: {
         id: alert.id,
         type: alert.type,
         service: alert.service,
         severity: alert.severity,
-        title: alert.title,
-        message: alert.message,
-        occurrenceCount: alert.occurrenceCount
+        title: alert.title
       }
     };
 
@@ -252,10 +269,11 @@ async function sendAlertNotification(alert: any, action: 'triggered' | 'resolved
       }
     });
 
-    console.log(`📬 Notification sent: ${result.successfulChannels}/${result.totalChannels} channels successful`);
+    console.log(`📧 Critical alert email sent: ${result.successfulChannels}/${result.totalChannels} channels`);
+    console.log(`   Alert: ${alert.severity} - ${alert.service} - ${action}`);
 
   } catch (error) {
-    console.error('Failed to send alert notification:', error);
+    console.error('Failed to send critical alert notification:', error);
   }
 }
 

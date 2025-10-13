@@ -364,17 +364,26 @@ export class NotificationService {
   }
 
   private generateEmailHTML(payload: NotificationPayload): string {
+    // Se il payload contiene già HTML (per report), usalo
+    if (payload.metadata && payload.metadata.htmlContent) {
+      return payload.metadata.htmlContent;
+    }
+
+    // Altrimenti genera HTML standard
     return `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; }
-            .header { background: ${this.getEmailColor(payload.severity)}; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-            .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-            .details { background: white; padding: 15px; border-radius: 4px; margin: 10px 0; }
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f9fafb; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+            .header { background: ${this.getEmailColor(payload.severity)}; color: white; padding: 20px; text-align: center; }
+            .header h1 { margin: 0; font-size: 20px; }
+            .content { padding: 20px; }
+            .details { background: #f8fafc; padding: 15px; border-radius: 4px; margin: 15px 0; border-left: 4px solid ${this.getEmailColor(payload.severity)}; }
+            .footer { background: #f8fafc; padding: 15px; text-align: center; color: #6b7280; font-size: 12px; }
+            pre { background: #1f2937; color: #f3f4f6; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
           </style>
         </head>
         <body>
@@ -387,9 +396,12 @@ export class NotificationService {
               <div class="details">
                 <p><strong>Service:</strong> ${payload.service || 'System'}</p>
                 <p><strong>Severity:</strong> ${payload.severity.toUpperCase()}</p>
-                <p><strong>Time:</strong> ${new Date(payload.timestamp).toLocaleString()}</p>
+                <p><strong>Time:</strong> ${new Date(payload.timestamp).toLocaleString('it')}</p>
               </div>
-              ${payload.details ? `<pre>${JSON.stringify(payload.details, null, 2)}</pre>` : ''}
+              ${payload.details ? `<details><summary>Technical Details</summary><pre>${JSON.stringify(payload.details, null, 2)}</pre></details>` : ''}
+            </div>
+            <div class="footer">
+              AutoGeorge Monitoring System | Per assistenza controlla i log su Vercel
             </div>
           </div>
         </body>

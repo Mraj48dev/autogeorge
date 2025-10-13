@@ -440,4 +440,37 @@ model SystemAlert {
   @@map("system_alerts")
 }
 
+model HealthReport {
+  id                    String   @id @default(cuid())
+  timestamp             DateTime @default(now())
+  reportType            String   // summary_12h, summary_daily, incident_report
+  periodStart           DateTime // Inizio periodo analizzato
+  periodEnd             DateTime // Fine periodo analizzato
+
+  // Metriche principali
+  overallStatus         String   // healthy, degraded, unhealthy
+  totalChecks           Int      // Numero totale health checks nel periodo
+  uptimePercentage      Float    // Percentuale uptime
+  totalAlerts           Int      // Totale alert nel periodo
+  criticalAlerts        Int      // Alert critici
+  averageResponseTime   Int      // Tempo risposta medio (ms)
+
+  // Dati completi del report
+  reportData            Json     // Analisi completa in JSON
+  htmlReport            String   @db.Text // Report HTML per email
+
+  // Tracking notifiche
+  emailSent             Boolean  @default(false)
+  emailSentAt           DateTime?
+  emailRecipients       Json?    // Lista recipient email
+
+  createdAt             DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([reportType])
+  @@index([overallStatus])
+  @@index([periodStart, periodEnd])
+  @@map("health_reports")
+}
+
 

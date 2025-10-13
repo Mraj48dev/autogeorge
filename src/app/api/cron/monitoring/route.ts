@@ -36,7 +36,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       signal: AbortSignal.timeout(30000) // 30 second timeout
     });
 
-    if (!healthResponse.ok) {
+    // Accept 200 (healthy), 207 (degraded), but not 503 (unhealthy)
+    if (healthResponse.status !== 200 && healthResponse.status !== 207) {
       throw new Error(`Health check failed with status: ${healthResponse.status}`);
     }
 

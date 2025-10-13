@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * per monitorare continuamente lo stato del sistema e generare alert automatici.
  *
  * URL CRON: https://autogeorge.vercel.app/api/cron/monitoring
- * Frequenza: Ogni 5 minuti (*/5 * * * *)
+ * Frequenza: Ogni 5 minuti (cron: every 5 minutes)
  *
  * Flusso:
  * 1. Esegue comprehensive health check

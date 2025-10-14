@@ -42,7 +42,7 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
       }
 
       // Check if source is ready for fetching (with auto-recovery support)
-      if (!source.isReadyForFetch(params.force)) {
+      if (!source.isReadyForFetch(request.force || false)) {
         const status = source.status.getValue();
         return Result.failure(new Error(`Source is not ready for fetching (status: ${status})`));
       }

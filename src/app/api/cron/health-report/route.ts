@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * CRON Health Report - Email Summary ogni 12 ore
+ * CRON Health Report - Email Summary ogni 12 ore v2
  *
  * Questo endpoint genera report dettagliati dello stato della piattaforma
  * e invia email summary ogni 12 ore.

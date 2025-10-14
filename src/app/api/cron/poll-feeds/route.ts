@@ -66,11 +66,11 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      // Get all active RSS sources from database using clean architecture
+      // Get all RSS sources (active + error sources eligible for auto-recovery)
       const getSourcesResult = await sourcesContainer.sourcesAdminFacade.getSources({
         limit: 100,
-        type: 'rss',
-        status: 'active'
+        type: 'rss'
+        // Don't filter by status - we'll check eligibility per source
       });
 
       if (getSourcesResult.isFailure()) {
@@ -81,12 +81,37 @@ export async function GET(request: NextRequest) {
         }, { status: 500 });
       }
 
-      const activeSources = getSourcesResult.value.sources.filter(s => s.url); // Only sources with URLs
+      // Filter sources: active + error sources eligible for auto-recovery
+      const eligibleSources = getSourcesResult.value.sources.filter(s => {
+        // Must have URL
+        if (!s.url) return false;
 
-      console.log(`📊 Found ${activeSources.length} active RSS sources to poll`);
+        // Always include active sources
+        if (s.status === 'active') return true;
 
-      if (activeSources.length === 0) {
-        console.log('⚠️ No active RSS sources found!');
+        // Include error sources that are eligible for auto-recovery
+        if (s.status === 'error') {
+          // Check if enough time has passed since last error (2+ hours)
+          if (s.lastErrorAt) {
+            const hoursSinceError = (Date.now() - new Date(s.lastErrorAt).getTime()) / (1000 * 60 * 60);
+            return hoursSinceError >= 2; // 2 hours auto-recovery window
+          }
+          return true; // No error timestamp, allow retry
+        }
+
+        return false; // Exclude paused, archived, etc.
+      });
+
+      console.log(`📊 Found ${eligibleSources.length} eligible RSS sources to poll (active + auto-recovery candidates)`);
+
+      // Log breakdown
+      const activeCount = eligibleSources.filter(s => s.status === 'active').length;
+      const recoveryCount = eligibleSources.filter(s => s.status === 'error').length;
+      console.log(`   ✅ Active sources: ${activeCount}`);
+      console.log(`   🔄 Auto-recovery candidates: ${recoveryCount}`);
+
+      if (eligibleSources.length === 0) {
+        console.log('⚠️ No eligible RSS sources found!');
         return NextResponse.json({
           success: true,
           timestamp: new Date().toISOString(),
@@ -103,14 +128,19 @@ export async function GET(request: NextRequest) {
       }
 
       // Log dettagliato dei sources trovati
-      activeSources.forEach((source, index) => {
-        console.log(`  ${index + 1}. 📰 "${source.name}" (${source.url})`);
+      eligibleSources.forEach((source, index) => {
+        const statusIcon = source.status === 'active' ? '✅' : '🔄';
+        console.log(`  ${index + 1}. ${statusIcon} "${source.name}" (${source.status}) - ${source.url}`);
         console.log(`     ⏰ Last fetch: ${source.lastFetchAt ? new Date(source.lastFetchAt).toLocaleString() : 'Never'}`);
         console.log(`     🔴 Last error: ${source.lastError || 'None'}`);
+        if (source.status === 'error' && source.lastErrorAt) {
+          const hoursSinceError = Math.round((Date.now() - new Date(source.lastErrorAt).getTime()) / (1000 * 60 * 60));
+          console.log(`     🔄 Auto-recovery: ${hoursSinceError}h since error (eligible for retry)`);
+        }
       });
 
       const results = {
-        totalSources: activeSources.length,
+        totalSources: eligibleSources.length,
         successfulPolls: 0,
         failedPolls: 0,
         newItemsFound: 0,
@@ -120,20 +150,27 @@ export async function GET(request: NextRequest) {
 
       // Poll each feed using FetchFromSource use case (RSS fetch only, NO auto-generation)
       const batchSize = 3; // Process in small batches to avoid overload
-      for (let i = 0; i < activeSources.length; i += batchSize) {
-        const batch = activeSources.slice(i, i + batchSize);
+      for (let i = 0; i < eligibleSources.length; i += batchSize) {
+        const batch = eligibleSources.slice(i, i + batchSize);
 
         const batchPromises = batch.map(async (sourceData) => {
           try {
-            console.log(`🔍 [CRON] Polling feed: ${sourceData.name} (${sourceData.url})`);
+            const statusIcon = sourceData.status === 'active' ? '✅' : '🔄';
+            console.log(`🔍 [CRON] ${statusIcon} Polling feed: ${sourceData.name} (${sourceData.status}) - ${sourceData.url}`);
+
+            if (sourceData.status === 'error') {
+              const hoursSinceError = Math.round((Date.now() - new Date(sourceData.lastErrorAt).getTime()) / (1000 * 60 * 60));
+              console.log(`🔄 [AUTO-RECOVERY] Attempting recovery after ${hoursSinceError}h in error state`);
+            }
 
             console.log(`📡 [SOURCES] RSS fetch only - no auto-generation (separate cron will handle this)`);
 
             // CLEAN SEPARATION: Only RSS fetch, NO auto-generation
             // Auto-generation will be handled by separate /api/cron/auto-generation
+            // Force=false to use auto-recovery logic, not bypass all checks
             const fetchResult = await sourcesContainer.sourcesAdminFacade.fetchFromSource({
               sourceId: sourceData.id,
-              force: true,
+              force: false, // Use auto-recovery logic in isReadyForFetch()
               autoGenerate: false  // 🚨 IMPORTANT: Sources module only fetches RSS, never generates
             });
 
@@ -146,6 +183,10 @@ export async function GET(request: NextRequest) {
 
               results.successfulPolls++;
               results.newItemsFound += newItems;
+
+              if (sourceData.status === 'error') {
+                console.log(`🎉 [AUTO-RECOVERY] SUCCESS: ${sourceData.name} recovered from error state!`);
+              }
 
               if (newItems > 0) {
                 console.log(`✅ [SOURCES] SUCCESS: ${newItems} new feed items from ${sourceData.name}`);
@@ -172,7 +213,7 @@ export async function GET(request: NextRequest) {
         await Promise.all(batchPromises);
 
         // Pausa tra i batch per non sovraccaricare
-        if (i + batchSize < activeSources.length) {
+        if (i + batchSize < eligibleSources.length) {
           await new Promise(resolve => setTimeout(resolve, 2000)); // 2 secondi di pausa
         }
       }

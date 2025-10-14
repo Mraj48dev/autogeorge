@@ -439,9 +439,56 @@ export class Source extends AggregateRoot<SourceId> {
 
   /**
    * Checks if the source is ready for fetching
+   * Includes auto-recovery logic for sources in error state
    */
-  isReadyForFetch(): boolean {
-    return this._status.isOperational();
+  isReadyForFetch(force: boolean = false): boolean {
+    // Force parameter bypasses all checks
+    if (force) {
+      return true;
+    }
+
+    // Active sources are always ready
+    if (this._status.isOperational()) {
+      return true;
+    }
+
+    // Auto-recovery for error state sources
+    if (this._status.isError() && this.canAttemptRecovery()) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if an error state source can attempt recovery
+   * Based on time since last error and retry limits
+   */
+  private canAttemptRecovery(): boolean {
+    if (!this._lastErrorAt) {
+      return true; // No error timestamp, allow retry
+    }
+
+    // Calculate hours since last error
+    const hoursSinceError = (Date.now() - this._lastErrorAt.getTime()) / (1000 * 60 * 60);
+
+    // Get retry configuration
+    const retryConfig = this.getRetryConfiguration();
+
+    // Check if enough time has passed for recovery attempt
+    return hoursSinceError >= retryConfig.retryDelayHours;
+  }
+
+  /**
+   * Gets retry configuration for auto-recovery
+   */
+  private getRetryConfiguration() {
+    // Default configuration - can be made configurable per source
+    return {
+      retryDelayHours: 2, // Wait 2 hours before retry
+      maxRetries: 10,     // Max 10 automatic retry attempts
+      backoffMultiplier: 1.5 // Increase delay by 1.5x each failure
+    };
   }
 
   /**

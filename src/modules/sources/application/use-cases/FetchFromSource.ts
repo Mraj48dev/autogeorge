@@ -41,9 +41,10 @@ export class FetchFromSource extends BaseUseCase<FetchFromSourceRequest, FetchFr
         return Result.failure(new Error('Source not found'));
       }
 
-      // Check if source is ready for fetching
-      if (!source.isReadyForFetch()) {
-        return Result.failure(new Error(`Source is not ready for fetching (status: ${source.status.getValue()})`));
+      // Check if source is ready for fetching (with auto-recovery support)
+      if (!source.isReadyForFetch(params.force)) {
+        const status = source.status.getValue();
+        return Result.failure(new Error(`Source is not ready for fetching (status: ${status})`));
       }
 
       const startTime = Date.now();

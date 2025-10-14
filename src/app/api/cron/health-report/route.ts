@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * e invia email summary ogni 12 ore.
  *
  * URL CRON: https://autogeorge.vercel.app/api/cron/health-report
- * Frequenza: Ogni 12 ore (0 */12 * * *)
+ * Frequenza: Ogni 12 ore (0 asterisk-slash-12 asterisk asterisk asterisk)
  *
  * Funzionalità:
  * - Analizza ultimi 12 ore di health checks

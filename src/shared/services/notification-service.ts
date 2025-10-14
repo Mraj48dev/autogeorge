@@ -395,10 +395,13 @@ export class NotificationService {
 
   private async sendEmailWithSMTP(emailData: any): Promise<any> {
     try {
-      // Implementazione SMTP usando Gmail API tramite REST
+      // Importa nodemailer dinamicamente per compatibilità Edge Runtime
+      const nodemailer = (await import('nodemailer')).default;
+
       const smtpData = {
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true', // true per 465, false per altri
         user: process.env.SMTP_USER,
         password: process.env.SMTP_PASSWORD,
         to: emailData.to,
@@ -407,68 +410,75 @@ export class NotificationService {
         text: emailData.text
       };
 
-      console.log('📧 SMTP Email sending via Gmail:', {
+      console.log('📧 Real SMTP Email sending:', {
         host: smtpData.host,
         port: smtpData.port,
+        secure: smtpData.secure,
         user: smtpData.user,
         to: emailData.to
       });
 
-      // Usa Gmail API invece di SMTP diretto per compatibilità Vercel
-      if (smtpData.host === 'smtp.gmail.com') {
-        return await this.sendEmailViaGmailAPI(emailData);
-      }
-
-      // Per altri provider SMTP, log dettagliato ma simula successo
-      console.log('📧 SMTP Email (simulated - non-Gmail provider):', { to: emailData.to });
-      return { messageId: `smtp_${Date.now()}` };
-    } catch (error) {
-      console.error('SMTP email failed:', error);
-      throw error;
-    }
-  }
-
-  private async sendEmailViaGmailAPI(emailData: any): Promise<any> {
-    try {
-      // Implementazione semplificata - per ora logga ma non invia realmente
-      // L'implementazione completa richiederebbe OAuth2 setup
-
-      console.log('📧 Gmail API Email (detailed logging):', {
-        from: process.env.SMTP_USER,
-        to: emailData.to,
-        subject: emailData.subject,
-        hasHTML: !!emailData.html,
-        hasText: !!emailData.text,
-        contentLength: emailData.html ? emailData.html.length : emailData.text?.length || 0
+      // Crea trasporter SMTP
+      const transporter = nodemailer.createTransporter({
+        host: smtpData.host,
+        port: smtpData.port,
+        secure: smtpData.secure,
+        auth: {
+          user: smtpData.user,
+          pass: smtpData.password,
+        },
+        // Configurazioni specifiche per Gmail
+        ...(smtpData.host === 'smtp.gmail.com' && {
+          service: 'gmail',
+          auth: {
+            user: smtpData.user,
+            pass: smtpData.password,
+          },
+        }),
       });
 
-      // Log dell'HTML content per debug (primi 200 caratteri)
-      if (emailData.html) {
-        console.log('📧 Email HTML preview:', emailData.html.substring(0, 200) + '...');
-      }
+      // Opzioni email
+      const mailOptions = {
+        from: `"AutoGeorge Monitor" <${smtpData.user}>`,
+        to: Array.isArray(emailData.to) ? emailData.to.join(', ') : emailData.to,
+        subject: emailData.subject,
+        text: emailData.text,
+        html: emailData.html,
+      };
 
-      // Simula successo Gmail
-      console.log('📧 Gmail Email (simulated success):', { to: emailData.to });
-      return { messageId: `gmail_${Date.now()}` };
+      // Invia email reale
+      const info = await transporter.sendMail(mailOptions);
+
+      console.log('✅ Real SMTP Email sent successfully:', {
+        messageId: info.messageId,
+        response: info.response,
+        to: emailData.to
+      });
+
+      return { messageId: info.messageId, response: info.response };
     } catch (error) {
-      console.error('Gmail API failed:', error);
+      console.error('❌ SMTP email failed:', error);
       throw error;
     }
   }
 
   private async sendEmailWithNodeMailer(emailData: any): Promise<any> {
-    // Fallback finale - placeholder ma con logging dettagliato
+    // Fallback finale - placeholder ma con logging dettagliato delle configurazioni
     console.log('📧 Email notification (no provider configured):', {
       to: emailData.to,
       subject: emailData.subject,
       availableVars: {
+        EMAIL_NOTIFICATIONS_ENABLED: process.env.EMAIL_NOTIFICATIONS_ENABLED,
         RESEND_API_KEY: !!process.env.RESEND_API_KEY,
-        SMTP_HOST: !!process.env.SMTP_HOST,
-        SMTP_USER: !!process.env.SMTP_USER,
-        SMTP_PASSWORD: !!process.env.SMTP_PASSWORD
+        SMTP_HOST: process.env.SMTP_HOST,
+        SMTP_PORT: process.env.SMTP_PORT,
+        SMTP_USER: process.env.SMTP_USER,
+        SMTP_PASSWORD: !!process.env.SMTP_PASSWORD,
+        EMAIL_RECIPIENTS: process.env.EMAIL_RECIPIENTS
       }
     });
 
+    console.log('⚠️  No email provider configured. Please set either RESEND_API_KEY or SMTP_* variables.');
     return { messageId: `mock_${Date.now()}` };
   }
 

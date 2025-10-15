@@ -9,7 +9,7 @@
     "build:prod": "npm run build && npx prisma db push",
     "build:vercel": "npx prisma generate && next build",
     "start": "next start",
-    "vercel-build": "npx prisma generate && next build",
+    "vercel-build": "next build",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",

@@ -1,10 +1,10 @@
 import NextAuth from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authConfig } from '@/lib/auth';
 
 /**
- * NextAuth.js API route handler
- * Integrates NextAuth with our Clean Architecture Auth Module
+ * NextAuth v5 API route handler
+ * Simplified configuration for Vercel serverless compatibility
  */
-const handler = NextAuth(authOptions);
+const handler = NextAuth(authConfig);
 
 export { handler as GET, handler as POST };

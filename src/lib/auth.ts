@@ -1,13 +1,13 @@
-import { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import { NextAuthConfig } from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
 
 /**
- * Ultra-minimal NextAuth configuration for debugging serverless issues
- * No OAuth providers, no complex callbacks, just basic credentials
+ * NextAuth v5 configuration for AutoGeorge
+ * Simplified for serverless compatibility
  */
-export const authOptions: NextAuthOptions = {
+export const authConfig: NextAuthConfig = {
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -24,6 +24,7 @@ export const authOptions: NextAuthOptions = {
             id: '873c7ec4-0fc4-4401-bdff-0469287908f4',
             email: 'alessandro.taurino900@gmail.com',
             name: 'Alessandro Taurino Admin',
+            role: 'admin',
           };
         }
 
@@ -37,7 +38,31 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = (user as any).role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        (session.user as any).id = token.sub;
+        (session.user as any).role = token.role;
+      }
+      return session;
+    },
+  },
+
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
 };
+
+// For backward compatibility - export as authOptions too
+export const authOptions = authConfig;
 
 /**
  * Simplified helper functions for the demo

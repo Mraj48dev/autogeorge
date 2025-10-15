@@ -8,8 +8,14 @@ import { createContainer } from '@/composition-root/container';
 // Get configuration
 const config = Config.fromEnvironment();
 
-// Create container for auth services
-const container = createContainer();
+// Lazy container initialization to avoid serverless issues
+let containerInstance: any = null;
+function getContainer() {
+  if (!containerInstance) {
+    containerInstance = createContainer();
+  }
+  return containerInstance;
+}
 
 /**
  * NextAuth configuration integrated with Auth Module
@@ -31,6 +37,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Use our Auth Module to authenticate
+          const container = getContainer();
           const nextAuthAdapter = container.nextAuthAdapter;
           const result = await nextAuthAdapter.getEnhancedUser(credentials.email);
 
@@ -75,6 +82,7 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       try {
         // Use our Auth Module for sign-in logic
+        const container = getContainer();
         const nextAuthAdapter = container.nextAuthAdapter;
         return await nextAuthAdapter.signIn(user, account, profile);
       } catch (error) {
@@ -86,6 +94,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       try {
         // Enhance session with our domain data
+        const container = getContainer();
         const nextAuthAdapter = container.nextAuthAdapter;
         return await nextAuthAdapter.session(session, token);
       } catch (error) {
@@ -97,6 +106,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account, profile }) {
       try {
         // Enhance JWT token with our domain data
+        const container = getContainer();
         const nextAuthAdapter = container.nextAuthAdapter;
         return await nextAuthAdapter.jwt(token, user, account, profile);
       } catch (error) {
@@ -130,6 +140,7 @@ export const authOptions: NextAuthOptions = {
  */
 export async function getUserPermissions(userId: string): Promise<string[]> {
   try {
+    const container = getContainer();
     const nextAuthAdapter = container.nextAuthAdapter;
     const result = await nextAuthAdapter.validateUserPermissions(userId, []);
     return result.user?.permissions.map(p => p.getValue()) || [];
@@ -147,6 +158,7 @@ export async function hasPermission(
   permission: string
 ): Promise<boolean> {
   try {
+    const container = getContainer();
     const nextAuthAdapter = container.nextAuthAdapter;
     const result = await nextAuthAdapter.validateUserPermissions(userId, [permission]);
     return result.hasAccess;

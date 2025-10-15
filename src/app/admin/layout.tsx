@@ -1,7 +1,12 @@
+'use client';
+
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { UserButton } from '@clerk/nextjs';
 import { BUILD_INFO } from '@/lib/buildinfo';
 import LiveClock from '@/components/LiveClock';
+import { AuthGuard } from '@/modules/auth/admin';
+import { UserRole } from '@/modules/auth/domain';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -9,34 +14,38 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">AG</span>
-                </div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  AutoGeorge Admin
-                </h1>
-              </Link>
-            </div>
-            <div className="text-sm text-gray-500">
-              <div>v1.0.0</div>
-              <LiveClock />
-              <div className="text-xs">
-                Deploy: {BUILD_INFO.buildTime}
+    <AuthGuard requiredRole={UserRole.VIEWER}>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center">
+                <Link href="/" className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">AG</span>
+                  </div>
+                  <h1 className="text-xl font-semibold text-gray-900">
+                    AutoGeorge Admin
+                  </h1>
+                </Link>
               </div>
-              <div className="text-xs text-gray-400">
-                #{BUILD_INFO.commitHash}
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-gray-500 text-right">
+                  <div>v1.0.0</div>
+                  <LiveClock />
+                  <div className="text-xs">
+                    Deploy: {BUILD_INFO.buildTime}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    #{BUILD_INFO.commitHash}
+                  </div>
+                </div>
+                <UserButton afterSignOutUrl="/" />
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       <div className="flex">
         {/* Sidebar */}
@@ -145,5 +154,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </main>
       </div>
     </div>
+    </AuthGuard>
   );
 }

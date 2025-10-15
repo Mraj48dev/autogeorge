@@ -34,8 +34,7 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "prepare": "husky install || true"
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@clerk/nextjs": "^6.33.4",

@@ -37,8 +37,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Genera token di verifica sicuro
+    // Genera token di verifica sicuro (min 32 caratteri)
     const token = Math.random().toString(36).substring(2, 15) +
+                  Math.random().toString(36).substring(2, 15) +
+                  Math.random().toString(36).substring(2, 15) +
                   Math.random().toString(36).substring(2, 15) +
                   Date.now().toString(36);
 

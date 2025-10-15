@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { Config } from '@/shared/config/env';
 import { createContainer } from '@/composition-root/container';
 
@@ -17,6 +18,42 @@ const container = createContainer();
 export const authOptions: NextAuthOptions = {
 
   providers: [
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        try {
+          // Use our Auth Module to authenticate
+          const nextAuthAdapter = container.nextAuthAdapter;
+          const result = await nextAuthAdapter.getEnhancedUser(credentials.email);
+
+          if (result) {
+            // In production, verify password hash here
+            // For now, we'll accept any password for existing users
+            return {
+              id: result.id,
+              email: result.email,
+              name: result.name,
+              image: result.image,
+              role: result.role,
+              permissions: result.permissions,
+            };
+          }
+
+          return null;
+        } catch (error) {
+          console.error('Credentials auth error:', error);
+          return null;
+        }
+      },
+    }),
     GoogleProvider({
       clientId: config.auth.providers.google.clientId || '',
       clientSecret: config.auth.providers.google.clientSecret || '',

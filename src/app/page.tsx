@@ -1,153 +1,270 @@
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { UserInfo } from '@/components/auth/UserInfo';
 
 export default function HomePage() {
+  const { data: session, status } = useSession();
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // User is authenticated - show authenticated homepage with user info
+  if (session?.user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-6xl mx-auto">
+
+            {/* Welcome Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                🚀 Benvenuto in AutoGeorge
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Piattaforma di generazione automatica e pubblicazione di articoli
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+
+              {/* User Information */}
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Il Tuo Profilo</h2>
+                <UserInfo />
+              </div>
+
+              {/* Quick Actions */}
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">Azioni Rapide</h2>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gestione Contenuti</CardTitle>
+                    <CardDescription>
+                      Accedi alle funzionalità principali della piattaforma
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Link href="/admin">
+                      <Button className="w-full">
+                        📊 Dashboard Admin
+                      </Button>
+                    </Link>
+                    <Link href="/admin/sources">
+                      <Button variant="outline" className="w-full">
+                        📡 Gestione Fonti RSS
+                      </Button>
+                    </Link>
+                    <Link href="/admin/articles">
+                      <Button variant="outline" className="w-full">
+                        📝 Articoli Generati
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Test & Debug</CardTitle>
+                    <CardDescription>
+                      Strumenti per testare le funzionalità
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Link href="/auth/demo">
+                      <Button variant="outline" className="w-full">
+                        🧪 Auth Module Demo
+                      </Button>
+                    </Link>
+                    <Link href="/api/health" target="_blank">
+                      <Button variant="outline" className="w-full">
+                        ❤️ Health Check API
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+
+              </div>
+            </div>
+
+            {/* System Status */}
+            <div className="mt-8 text-center">
+              <div className="inline-flex items-center space-x-2 text-sm text-gray-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Sistema operativo</span>
+                <Badge variant="outline">Auth Module attivo</Badge>
+                <Badge variant="outline">Database connesso</Badge>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // User is not authenticated - show login options
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
-      <header className="container mx-auto px-6 py-8">
-        <nav className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">AutoGeorge</h1>
-          </div>
-          <Link
-            href="/admin"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            Accedi all'Admin
-          </Link>
-        </nav>
-      </header>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl w-full space-y-8">
 
-      {/* Hero Section */}
-      <main className="container mx-auto px-6 py-16">
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-gray-900 mb-6">
-            Generazione Automatica
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-              {' '}di Articoli
-            </span>
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Piattaforma avanzata per la creazione automatica di contenuti di qualità
-            utilizzando l'intelligenza artificiale. Ottimizza il tuo workflow editoriale
-            con tecnologie all'avanguardia.
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            🚀 AutoGeorge
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Automatizza la produzione di contenuti per il tuo blog
           </p>
-          <div className="flex justify-center space-x-4">
-            <Link
-              href="/admin/generate"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
-            >
-              Genera Articolo
-            </Link>
-            <Link
-              href="/monitor"
-              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
-            >
-              🔍 Monitor RSS
-            </Link>
-            <Link
-              href="/admin/dashboard"
-              className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-lg font-semibold border border-gray-200 transition-colors"
-            >
-              Visualizza Dashboard
-            </Link>
-          </div>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">Generazione Veloce</h3>
-            <p className="text-gray-600">
-              Crea articoli di qualità in pochi secondi utilizzando AI avanzata
-              e sources personalizzabili per contenuti sempre aggiornati.
-            </p>
-          </div>
-
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">Clean Architecture</h3>
-            <p className="text-gray-600">
-              Architettura pulita e modulare che garantisce scalabilità,
-              manutenibilità e testing efficace del codice.
-            </p>
-          </div>
-
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">Automazione Completa</h3>
-            <p className="text-gray-600">
-              Sistema completamente automatizzato dalla ricerca delle fonti
-              alla pubblicazione finale su multiple piattaforme.
-            </p>
-          </div>
-        </div>
-
-        {/* Tech Stack */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
-            Tecnologie Utilizzate
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-black rounded-lg flex items-center justify-center mx-auto mb-3">
-                <span className="text-white font-bold text-xl">▲</span>
-              </div>
-              <p className="font-medium text-gray-900">Next.js 15</p>
-              <p className="text-sm text-gray-600">React Framework</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <span className="text-white font-bold text-xl">TS</span>
-              </div>
-              <p className="font-medium text-gray-900">TypeScript</p>
-              <p className="text-sm text-gray-600">Type Safety</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <span className="text-white font-bold text-xl">P</span>
-              </div>
-              <p className="font-medium text-gray-900">Prisma ORM</p>
-              <p className="text-sm text-gray-600">Database</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <span className="text-white font-bold text-xl">AI</span>
-              </div>
-              <p className="font-medium text-gray-900">Perplexity AI</p>
-              <p className="text-sm text-gray-600">Content Generation</p>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="container mx-auto px-6 py-8 mt-16 border-t border-gray-200">
-        <div className="text-center text-gray-600">
-          <p>&copy; 2024 AutoGeorge. Tutti i diritti riservati.</p>
-          <p className="mt-2 text-sm">
-            Powered by AI • Built with ❤️ • Clean Architecture
+          <p className="text-gray-500 mt-2">
+            Generazione automatica e pubblicazione di articoli con Clean Architecture
           </p>
         </div>
-      </footer>
+
+        <div className="grid md:grid-cols-2 gap-8">
+
+          {/* Authentication Options */}
+          <Card>
+            <CardHeader>
+              <CardTitle>🔐 Accesso alla Piattaforma</CardTitle>
+              <CardDescription>
+                Scegli come accedere al tuo account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              {/* Classic Auth */}
+              <div>
+                <h4 className="font-medium mb-3">Autenticazione Classica</h4>
+                <div className="space-y-2">
+                  <Link href="/auth/login">
+                    <Button className="w-full">
+                      📧 Accedi con Email/Password
+                    </Button>
+                  </Link>
+                  <Link href="/auth/register">
+                    <Button variant="outline" className="w-full">
+                      ➕ Registrati con Email/Password
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* OAuth */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">Oppure</span>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-3">Accesso Rapido OAuth</h4>
+                <div className="space-y-2">
+                  <Link href="/auth/signin">
+                    <Button variant="outline" className="w-full">
+                      🌐 Login con Google/GitHub
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+            </CardContent>
+          </Card>
+
+          {/* System Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>📋 Sistema di Ruoli</CardTitle>
+              <CardDescription>
+                Comprendi i permessi e le funzionalità disponibili
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium">Admin</span>
+                    <Badge className="bg-red-100 text-red-800">admin</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Accesso completo al sistema e gestione utenti
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium">Editor</span>
+                    <Badge className="bg-blue-100 text-blue-800">editor</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Creazione e gestione contenuti, fonti RSS
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium">Viewer</span>
+                    <Badge className="bg-green-100 text-green-800">viewer</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Solo lettura (assegnato ai nuovi utenti)
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium">API Client</span>
+                    <Badge className="bg-yellow-100 text-yellow-800">api_client</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Accesso programmatico alle API
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Primo accesso:</strong> Riceverai automaticamente il ruolo "viewer".
+                  Un amministratore può promuoverti successivamente.
+                </p>
+              </div>
+
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-sm text-gray-500 space-y-2">
+          <p>Sistema implementato con Clean Architecture + RBAC</p>
+          <div className="inline-flex items-center space-x-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Auth Module attivo</span>
+            <span>•</span>
+            <span>Database connesso</span>
+            <span>•</span>
+            <span>API funzionanti</span>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

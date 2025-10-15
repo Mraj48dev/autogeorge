@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         data: {
           token: token,
           email: email,
+          status: 'pending',
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 ore
         },
       });

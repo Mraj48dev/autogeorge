@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
-import { BUILD_INFO } from '@/lib/buildinfo';
-import LiveClock from '@/components/LiveClock';
+import { redirect } from 'next/navigation';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  // 🚨 EMERGENCY LOCKDOWN - REDIRECT ALL ADMIN ACCESS
+  redirect('/maintenance');
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}

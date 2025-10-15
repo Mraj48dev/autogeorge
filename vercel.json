@@ -1,12 +1,13 @@
 {
   "buildCommand": "npm run vercel-build",
   "outputDirectory": ".next",
-  "installCommand": "npm install",
+  "installCommand": "npm install --legacy-peer-deps",
   "devCommand": "npm run dev",
   "framework": "nextjs",
   "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 60
+    "src/app/api/**/*.ts": {
+      "maxDuration": 60,
+      "runtime": "nodejs18.x"
     }
   },
   "build": {

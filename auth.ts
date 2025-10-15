@@ -1,12 +1,25 @@
 import NextAuth from 'next-auth';
+import { PrismaAdapter } from '@auth/prisma-adapter';
 import Credentials from 'next-auth/providers/credentials';
+import Resend from 'next-auth/providers/resend';
+import { prisma } from '@/shared/database/prisma';
+import bcrypt from 'bcryptjs';
 
 /**
- * NextAuth v5 main configuration
- * This is the new v5 pattern with handlers export
+ * NextAuth v5 con Prisma Adapter - STANDARD COMPLETO
+ * Gestisce automaticamente: users, accounts, sessions, verification tokens
  */
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+
   providers: [
+    // Provider Email con Resend per registration + login passwordless
+    Resend({
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.EMAIL_FROM || "AutoGeorge <onboarding@resend.dev>",
+    }),
+
+    // Provider Credentials per login con password
     Credentials({
       name: 'credentials',
       credentials: {
@@ -19,9 +32,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         try {
-          // Import prisma client
-          const { prisma } = await import('@/shared/database/prisma');
-
           // Trova l'utente nel database
           const user = await prisma.user.findUnique({
             where: { email: credentials.email as string }
@@ -31,43 +41,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null;
           }
 
-          // Verifica password (qui dovresti usare bcrypt.compare)
-          // Per ora accetto qualsiasi password per test
-          // if (!await bcrypt.compare(credentials.password, user.password)) {
-          //   return null;
-          // }
+          // Verifica password con bcrypt
+          if (user.password && !(await bcrypt.compare(credentials.password as string, user.password))) {
+            return null;
+          }
 
-          // 🚨 BLOCCO CRITICO: Verifica email obbligatoria
+          // 🚨 SICUREZZA: Email deve essere verificata per login
           if (!user.emailVerified) {
-            throw new Error('EMAIL_NOT_VERIFIED');
+            throw new Error('Please verify your email before signing in.');
           }
 
-          // Hardcoded admin per mantenere compatibilità
-          if (credentials.email === 'alessandro.taurino900@gmail.com') {
-            return {
-              id: '873c7ec4-0fc4-4401-bdff-0469287908f4',
-              email: 'alessandro.taurino900@gmail.com',
-              name: 'Alessandro Taurino Admin',
-              role: 'admin',
-              emailVerified: new Date(),
-            };
-          }
-
-          // Utente verificato dal database
           return {
             id: user.id,
             email: user.email,
-            name: user.name || user.email,
-            role: 'user',
+            name: user.name,
+            image: user.image,
             emailVerified: user.emailVerified,
           };
 
         } catch (error) {
           console.error('Auth error:', error);
-          if (error instanceof Error && error.message === 'EMAIL_NOT_VERIFIED') {
-            throw error; // Rilanciamo l'errore specifico
-          }
-          return null;
+          throw error;
         }
       },
     }),
@@ -76,36 +70,71 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 
   session: {
-    strategy: 'jwt',
+    strategy: 'database', // Usa database sessions invece di JWT
+    maxAge: 30 * 24 * 60 * 60, // 30 giorni
   },
 
   callbacks: {
-    async jwt({ token, user, account }) {
-      if (user) {
-        token.role = (user as any).role;
-        token.emailVerified = (user as any).emailVerified;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token && session.user) {
-        (session.user as any).id = token.sub;
-        (session.user as any).role = token.role;
-        (session.user as any).emailVerified = token.emailVerified;
+    async session({ session, user }) {
+      // Con database strategy, 'user' è l'utente dal database
+      if (session.user && user) {
+        session.user.id = user.id;
+        session.user.emailVerified = user.emailVerified;
       }
       return session;
     },
     async signIn({ user, account, profile, email, credentials }) {
-      // Questo callback viene chiamato quando l'authorize() ha successo
-      // Se arriviamo qui, significa che l'utente è verificato
+      // Con Prisma Adapter, la gestione è automatica
+      // Questo viene chiamato solo per validazione extra
       return true;
     },
   },
 
   pages: {
     signIn: '/auth/signin',
+    signUp: '/auth/signup',
     error: '/auth/error',
+    verifyRequest: '/auth/verify-request',
+    newUser: '/auth/new-user'
   },
+
+  // Email configuration per Resend
+  email: {
+    createTransport: () => ({
+      sendMail: async (options: any) => {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: process.env.EMAIL_FROM || "AutoGeorge <onboarding@resend.dev>",
+            to: options.to,
+            subject: options.subject,
+            html: options.html,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Email sending failed: ${response.statusText}`);
+        }
+
+        return response.json();
+      }
+    }),
+  },
+
+  events: {
+    async createUser({ user }) {
+      console.log('✅ New user created:', user.email);
+    },
+    async signIn({ user, account, profile, isNewUser }) {
+      console.log('✅ User signed in:', user.email);
+    },
+  },
+
+  debug: process.env.NODE_ENV === 'development',
 });
 
 /**

@@ -36,19 +36,40 @@ export default function LoginPage() {
     setMessage(null);
 
     try {
-      // Use NextAuth signIn with credentials
-      const result = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
+      // Try NextAuth first, fallback to simple login if it fails
+      let loginSuccess = false;
 
-      if (result?.error) {
-        setMessage({
-          type: 'error',
-          text: 'Email o password non corretti',
+      try {
+        const result = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
         });
-      } else if (result?.ok) {
+
+        if (result?.ok) {
+          loginSuccess = true;
+        } else if (result?.error) {
+          throw new Error('NextAuth failed');
+        }
+      } catch (nextAuthError) {
+        console.log('NextAuth failed, trying simple login...');
+
+        // Fallback to simple login
+        const response = await fetch('/api/auth/simple-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
+
+        if (response.ok) {
+          loginSuccess = true;
+        }
+      }
+
+      if (loginSuccess) {
         setMessage({
           type: 'success',
           text: 'Accesso effettuato con successo! Reindirizzamento...',
@@ -58,6 +79,11 @@ export default function LoginPage() {
         setTimeout(() => {
           window.location.href = '/admin';
         }, 1500);
+      } else {
+        setMessage({
+          type: 'error',
+          text: 'Email o password non corretti',
+        });
       }
     } catch (error) {
       console.error('Login error:', error);

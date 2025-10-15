@@ -1,21 +1,42 @@
+import { authMiddleware } from '@clerk/nextjs';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
 /**
- * 🚨 LOCKDOWN TOTALE - SICUREZZA MASSIMA
- * BLOCCA COMPLETAMENTE TUTTO FINO A SISTEMA AUTH SICURO
+ * 🔒 CLERK.COM MIDDLEWARE - SICUREZZA ENTERPRISE
+ * Protegge automaticamente tutte le route tranne quelle pubbliche
  */
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export default authMiddleware({
+  // Pagine pubbliche (accessibili senza login)
+  publicRoutes: [
+    '/',
+    '/sign-in',
+    '/sign-up',
+    '/maintenance'
+  ],
 
-  // BLOCCO TOTALE: Solo pagina manutenzione
-  if (pathname === '/maintenance') {
+  // Pagine sempre protette (richiedono login)
+  protectedRoutes: [
+    '/admin(.*)',
+    '/api/admin(.*)'
+  ],
+
+  // Dopo login, redirect alla dashboard
+  afterAuth(auth, req, evt) {
+    // Se utente loggato e su pagina pubblica, redirect alla dashboard
+    if (auth.userId && auth.isPublicRoute) {
+      if (req.nextUrl.pathname === '/' || req.nextUrl.pathname === '/sign-in') {
+        return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+      }
+    }
+
+    // Se utente non loggato e prova ad accedere a pagina protetta
+    if (!auth.userId && !auth.isPublicRoute) {
+      return NextResponse.redirect(new URL('/sign-in', req.url));
+    }
+
     return NextResponse.next();
   }
-
-  // REDIRECT TUTTO ALLA PAGINA MANUTENZIONE
-  return NextResponse.redirect(new URL('/maintenance', request.url));
-}
+});
 
 export const config = {
   matcher: [

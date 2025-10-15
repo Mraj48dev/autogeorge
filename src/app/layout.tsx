@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { SessionProvider } from '@/components/providers/SessionProvider';
+import { ClerkProvider } from '@clerk/nextjs';
 
 export const metadata: Metadata = {
   title: 'AutoGeorge - Generazione Automatica Articoli',
@@ -27,12 +27,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="it">
-      <body className="min-h-screen bg-gray-50 antialiased">
-        <SessionProvider>
+    <ClerkProvider>
+      <html lang="it">
+        <body className="min-h-screen bg-gray-50 antialiased">
           {children}
-        </SessionProvider>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

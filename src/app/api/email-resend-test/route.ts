@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // Test RESEND API
     const resendKey = process.env.RESEND_API_KEY;
-    const emailFrom = process.env.EMAIL_FROM || 'AutoGeorge <onboarding@resend.dev>';
+    const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
     if (!resendKey) {
       return NextResponse.json({

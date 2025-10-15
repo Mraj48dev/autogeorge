@@ -1,34 +1,15 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-/**
- * 🚨 EMERGENCY SECURITY LOCKDOWN
- * Sistema in migrazione da NextAuth a Clerk.com
- * TUTTO BLOCCATO tranne pagine pubbliche essenziali
- */
-export default function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+const isProtectedRoute = createRouteMatcher([
+  '/admin(.*)',
+  '/api/admin(.*)'
+]);
 
-  // PAGINE PUBBLICHE PERMESSE
-  const allowedPaths = [
-    '/',
-    '/sign-in',
-    '/sign-up',
-    '/maintenance',
-    '/api/health',
-    '/_next',
-    '/favicon.ico'
-  ];
-
-  // Se è una pagina permessa, passa
-  if (allowedPaths.some(path => pathname.startsWith(path))) {
-    return NextResponse.next();
+export default clerkMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) {
+    await auth.protect();
   }
-
-  // ⚠️ TUTTO IL RESTO BLOCCATO - REINDIRIZZA A MANUTENZIONE
-  console.warn(`🚨 SECURITY LOCKDOWN: Blocked access to ${pathname}`);
-  return NextResponse.redirect(new URL('/maintenance', request.url));
-}
+});
 
 export const config = {
   matcher: [

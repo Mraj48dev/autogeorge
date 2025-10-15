@@ -1,14 +1,20 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { BUILD_INFO } from '@/lib/buildinfo';
+import LiveClock from '@/components/LiveClock';
+import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  // 🚨 EMERGENCY LOCKDOWN - REDIRECT ALL ADMIN ACCESS
-  redirect('/maintenance');
+export default async function AdminLayout({ children }: AdminLayoutProps) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect('/sign-in');
+  }
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}

@@ -74,21 +74,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 
   session: {
-    strategy: 'database',
+    strategy: 'jwt', // OBBLIGATORIO per Credentials provider
     maxAge: 30 * 24 * 60 * 60, // 30 giorni
   },
 
   callbacks: {
-    async session({ session, user }) {
-      console.log('🔍 Session callback:', { sessionEmail: session.user?.email, userEmail: user?.email });
+    async jwt({ token, user }) {
+      console.log('🔍 JWT callback:', { tokenEmail: token.email, userEmail: user?.email });
 
-      if (session.user && user) {
-        session.user.id = user.id;
-        session.user.emailVerified = user.emailVerified;
+      // Quando user è presente (primo login), aggiungi dati al token
+      if (user) {
+        token.id = user.id;
+        token.emailVerified = user.emailVerified;
+
+        // BLOCCO ASSOLUTO: Solo utenti verificati
+        if (!user.emailVerified) {
+          console.log('❌ JWT rejected - email not verified:', user.email);
+          throw new Error('Email verification required');
+        }
+      }
+      return token;
+    },
+
+    async session({ session, token }) {
+      console.log('🔍 Session callback:', { sessionEmail: session.user?.email, tokenEmail: token.email });
+
+      if (session.user && token) {
+        session.user.id = token.id as string;
+        session.user.emailVerified = token.emailVerified as Date;
 
         // DOPPIO CONTROLLO: Se email non verificata, invalida sessione
-        if (!user.emailVerified) {
-          console.log('❌ Session rejected - email not verified:', user.email);
+        if (!token.emailVerified) {
+          console.log('❌ Session rejected - email not verified:', token.email);
           throw new Error('Email verification required');
         }
       }

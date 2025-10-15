@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 /**
  * Simple temporary login bypass for debugging
@@ -21,9 +20,14 @@ export async function POST(request: NextRequest) {
         expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
       };
 
-      // Set session cookie
-      const cookieStore = await cookies();
-      cookieStore.set('autogeorge-session', JSON.stringify(sessionData), {
+      // Create response with session cookie
+      const response = NextResponse.json({
+        success: true,
+        user: sessionData.user,
+        message: 'Login successful',
+      });
+
+      response.cookies.set('autogeorge-session', JSON.stringify(sessionData), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -31,11 +35,7 @@ export async function POST(request: NextRequest) {
         path: '/',
       });
 
-      return NextResponse.json({
-        success: true,
-        user: sessionData.user,
-        message: 'Login successful',
-      });
+      return response;
     }
 
     return NextResponse.json(

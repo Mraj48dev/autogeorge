@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 /**
  * Simple session check endpoint that reads our manual session cookie
@@ -7,8 +6,7 @@ import { cookies } from 'next/headers';
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('autogeorge-session');
+    const sessionCookie = request.cookies.get('autogeorge-session');
 
     if (!sessionCookie?.value) {
       return NextResponse.json({ user: null, session: null });
@@ -18,9 +16,10 @@ export async function GET(request: NextRequest) {
 
     // Check if session has expired
     if (new Date() > new Date(sessionData.expires)) {
-      // Clear expired session
-      cookieStore.delete('autogeorge-session');
-      return NextResponse.json({ user: null, session: null });
+      // Return response with cleared cookie
+      const response = NextResponse.json({ user: null, session: null });
+      response.cookies.delete('autogeorge-session');
+      return response;
     }
 
     return NextResponse.json({

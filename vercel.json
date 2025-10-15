@@ -30,6 +30,15 @@
           "value": "no-cache, no-store, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Force-Rebuild",
+          "value": "2025-10-15-lockdown"
+        }
+      ]
     }
   ]
 }

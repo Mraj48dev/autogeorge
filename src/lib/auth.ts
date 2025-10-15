@@ -2,27 +2,12 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { Config } from '@/shared/config/env';
-import { createContainer } from '@/composition-root/container';
-
-// Get configuration
-const config = Config.fromEnvironment();
-
-// Lazy container initialization to avoid serverless issues
-let containerInstance: any = null;
-function getContainer() {
-  if (!containerInstance) {
-    containerInstance = createContainer();
-  }
-  return containerInstance;
-}
 
 /**
- * NextAuth configuration integrated with Auth Module
- * Using our own Auth Module instead of PrismaAdapter
+ * Simplified NextAuth configuration to avoid serverless issues
+ * Temporarily removes complex Auth Module integration
  */
 export const authOptions: NextAuthOptions = {
-
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -35,84 +20,50 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        try {
-          // Use our Auth Module to authenticate
-          const container = getContainer();
-          const nextAuthAdapter = container.nextAuthAdapter;
-          const result = await nextAuthAdapter.getEnhancedUser(credentials.email);
-
-          if (result) {
-            // In production, verify password hash here
-            // For now, we'll accept any password for existing users
-            return {
-              id: result.id,
-              email: result.email,
-              name: result.name,
-              image: result.image,
-              role: result.role,
-              permissions: result.permissions,
-            };
-          }
-
-          return null;
-        } catch (error) {
-          console.error('Credentials auth error:', error);
-          return null;
+        // Simplified auth: Check if user is the admin we created
+        if (credentials.email === 'alessandro.taurino900@gmail.com') {
+          return {
+            id: '873c7ec4-0fc4-4401-bdff-0469287908f4',
+            email: 'alessandro.taurino900@gmail.com',
+            name: 'Alessandro Taurino Admin',
+            role: 'admin',
+          };
         }
+
+        return null;
       },
     }),
     GoogleProvider({
-      clientId: config.auth.providers.google.clientId || '',
-      clientSecret: config.auth.providers.google.clientSecret || '',
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
     GitHubProvider({
-      clientId: config.auth.providers.github.clientId || '',
-      clientSecret: config.auth.providers.github.clientSecret || '',
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
     }),
   ],
 
-  secret: config.auth.nextAuthSecret,
+  secret: process.env.NEXTAUTH_SECRET,
 
   session: {
     strategy: 'jwt',
-    maxAge: config.auth.sessionMaxAge,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
   callbacks: {
-    async signIn({ user, account, profile }) {
-      try {
-        // Use our Auth Module for sign-in logic
-        const container = getContainer();
-        const nextAuthAdapter = container.nextAuthAdapter;
-        return await nextAuthAdapter.signIn(user, account, profile);
-      } catch (error) {
-        console.error('Sign-in error:', error);
-        return false;
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
       }
+      return token;
     },
 
     async session({ session, token }) {
-      try {
-        // Enhance session with our domain data
-        const container = getContainer();
-        const nextAuthAdapter = container.nextAuthAdapter;
-        return await nextAuthAdapter.session(session, token);
-      } catch (error) {
-        console.error('Session error:', error);
-        return session;
+      if (token) {
+        session.user.id = token.sub;
+        session.user.role = token.role;
       }
-    },
-
-    async jwt({ token, user, account, profile }) {
-      try {
-        // Enhance JWT token with our domain data
-        const container = getContainer();
-        const nextAuthAdapter = container.nextAuthAdapter;
-        return await nextAuthAdapter.jwt(token, user, account, profile);
-      } catch (error) {
-        console.error('JWT error:', error);
-        return token;
-      }
+      return session;
     },
   },
 
@@ -121,33 +72,19 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/error',
   },
 
-  events: {
-    async signIn({ user }) {
-      console.log(`User signed in: ${user.email}`);
-    },
-
-    async signOut({ token }) {
-      console.log(`User signed out: ${token?.email}`);
-    },
-  },
-
-  debug: config.app.isDevelopment,
+  debug: process.env.NODE_ENV === 'development',
 };
 
 /**
- * Helper function to get user permissions
- * Can be used in API routes or middleware
+ * Simplified helper functions for the demo
+ * These will be re-integrated with Auth Module once NextAuth is stable
  */
 export async function getUserPermissions(userId: string): Promise<string[]> {
-  try {
-    const container = getContainer();
-    const nextAuthAdapter = container.nextAuthAdapter;
-    const result = await nextAuthAdapter.validateUserPermissions(userId, []);
-    return result.user?.permissions.map(p => p.getValue()) || [];
-  } catch (error) {
-    console.error('Error getting user permissions:', error);
-    return [];
+  // Simplified: admin gets all permissions
+  if (userId === '873c7ec4-0fc4-4401-bdff-0469287908f4') {
+    return ['system:admin'];
   }
+  return [];
 }
 
 /**
@@ -157,13 +94,9 @@ export async function hasPermission(
   userId: string,
   permission: string
 ): Promise<boolean> {
-  try {
-    const container = getContainer();
-    const nextAuthAdapter = container.nextAuthAdapter;
-    const result = await nextAuthAdapter.validateUserPermissions(userId, [permission]);
-    return result.hasAccess;
-  } catch (error) {
-    console.error('Error checking permission:', error);
-    return false;
+  // Simplified: admin has all permissions
+  if (userId === '873c7ec4-0fc4-4401-bdff-0469287908f4') {
+    return true;
   }
+  return false;
 }

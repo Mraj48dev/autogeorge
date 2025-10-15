@@ -359,7 +359,8 @@ export class Container {
     if (!this._sendVerificationEmail) {
       this._sendVerificationEmail = new SendVerificationEmail(
         this.emailVerificationRepository,
-        this.emailService
+        this.emailService,
+        this.userRepository
       );
     }
     return this._sendVerificationEmail;

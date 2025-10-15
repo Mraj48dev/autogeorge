@@ -1,6 +1,7 @@
 import { UseCase } from '@/shared/application/base/UseCase';
 import { EmailVerificationRepository } from '../../domain/ports/EmailVerificationRepository';
 import { EmailService } from '../../domain/ports/EmailService';
+import { UserRepository } from '../../domain/ports/UserRepository';
 import { Email } from '../../domain/value-objects/Email';
 import { VerificationToken } from '../../domain/value-objects/VerificationToken';
 import { EmailVerification } from '../../domain/entities/EmailVerification';
@@ -19,6 +20,8 @@ interface SendVerificationEmailResponse {
   expiresAt: Date;
   emailSent: boolean;
   message: string;
+  userExists: boolean;
+  userEmailVerified?: boolean;
 }
 
 /**
@@ -31,7 +34,8 @@ export class SendVerificationEmail extends UseCase<
 > {
   constructor(
     private emailVerificationRepository: EmailVerificationRepository,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private userRepository: UserRepository
   ) {
     super();
   }
@@ -41,6 +45,14 @@ export class SendVerificationEmail extends UseCase<
   ): Promise<SendVerificationEmailResponse> {
     // Validate email
     const email = new Email(request.email);
+
+    // Check if user exists and if email is already verified
+    const existingUser = await this.userRepository.findByEmail(email);
+
+    if (existingUser && existingUser.emailVerified) {
+      // User exists and email is already verified, no need to send verification
+      throw new Error(`L'utente ${email.value} esiste già ed è già verificato. Prova ad accedere invece.`);
+    }
 
     // Check if there's already a pending verification
     const existingVerification = await this.emailVerificationRepository.findPendingByEmail(email);
@@ -121,6 +133,8 @@ export class SendVerificationEmail extends UseCase<
       message: emailSent
         ? 'Email di verifica inviata con successo'
         : `Verifica creata ma email non inviata: ${emailError}`,
+      userExists: !!existingUser,
+      userEmailVerified: existingUser?.emailVerified ? true : false,
     };
   }
 }

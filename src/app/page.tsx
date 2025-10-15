@@ -1,16 +1,15 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { UserInfo } from '@/components/auth/UserInfo';
+import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 
 export default function HomePage() {
-  const { data: session, status } = useSession();
+  const { isSignedIn, user, isLoaded } = useUser();
 
-  if (status === 'loading') {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -22,7 +21,7 @@ export default function HomePage() {
   }
 
   // User is authenticated - show authenticated homepage with user info
-  if (session?.user) {
+  if (isSignedIn) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto py-8 px-4">
@@ -43,7 +42,17 @@ export default function HomePage() {
               {/* User Information */}
               <div>
                 <h2 className="text-xl font-semibold mb-4">Il Tuo Profilo</h2>
-                <UserInfo />
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center space-x-4">
+                      <UserButton />
+                      <div>
+                        <p className="font-medium">{user?.fullName || user?.firstName || 'Utente'}</p>
+                        <p className="text-sm text-gray-600">{user?.primaryEmailAddress?.emailAddress}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Quick Actions */}
@@ -78,22 +87,21 @@ export default function HomePage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Test & Debug</CardTitle>
+                    <CardTitle>Sistema</CardTitle>
                     <CardDescription>
-                      Strumenti per testare le funzionalità
+                      Monitoraggio e stato del sistema
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Link href="/auth/demo">
-                      <Button variant="outline" className="w-full">
-                        🧪 Auth Module Demo
-                      </Button>
-                    </Link>
                     <Link href="/api/health" target="_blank">
                       <Button variant="outline" className="w-full">
                         ❤️ Health Check API
                       </Button>
                     </Link>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>🔐 Clerk Security Active</span>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -146,41 +154,25 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="space-y-4">
 
-              {/* Classic Auth */}
+              {/* Clerk Auth */}
               <div>
-                <h4 className="font-medium mb-3">Autenticazione Classica</h4>
+                <h4 className="font-medium mb-3">🔐 Accesso Sicuro</h4>
                 <div className="space-y-2">
-                  <Link href="/auth/login">
+                  <SignInButton mode="modal">
                     <Button className="w-full">
-                      📧 Accedi con Email/Password
+                      🔑 Accedi al Sistema
                     </Button>
-                  </Link>
-                  <Link href="/auth/register">
+                  </SignInButton>
+                  <SignUpButton mode="modal">
                     <Button variant="outline" className="w-full">
-                      ➕ Registrati con Email/Password
+                      ✨ Registrati Gratuitamente
                     </Button>
-                  </Link>
+                  </SignUpButton>
                 </div>
-              </div>
-
-              {/* OAuth */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Oppure</span>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-3">Accesso Rapido OAuth</h4>
-                <div className="space-y-2">
-                  <Link href="/auth/signin">
-                    <Button variant="outline" className="w-full">
-                      🌐 Login con Google/GitHub
-                    </Button>
-                  </Link>
+                <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                  <p className="text-xs text-green-700">
+                    🛡️ Sicurezza enterprise con Clerk.com
+                  </p>
                 </div>
               </div>
 

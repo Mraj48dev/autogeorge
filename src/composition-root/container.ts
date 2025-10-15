@@ -38,6 +38,10 @@ import { GenerateImagePrompt } from '../modules/prompt-engineer/application/use-
 import { ValidateImagePrompt } from '../modules/prompt-engineer/application/use-cases/ValidateImagePrompt';
 import { PromptEngineerFacade } from '../modules/prompt-engineer/admin/PromptEngineerFacade';
 
+// Auth Module
+import { AuthService } from '../modules/auth/domain';
+import { MockAuthService } from '../modules/auth/infrastructure';
+
 // Automation Module REMOVED - Architecture simplified
 
 // Configuration
@@ -64,6 +68,9 @@ export class Container {
   private _generateImagePrompt: GenerateImagePrompt | null = null;
   private _validateImagePrompt: ValidateImagePrompt | null = null;
   private _promptEngineerFacade: PromptEngineerFacade | null = null;
+
+  // Auth module dependencies
+  private _authService: AuthService | null = null;
 
   // Automation module REMOVED - Simplified architecture
 
@@ -223,6 +230,18 @@ export class Container {
   }
 
   // =============================================
+  // Auth Module Dependencies
+  // =============================================
+
+  get authService(): AuthService {
+    if (!this._authService) {
+      // For now using MockAuthService, can be easily switched to NextAuth or Clerk
+      this._authService = new MockAuthService();
+    }
+    return this._authService;
+  }
+
+  // =============================================
   // Automation Module REMOVED - Simplified architecture
   // =============================================
 
@@ -328,6 +347,23 @@ export class Container {
       });
     }
 
+    // Auth service health check
+    try {
+      const isAuthenticated = await this.authService.isAuthenticated();
+      checks.push({
+        name: 'auth_service',
+        status: 'healthy', // AuthService is always considered healthy if it responds
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      checks.push({
+        name: 'auth_service',
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date(),
+      });
+    }
+
     const isHealthy = checks.every(check => check.status === 'healthy');
 
     return {
@@ -350,6 +386,9 @@ export class Container {
     }
     if (mocks.aiService) {
       container._aiService = mocks.aiService;
+    }
+    if (mocks.authService) {
+      container._authService = mocks.authService;
     }
     if (mocks.logger) {
       container._logger = mocks.logger;
@@ -379,6 +418,7 @@ export interface HealthCheckResult {
 export interface TestMocks {
   articleRepository: ArticleRepository;
   aiService: AiService;
+  authService: AuthService;
   logger: Logger;
 }
 

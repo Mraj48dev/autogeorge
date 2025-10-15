@@ -33,7 +33,7 @@ export function AuthGuard({
   children,
   requiredRole,
   fallback,
-  redirectTo = '/auth/signin'
+  redirectTo = '/sign-in'
 }: AuthGuardProps) {
   const [state, setState] = useState<AuthGuardState>({
     isLoading: true,

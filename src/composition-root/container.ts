@@ -40,7 +40,7 @@ import { PromptEngineerFacade } from '../modules/prompt-engineer/admin/PromptEng
 
 // Auth Module
 import { AuthService } from '../modules/auth/domain';
-import { MockAuthService } from '../modules/auth/infrastructure';
+import { MockAuthService, ClerkAuthService } from '../modules/auth/infrastructure';
 
 // Automation Module REMOVED - Architecture simplified
 
@@ -235,8 +235,8 @@ export class Container {
 
   get authService(): AuthService {
     if (!this._authService) {
-      // For now using MockAuthService, can be easily switched to NextAuth or Clerk
-      this._authService = new MockAuthService();
+      // Using ClerkAuthService for real authentication
+      this._authService = new ClerkAuthService();
     }
     return this._authService;
   }

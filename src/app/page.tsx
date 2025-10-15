@@ -1,6 +1,10 @@
+'use client';
+
 import Link from 'next/link';
+import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 
 export default function HomePage() {
+  const { user, isLoaded } = useUser();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
@@ -14,12 +18,32 @@ export default function HomePage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900">AutoGeorge</h1>
           </div>
-          <Link
-            href="/admin"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            Accedi all'Admin
-          </Link>
+          {!isLoaded ? (
+            <div className="animate-pulse bg-gray-200 h-10 w-32 rounded-lg"></div>
+          ) : user ? (
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/admin"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              >
+                Dashboard
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <SignInButton mode="redirect" redirectUrl="/admin/dashboard">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                  Accedi
+                </button>
+              </SignInButton>
+              <SignUpButton mode="redirect" redirectUrl="/admin/dashboard">
+                <button className="bg-white hover:bg-gray-50 text-gray-900 px-6 py-2 rounded-lg font-medium border border-gray-200 transition-colors">
+                  Registrati
+                </button>
+              </SignUpButton>
+            </div>
+          )}
         </nav>
       </header>
 
@@ -38,24 +62,53 @@ export default function HomePage() {
             con tecnologie all'avanguardia.
           </p>
           <div className="flex justify-center space-x-4">
-            <Link
-              href="/admin/generate"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
-            >
-              Genera Articolo
-            </Link>
-            <Link
-              href="/monitor"
-              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
-            >
-              🔍 Monitor RSS
-            </Link>
-            <Link
-              href="/admin/dashboard"
-              className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-lg font-semibold border border-gray-200 transition-colors"
-            >
-              Visualizza Dashboard
-            </Link>
+            {!isLoaded ? (
+              <>
+                <div className="animate-pulse bg-gray-200 h-12 w-40 rounded-lg"></div>
+                <div className="animate-pulse bg-gray-200 h-12 w-32 rounded-lg"></div>
+                <div className="animate-pulse bg-gray-200 h-12 w-48 rounded-lg"></div>
+              </>
+            ) : user ? (
+              <>
+                <Link
+                  href="/admin/generate"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
+                >
+                  Genera Articolo
+                </Link>
+                <Link
+                  href="/monitor"
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
+                >
+                  🔍 Monitor RSS
+                </Link>
+                <Link
+                  href="/admin/dashboard"
+                  className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-lg font-semibold border border-gray-200 transition-colors"
+                >
+                  Visualizza Dashboard
+                </Link>
+              </>
+            ) : (
+              <>
+                <SignInButton mode="redirect" redirectUrl="/admin/dashboard">
+                  <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105">
+                    Inizia Ora
+                  </button>
+                </SignInButton>
+                <Link
+                  href="/monitor"
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105"
+                >
+                  🔍 Monitor RSS
+                </Link>
+                <SignUpButton mode="redirect" redirectUrl="/admin/dashboard">
+                  <button className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-lg font-semibold border border-gray-200 transition-colors">
+                    Registrati Gratis
+                  </button>
+                </SignUpButton>
+              </>
+            )}
           </div>
         </div>
 

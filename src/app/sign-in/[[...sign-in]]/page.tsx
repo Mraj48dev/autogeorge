@@ -1,0 +1,32 @@
+import { SignIn } from '@clerk/nextjs';
+
+export default function SignInPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Accedi ad AutoGeorge
+          </h1>
+          <p className="text-gray-600">
+            Accedi per gestire la generazione automatica di articoli
+          </p>
+        </div>
+
+        <SignIn
+          appearance={{
+            elements: {
+              rootBox: "mx-auto",
+              card: "shadow-lg border-0",
+            }
+          }}
+          routing="path"
+          path="/sign-in"
+          signUpUrl="/sign-up"
+          forceRedirectUrl="/admin/dashboard"
+          fallbackRedirectUrl="/admin/dashboard"
+        />
+      </div>
+    </div>
+  );
+}

@@ -11,24 +11,23 @@ export class VerificationToken extends ValueObject<string> {
 
   constructor(value: string) {
     super(value);
-    this.validate();
   }
 
-  protected validate(): void {
-    if (!this.value || typeof this.value !== 'string') {
+  protected validate(value: string): void {
+    if (!value || typeof value !== 'string') {
       throw new Error('VerificationToken must be a non-empty string');
     }
 
-    if (this.value.length < VerificationToken.MIN_LENGTH) {
+    if (value.length < VerificationToken.MIN_LENGTH) {
       throw new Error(`VerificationToken must be at least ${VerificationToken.MIN_LENGTH} characters`);
     }
 
-    if (this.value.length > VerificationToken.MAX_LENGTH) {
+    if (value.length > VerificationToken.MAX_LENGTH) {
       throw new Error(`VerificationToken cannot exceed ${VerificationToken.MAX_LENGTH} characters`);
     }
 
     // Check if it's a valid hex string (for crypto tokens)
-    if (!/^[a-fA-F0-9]+$/.test(this.value)) {
+    if (!/^[a-fA-F0-9]+$/.test(value)) {
       throw new Error('VerificationToken must be a valid hexadecimal string');
     }
   }

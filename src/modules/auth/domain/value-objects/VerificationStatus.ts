@@ -11,15 +11,14 @@ export class VerificationStatus extends ValueObject<VerificationStatusType> {
 
   constructor(value: VerificationStatusType) {
     super(value);
-    this.validate();
   }
 
-  protected validate(): void {
-    if (!this.value || typeof this.value !== 'string') {
+  protected validate(value: VerificationStatusType): void {
+    if (!value || typeof value !== 'string') {
       throw new Error('VerificationStatus must be a non-empty string');
     }
 
-    if (!VerificationStatus.VALID_STATUSES.includes(this.value)) {
+    if (!VerificationStatus.VALID_STATUSES.includes(value)) {
       throw new Error(`VerificationStatus must be one of: ${VerificationStatus.VALID_STATUSES.join(', ')}`);
     }
   }

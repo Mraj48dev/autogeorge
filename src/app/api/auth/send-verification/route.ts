@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getContainer } from '@/composition-root/container';
+import { createContainer } from '@/composition-root/factories';
 
 /**
  * Send Email Verification
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const container = getContainer();
+    const container = createContainer();
     const sendVerificationEmail = container.sendVerificationEmail;
 
     const result = await sendVerificationEmail.execute({

@@ -1,21 +1,20 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { authMiddleware } from '@clerk/nextjs';
 
-// Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/api/health',
-  '/api/cron(.*)', // Allow cron endpoints to be public
-  '/api/debug-clerk',
-  '/monitor', // Public RSS monitor page
-]);
-
-export default clerkMiddleware(async (auth, req) => {
-  // Protect all routes except public ones
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
+export default authMiddleware({
+  // Routes that can be accessed while signed out
+  publicRoutes: [
+    '/',
+    '/api/health',
+    '/api/cron(.*)',
+    '/api/debug-clerk',
+    '/monitor',
+  ],
+  // Routes that can always be accessed, and have
+  // no authentication information
+  ignoredRoutes: [
+    '/api/health',
+    '/api/cron(.*)',
+  ],
 });
 
 export const config = {

@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
-import { auth } from '@clerk/nextjs/server';
+import { currentUser } from '@clerk/nextjs/server';
 
-export default function HomePage() {
-  const { userId } = auth();
+export default async function HomePage() {
+  const user = await currentUser();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
@@ -17,7 +17,7 @@ export default function HomePage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900">AutoGeorge</h1>
           </div>
-          {userId ? (
+          {user ? (
             <div className="flex items-center space-x-4">
               <Link
                 href="/admin"
@@ -59,7 +59,7 @@ export default function HomePage() {
             con tecnologie all'avanguardia.
           </p>
           <div className="flex justify-center space-x-4">
-            {userId ? (
+            {user ? (
               <>
                 <Link
                   href="/admin/generate"

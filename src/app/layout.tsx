@@ -26,6 +26,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Clerk Auth Provider for the entire app
   return (
     <ClerkProvider>
       <html lang="it">

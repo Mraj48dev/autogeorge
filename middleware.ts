@@ -1,42 +1,34 @@
-import { authMiddleware } from '@clerk/nextjs';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /**
- * 🔒 CLERK.COM MIDDLEWARE - SICUREZZA ENTERPRISE
- * Protegge automaticamente tutte le route tranne quelle pubbliche
+ * 🚨 EMERGENCY SECURITY LOCKDOWN
+ * Sistema in migrazione da NextAuth a Clerk.com
+ * TUTTO BLOCCATO tranne pagine pubbliche essenziali
  */
-export default authMiddleware({
-  // Pagine pubbliche (accessibili senza login)
-  publicRoutes: [
+export default function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // PAGINE PUBBLICHE PERMESSE
+  const allowedPaths = [
     '/',
     '/sign-in',
     '/sign-up',
-    '/maintenance'
-  ],
+    '/maintenance',
+    '/api/health',
+    '/_next',
+    '/favicon.ico'
+  ];
 
-  // Pagine sempre protette (richiedono login)
-  protectedRoutes: [
-    '/admin(.*)',
-    '/api/admin(.*)'
-  ],
-
-  // Dopo login, redirect alla dashboard
-  afterAuth(auth, req, evt) {
-    // Se utente loggato e su pagina pubblica, redirect alla dashboard
-    if (auth.userId && auth.isPublicRoute) {
-      if (req.nextUrl.pathname === '/' || req.nextUrl.pathname === '/sign-in') {
-        return NextResponse.redirect(new URL('/admin/dashboard', req.url));
-      }
-    }
-
-    // Se utente non loggato e prova ad accedere a pagina protetta
-    if (!auth.userId && !auth.isPublicRoute) {
-      return NextResponse.redirect(new URL('/sign-in', req.url));
-    }
-
+  // Se è una pagina permessa, passa
+  if (allowedPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
-});
+
+  // ⚠️ TUTTO IL RESTO BLOCCATO - REINDIRIZZA A MANUTENZIONE
+  console.warn(`🚨 SECURITY LOCKDOWN: Blocked access to ${pathname}`);
+  return NextResponse.redirect(new URL('/maintenance', request.url));
+}
 
 export const config = {
   matcher: [

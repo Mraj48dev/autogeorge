@@ -1,25 +1,16 @@
 import NextAuth from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import Credentials from 'next-auth/providers/credentials';
-import Resend from 'next-auth/providers/resend';
 import { prisma } from '@/shared/database/prisma';
 import bcrypt from 'bcryptjs';
 
 /**
- * NextAuth v5 con Prisma Adapter - STANDARD COMPLETO
- * Gestisce automaticamente: users, accounts, sessions, verification tokens
+ * NextAuth v5 SICURO - NESSUNO ENTRA SENZA REGISTRAZIONE
  */
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
 
   providers: [
-    // Provider Email con Resend per registration + login passwordless
-    Resend({
-      apiKey: process.env.RESEND_API_KEY,
-      from: process.env.EMAIL_FROM || "AutoGeorge <onboarding@resend.dev>",
-    }),
-
-    // Provider Credentials per login con password
     Credentials({
       name: 'credentials',
       credentials: {
@@ -27,7 +18,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log('🔐 Authorize attempt:', credentials?.email);
+
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ Missing credentials');
           return null;
         }
 
@@ -38,19 +32,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!user) {
+            console.log('❌ User not found:', credentials.email);
             return null;
           }
 
-          // Verifica password con bcrypt
-          if (user.password && !(await bcrypt.compare(credentials.password as string, user.password))) {
+          // Verifica password
+          if (!user.password) {
+            console.log('❌ No password set for user:', credentials.email);
             return null;
           }
 
-          // 🚨 SICUREZZA: Email deve essere verificata per login
+          const passwordValid = await bcrypt.compare(credentials.password as string, user.password);
+          if (!passwordValid) {
+            console.log('❌ Invalid password for user:', credentials.email);
+            return null;
+          }
+
+          // BLOCCO TOTALE: Email deve essere verificata
           if (!user.emailVerified) {
+            console.log('❌ Email not verified for user:', credentials.email);
             throw new Error('Please verify your email before signing in.');
           }
 
+          console.log('✅ User authorized:', user.email);
           return {
             id: user.id,
             email: user.email,
@@ -60,7 +64,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           };
 
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error('❌ Auth error:', error);
           throw error;
         }
       },
@@ -70,89 +74,53 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 
   session: {
-    strategy: 'database', // Usa database sessions invece di JWT
+    strategy: 'database',
     maxAge: 30 * 24 * 60 * 60, // 30 giorni
   },
 
   callbacks: {
     async session({ session, user }) {
-      // Con database strategy, 'user' è l'utente dal database
+      console.log('🔍 Session callback:', { sessionEmail: session.user?.email, userEmail: user?.email });
+
       if (session.user && user) {
         session.user.id = user.id;
         session.user.emailVerified = user.emailVerified;
+
+        // DOPPIO CONTROLLO: Se email non verificata, invalida sessione
+        if (!user.emailVerified) {
+          console.log('❌ Session rejected - email not verified:', user.email);
+          throw new Error('Email verification required');
+        }
       }
       return session;
     },
+
     async signIn({ user, account, profile, email, credentials }) {
-      // Con Prisma Adapter, la gestione è automatica
-      // Questo viene chiamato solo per validazione extra
+      console.log('🔍 SignIn callback:', { userEmail: user?.email, accountType: account?.type });
+
+      // BLOCCO ASSOLUTO: Solo utenti verificati
+      if (user && !user.emailVerified) {
+        console.log('❌ SignIn rejected - email not verified:', user.email);
+        return false;
+      }
+
       return true;
     },
   },
 
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup',
     error: '/auth/error',
-    verifyRequest: '/auth/verify-request',
-    newUser: '/auth/new-user'
-  },
-
-  // Email configuration per Resend
-  email: {
-    createTransport: () => ({
-      sendMail: async (options: any) => {
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: process.env.EMAIL_FROM || "AutoGeorge <onboarding@resend.dev>",
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Email sending failed: ${response.statusText}`);
-        }
-
-        return response.json();
-      }
-    }),
   },
 
   events: {
-    async createUser({ user }) {
-      console.log('✅ New user created:', user.email);
-    },
     async signIn({ user, account, profile, isNewUser }) {
-      console.log('✅ User signed in:', user.email);
+      console.log('📝 Event signIn:', user.email);
+    },
+    async signOut({ session, token }) {
+      console.log('📝 Event signOut');
     },
   },
 
-  debug: process.env.NODE_ENV === 'development',
+  debug: true,
 });
-
-/**
- * Backward compatibility helper functions
- */
-export async function getUserPermissions(userId: string): Promise<string[]> {
-  if (userId === '873c7ec4-0fc4-4401-bdff-0469287908f4') {
-    return ['system:admin'];
-  }
-  return [];
-}
-
-export async function hasPermission(
-  userId: string,
-  permission: string
-): Promise<boolean> {
-  if (userId === '873c7ec4-0fc4-4401-bdff-0469287908f4') {
-    return true;
-  }
-  return false;
-}

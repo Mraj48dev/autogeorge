@@ -1,11 +1,9 @@
 import { NextAuthOptions } from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
-import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 /**
- * Simplified NextAuth configuration to avoid serverless issues
- * Temporarily removes complex Auth Module integration
+ * Ultra-minimal NextAuth configuration for debugging serverless issues
+ * No OAuth providers, no complex callbacks, just basic credentials
  */
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -20,26 +18,17 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Simplified auth: Check if user is the admin we created
+        // Hardcoded admin for testing
         if (credentials.email === 'alessandro.taurino900@gmail.com') {
           return {
             id: '873c7ec4-0fc4-4401-bdff-0469287908f4',
             email: 'alessandro.taurino900@gmail.com',
             name: 'Alessandro Taurino Admin',
-            role: 'admin',
           };
         }
 
         return null;
       },
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
     }),
   ],
 
@@ -47,32 +36,7 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-      }
-      return token;
-    },
-
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.sub;
-        session.user.role = token.role;
-      }
-      return session;
-    },
-  },
-
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
-
-  debug: process.env.NODE_ENV === 'development',
 };
 
 /**

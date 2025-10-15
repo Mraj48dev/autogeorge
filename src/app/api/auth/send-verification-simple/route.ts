@@ -36,6 +36,28 @@ export async function POST(request: NextRequest) {
                   Math.random().toString(36).substring(2, 15) +
                   Date.now().toString(36);
 
+    // Salva il token nel database
+    try {
+      const { prisma } = await import('@/shared/database/prisma');
+
+      await prisma.emailVerification.create({
+        data: {
+          token: token,
+          email: email,
+          status: 'pending',
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 ore
+        },
+      });
+
+      console.log('📝 Token saved to database:', token);
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      return NextResponse.json({
+        error: 'Database error creating verification token',
+        details: dbError instanceof Error ? dbError.message : 'Unknown error'
+      }, { status: 500 });
+    }
+
     // URL di verifica
     const verificationUrl = `${baseUrl || process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}`;
 

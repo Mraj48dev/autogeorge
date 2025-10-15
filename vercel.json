@@ -1,36 +1,6 @@
 {
   "buildCommand": "npm run vercel-build",
-  "outputDirectory": ".next",
   "installCommand": "npm install --legacy-peer-deps",
-  "devCommand": "npm run dev",
   "framework": "nextjs",
-  "functions": {
-    "src/app/api/**/*.ts": {
-      "maxDuration": 60,
-      "runtime": "nodejs18.x"
-    }
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
-  "regions": ["iad1"],
-  "rewrites": [
-    {
-      "source": "/api/admin/(.*)",
-      "destination": "/api/admin/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    }
-  ]
+  "regions": ["iad1"]
 }

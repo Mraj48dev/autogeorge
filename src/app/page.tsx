@@ -1,13 +1,14 @@
 'use client';
 
+import { useUser, SignInButton, SignUpButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
+import { UserInfo } from '@/components/auth/UserInfo';
 
 export default function HomePage() {
-  const { isSignedIn, user, isLoaded } = useUser();
+  const { isSignedIn, isLoaded } = useUser();
 
   if (!isLoaded) {
     return (
@@ -42,17 +43,7 @@ export default function HomePage() {
               {/* User Information */}
               <div>
                 <h2 className="text-xl font-semibold mb-4">Il Tuo Profilo</h2>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-4">
-                      <UserButton />
-                      <div>
-                        <p className="font-medium">{user?.fullName || user?.firstName || 'Utente'}</p>
-                        <p className="text-sm text-gray-600">{user?.primaryEmailAddress?.emailAddress}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <UserInfo />
               </div>
 
               {/* Quick Actions */}
@@ -87,9 +78,9 @@ export default function HomePage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Sistema</CardTitle>
+                    <CardTitle>Test & Debug</CardTitle>
                     <CardDescription>
-                      Monitoraggio e stato del sistema
+                      Strumenti per testare le funzionalità
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -98,10 +89,6 @@ export default function HomePage() {
                         ❤️ Health Check API
                       </Button>
                     </Link>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>🔐 Clerk Security Active</span>
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -113,7 +100,7 @@ export default function HomePage() {
               <div className="inline-flex items-center space-x-2 text-sm text-gray-600">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span>Sistema operativo</span>
-                <Badge variant="outline">Auth Module attivo</Badge>
+                <Badge variant="outline">Clerk Auth attivo</Badge>
                 <Badge variant="outline">Database connesso</Badge>
               </div>
             </div>
@@ -156,7 +143,7 @@ export default function HomePage() {
 
               {/* Clerk Auth */}
               <div>
-                <h4 className="font-medium mb-3">🔐 Accesso Sicuro</h4>
+                <h4 className="font-medium mb-3">🔐 Accesso Sicuro Enterprise</h4>
                 <div className="space-y-2">
                   <SignInButton mode="modal">
                     <Button className="w-full">
@@ -248,7 +235,7 @@ export default function HomePage() {
           <p>Sistema implementato con Clean Architecture + RBAC</p>
           <div className="inline-flex items-center space-x-2">
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Auth Module attivo</span>
+            <span>Clerk Auth attivo</span>
             <span>•</span>
             <span>Database connesso</span>
             <span>•</span>

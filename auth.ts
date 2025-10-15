@@ -1,11 +1,11 @@
-import { NextAuthConfig } from 'next-auth';
+import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
 /**
- * NextAuth v5 configuration for AutoGeorge
- * Simplified for serverless compatibility
+ * NextAuth v5 main configuration
+ * This is the new v5 pattern with handlers export
  */
-export const authConfig: NextAuthConfig = {
+export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       name: 'credentials',
@@ -33,7 +33,7 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
 
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 
   session: {
     strategy: 'jwt',
@@ -59,31 +59,22 @@ export const authConfig: NextAuthConfig = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
-};
-
-// For backward compatibility - export as authOptions too
-export const authOptions = authConfig;
+});
 
 /**
- * Simplified helper functions for the demo
- * These will be re-integrated with Auth Module once NextAuth is stable
+ * Backward compatibility helper functions
  */
 export async function getUserPermissions(userId: string): Promise<string[]> {
-  // Simplified: admin gets all permissions
   if (userId === '873c7ec4-0fc4-4401-bdff-0469287908f4') {
     return ['system:admin'];
   }
   return [];
 }
 
-/**
- * Helper function to check if user has specific permission
- */
 export async function hasPermission(
   userId: string,
   permission: string
 ): Promise<boolean> {
-  // Simplified: admin has all permissions
   if (userId === '873c7ec4-0fc4-4401-bdff-0469287908f4') {
     return true;
   }

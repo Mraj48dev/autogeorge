@@ -1,10 +1,7 @@
-import NextAuth from 'next-auth';
-import { authConfig } from '@/lib/auth';
+import { handlers } from '@/auth';
 
 /**
- * NextAuth v5 API route handler
- * Simplified configuration for Vercel serverless compatibility
+ * NextAuth v5 route handler
+ * Uses the new v5 pattern with handlers export
  */
-const handler = NextAuth(authConfig);
-
-export { handler as GET, handler as POST };
+export const { GET, POST } = handlers;

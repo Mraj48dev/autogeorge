@@ -1,5 +1,4 @@
-import { currentUser, auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
+import { useUser, useAuth } from '@clerk/nextjs';
 import {
   AuthService,
   UserEntity,
@@ -14,15 +13,9 @@ import {
  */
 export class ClerkAuthService implements AuthService {
   async getCurrentUser(): Promise<UserEntity | null> {
-    try {
-      const user = await currentUser();
-      if (!user) return null;
-
-      return this.mapClerkUserToEntity(user);
-    } catch (error) {
-      console.error('Error getting current user from Clerk:', error);
-      return null;
-    }
+    // This implementation is client-safe
+    // Real implementation should use Clerk hooks in components
+    return null;
   }
 
   async isAuthenticated(): Promise<boolean> {
@@ -71,9 +64,8 @@ export class ClerkAuthService implements AuthService {
   }
 
   async signOut(): Promise<void> {
-    // For server-side, we need to redirect to Clerk's sign-out URL
-    // For client-side, this would use useClerk().signOut()
-    redirect('/api/auth/sign-out');
+    // Clerk sign-out should be handled by components
+    throw new Error('Use Clerk components for sign-out');
   }
 
   getSignInUrl(): string {

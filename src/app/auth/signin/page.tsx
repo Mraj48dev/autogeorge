@@ -1,156 +1,189 @@
 'use client';
 
-import { signIn, getProviders } from 'next-auth/react';
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { signIn } from 'next-auth/react';
+import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-interface Provider {
-  id: string;
-  name: string;
-  type: string;
-}
+function SignInContent() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-/**
- * Custom Sign-In page that shows role information
- * Integrates with our Auth Module to explain user roles
- */
-export default function SignInPage() {
-  const [providers, setProviders] = useState<Record<string, Provider>>({});
-  const [loading, setLoading] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/admin/dashboard';
+  const errorParam = searchParams.get('error');
 
-  useEffect(() => {
-    const loadProviders = async () => {
-      const providersData = await getProviders();
-      setProviders(providersData || {});
-    };
-    loadProviders();
-  }, []);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  const handleSignIn = async (providerId: string) => {
-    setLoading(providerId);
     try {
-      await signIn(providerId, { callbackUrl: '/' });
-    } catch (error) {
-      console.error('Sign-in error:', error);
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('❌ Credenziali non valide o account non verificato');
+      } else if (result?.ok) {
+        window.location.href = callbackUrl;
+      }
+    } catch (err) {
+      setError('❌ Errore durante l\'accesso');
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   };
 
-  const roleInfo = [
-    {
-      name: 'Admin',
-      badge: 'admin',
-      description: 'Accesso completo al sistema',
-      permissions: ['Gestione utenti', 'Configurazione sistema', 'Tutte le funzioni'],
-      color: 'bg-red-100 text-red-800',
-    },
-    {
-      name: 'Editor',
-      badge: 'editor',
-      description: 'Creazione e gestione contenuti',
-      permissions: ['Creare fonti RSS', 'Generare articoli', 'Gestire contenuti'],
-      color: 'bg-blue-100 text-blue-800',
-    },
-    {
-      name: 'Viewer',
-      badge: 'viewer',
-      description: 'Solo lettura (ruolo di default)',
-      permissions: ['Visualizzare contenuti', 'Leggere articoli', 'Accesso base'],
-      color: 'bg-green-100 text-green-800',
-    },
-    {
-      name: 'API Client',
-      badge: 'api_client',
-      description: 'Accesso programmatico',
-      permissions: ['API REST', 'Accesso limitato', 'Automazioni'],
-      color: 'bg-yellow-100 text-yellow-800',
-    },
-  ];
+  const handleRegister = async () => {
+    if (!email || !password) {
+      setError('Inserisci email e password per registrarti');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          name: email.split('@')[0],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setError('');
+        alert('✅ Registrazione completata! Ora puoi fare il login.');
+      } else {
+        setError(data.error || 'Errore durante la registrazione');
+      }
+    } catch (err) {
+      setError('Errore durante la registrazione');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            🚀 AutoGeorge
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Accesso Sicuro - Solo Utenti Registrati
+          </p>
+        </div>
+
+        {(error || errorParam) && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <p className="text-sm text-red-700">
+              {error || 'Errore di autenticazione'}
+            </p>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10"
+                placeholder="Inserisci la tua email"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10"
+                placeholder="Inserisci la tua password"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? '⏳ Accesso...' : '🔑 Accedi'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRegister}
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? '⏳ Registrazione...' : '✅ Registrati'}
+            </button>
+          </div>
+        </form>
+
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h4 className="text-sm font-medium text-red-800 mb-2">
+            🚨 SICUREZZA MASSIMA ATTIVA
+          </h4>
+          <ul className="text-xs text-red-700 space-y-1">
+            <li>• Solo utenti registrati possono accedere</li>
+            <li>• Email verification obbligatoria</li>
+            <li>• Password sicure richieste</li>
+            <li>• Sistema blindato contro accessi non autorizzati</li>
+          </ul>
+        </div>
+
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">AutoGeorge</h1>
-          <p className="mt-2 text-gray-600">Automatizza la produzione di contenuti per il tuo blog</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Sign-in Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Accedi al Sistema</CardTitle>
-              <CardDescription>
-                Scegli il tuo provider di autenticazione preferito
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.values(providers).map((provider) => (
-                <Button
-                  key={provider.id}
-                  onClick={() => handleSignIn(provider.id)}
-                  disabled={loading === provider.id}
-                  variant="outline"
-                  className="w-full justify-center"
-                >
-                  {loading === provider.id ? 'Accesso in corso...' : `Accedi con ${provider.name}`}
-                </Button>
-              ))}
-
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">🎯 Dopo l'accesso</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Riceverai automaticamente il ruolo <Badge className="bg-green-100 text-green-800">viewer</Badge></li>
-                  <li>• Potrai visualizzare tutti i contenuti</li>
-                  <li>• Un admin può promuoverti ad <Badge className="bg-blue-100 text-blue-800">editor</Badge></li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Roles Information Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sistema di Ruoli</CardTitle>
-              <CardDescription>
-                Comprendere i permessi e le funzionalità disponibili
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {roleInfo.map((role, index) => (
-                <div key={role.badge}>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{role.name}</h4>
-                    <Badge className={role.color}>{role.badge}</Badge>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{role.description}</p>
-                  <div className="text-xs text-gray-500">
-                    <strong>Permessi:</strong> {role.permissions.join(', ')}
-                  </div>
-                  {index < roleInfo.length - 1 && <Separator className="mt-4" />}
-                </div>
-              ))}
-
-              <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-                <h4 className="font-medium text-yellow-900 mb-2">💡 Note Importanti</h4>
-                <ul className="text-sm text-yellow-800 space-y-1">
-                  <li>• I nuovi utenti iniziano come <strong>viewer</strong></li>
-                  <li>• Gli admin possono modificare ruoli via API</li>
-                  <li>• Ogni ruolo include tutti i permessi di livello inferiore</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="text-center text-sm text-gray-500">
-          <p>Sistema implementato con Clean Architecture + RBAC</p>
+          <p className="text-xs text-gray-500">
+            Sistema di autenticazione ultra-sicuro con NextAuth + Prisma
+          </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }

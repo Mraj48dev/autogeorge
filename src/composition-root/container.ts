@@ -38,6 +38,18 @@ import { GenerateImagePrompt } from '../modules/prompt-engineer/application/use-
 import { ValidateImagePrompt } from '../modules/prompt-engineer/application/use-cases/ValidateImagePrompt';
 import { PromptEngineerFacade } from '../modules/prompt-engineer/admin/PromptEngineerFacade';
 
+// Auth Module
+import { IUserRepository } from '../modules/auth/application/use-cases/AuthenticateUser';
+import { ISessionRepository } from '../modules/auth/application/use-cases/AuthenticateUser';
+import { PrismaUserRepository } from '../modules/auth/infrastructure/repositories/PrismaUserRepository';
+import { PrismaSessionRepository } from '../modules/auth/infrastructure/repositories/PrismaSessionRepository';
+import { AuthenticateUser } from '../modules/auth/application/use-cases/AuthenticateUser';
+import { GetUser } from '../modules/auth/application/use-cases/GetUser';
+import { ManageUserRoles } from '../modules/auth/application/use-cases/ManageUserRoles';
+import { ValidatePermissions } from '../modules/auth/application/use-cases/ValidatePermissions';
+import { AuthAdminFacade } from '../modules/auth/admin/AuthAdminFacade';
+import { NextAuthAdapter } from '../modules/auth/infrastructure/services/NextAuthAdapter';
+
 // Automation Module REMOVED - Architecture simplified
 
 // Configuration
@@ -64,6 +76,16 @@ export class Container {
   private _generateImagePrompt: GenerateImagePrompt | null = null;
   private _validateImagePrompt: ValidateImagePrompt | null = null;
   private _promptEngineerFacade: PromptEngineerFacade | null = null;
+
+  // Auth module dependencies
+  private _userRepository: IUserRepository | null = null;
+  private _sessionRepository: ISessionRepository | null = null;
+  private _authenticateUser: AuthenticateUser | null = null;
+  private _getUser: GetUser | null = null;
+  private _manageUserRoles: ManageUserRoles | null = null;
+  private _validatePermissions: ValidatePermissions | null = null;
+  private _authAdminFacade: AuthAdminFacade | null = null;
+  private _nextAuthAdapter: NextAuthAdapter | null = null;
 
   // Automation module REMOVED - Simplified architecture
 
@@ -223,6 +245,87 @@ export class Container {
   }
 
   // =============================================
+  // Auth Module Dependencies
+  // =============================================
+
+  get userRepository(): IUserRepository {
+    if (!this._userRepository) {
+      this._userRepository = new PrismaUserRepository(this.prisma);
+    }
+    return this._userRepository;
+  }
+
+  get sessionRepository(): ISessionRepository {
+    if (!this._sessionRepository) {
+      this._sessionRepository = new PrismaSessionRepository(this.prisma);
+    }
+    return this._sessionRepository;
+  }
+
+  get authenticateUser(): AuthenticateUser {
+    if (!this._authenticateUser) {
+      this._authenticateUser = new AuthenticateUser(
+        this.userRepository,
+        this.sessionRepository
+      );
+    }
+    return this._authenticateUser;
+  }
+
+  get getUser(): GetUser {
+    if (!this._getUser) {
+      this._getUser = new GetUser(this.userRepository);
+    }
+    return this._getUser;
+  }
+
+  get manageUserRoles(): ManageUserRoles {
+    if (!this._manageUserRoles) {
+      this._manageUserRoles = new ManageUserRoles(this.userRepository);
+    }
+    return this._manageUserRoles;
+  }
+
+  get validatePermissions(): ValidatePermissions {
+    if (!this._validatePermissions) {
+      this._validatePermissions = new ValidatePermissions(this.userRepository);
+    }
+    return this._validatePermissions;
+  }
+
+  get nextAuthAdapter(): NextAuthAdapter {
+    if (!this._nextAuthAdapter) {
+      this._nextAuthAdapter = new NextAuthAdapter(
+        this.authenticateUser,
+        this.getUser
+      );
+    }
+    return this._nextAuthAdapter;
+  }
+
+  get authAdminFacade(): AuthAdminFacade {
+    if (!this._authAdminFacade) {
+      this._authAdminFacade = new AuthAdminFacade(
+        this.authenticateUser,
+        this.getUser,
+        this.manageUserRoles,
+        this.validatePermissions
+      );
+    }
+    return this._authAdminFacade;
+  }
+
+  get nextAuthAdapter(): NextAuthAdapter {
+    if (!this._nextAuthAdapter) {
+      this._nextAuthAdapter = new NextAuthAdapter(
+        this.authenticateUser,
+        this.getUser
+      );
+    }
+    return this._nextAuthAdapter;
+  }
+
+  // =============================================
   // Automation Module REMOVED - Simplified architecture
   // =============================================
 
@@ -328,6 +431,24 @@ export class Container {
       });
     }
 
+    // Auth module health check
+    try {
+      const authHealth = await this.authAdminFacade.healthCheck();
+      checks.push({
+        name: 'auth_module',
+        status: authHealth.status,
+        error: authHealth.status === 'unhealthy' ? authHealth.details.error : undefined,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      checks.push({
+        name: 'auth_module',
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date(),
+      });
+    }
+
     const isHealthy = checks.every(check => check.status === 'healthy');
 
     return {
@@ -353,6 +474,12 @@ export class Container {
     }
     if (mocks.logger) {
       container._logger = mocks.logger;
+    }
+    if (mocks.userRepository) {
+      container._userRepository = mocks.userRepository;
+    }
+    if (mocks.sessionRepository) {
+      container._sessionRepository = mocks.sessionRepository;
     }
 
     return container;
@@ -380,6 +507,8 @@ export interface TestMocks {
   articleRepository: ArticleRepository;
   aiService: AiService;
   logger: Logger;
+  userRepository: IUserRepository;
+  sessionRepository: ISessionRepository;
 }
 
 /**

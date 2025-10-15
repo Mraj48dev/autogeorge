@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { SessionProvider } from '@/components/providers/SessionProvider';
 
 export const metadata: Metadata = {
   title: 'AutoGeorge - Generazione Automatica Articoli',
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body className="min-h-screen bg-gray-50 antialiased">
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

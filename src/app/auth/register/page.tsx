@@ -71,10 +71,40 @@ export default function RegisterPage() {
       const result = await response.json();
 
       if (response.ok) {
-        setMessage({
-          type: 'success',
-          text: `Account creato con successo! Ruolo assegnato: ${result.user?.role || 'viewer'}`,
-        });
+        // Send verification email after successful registration
+        try {
+          const verificationResponse = await fetch('/api/auth/send-verification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              name: formData.name,
+              baseUrl: window.location.origin,
+            }),
+          });
+
+          const verificationResult = await verificationResponse.json();
+
+          if (verificationResponse.ok && verificationResult.success) {
+            setMessage({
+              type: 'success',
+              text: `Account creato con successo! Ti abbiamo inviato un'email di verifica a ${formData.email}. Controlla la tua casella di posta per completare la registrazione.`,
+            });
+          } else {
+            setMessage({
+              type: 'success',
+              text: `Account creato con successo! Ruolo assegnato: ${result.user?.role || 'viewer'}. ⚠️ Email di verifica non inviata.`,
+            });
+          }
+        } catch (emailError) {
+          console.warn('Failed to send verification email:', emailError);
+          setMessage({
+            type: 'success',
+            text: `Account creato con successo! Ruolo assegnato: ${result.user?.role || 'viewer'}. ⚠️ Email di verifica non disponibile.`,
+          });
+        }
 
         // Reset form
         setFormData({

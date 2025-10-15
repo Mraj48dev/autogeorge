@@ -473,4 +473,21 @@ model HealthReport {
   @@map("health_reports")
 }
 
+model EmailVerification {
+  id         String   @id @default(cuid())
+  email      String   // Email da verificare
+  token      String   @unique // Token di verifica (hex string)
+  status     String   // pending, verified, expired
+  expiresAt  DateTime // Scadenza del token
+  verifiedAt DateTime? // Timestamp verifica completata
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([email])
+  @@index([token])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("email_verifications")
+}
+
 

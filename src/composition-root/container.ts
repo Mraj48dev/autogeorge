@@ -49,6 +49,12 @@ import { ManageUserRoles } from '../modules/auth/application/use-cases/ManageUse
 import { ValidatePermissions } from '../modules/auth/application/use-cases/ValidatePermissions';
 import { AuthAdminFacade } from '../modules/auth/admin/AuthAdminFacade';
 import { NextAuthAdapter } from '../modules/auth/infrastructure/services/NextAuthAdapter';
+import { SendVerificationEmail } from '../modules/auth/application/use-cases/SendVerificationEmail';
+import { VerifyEmail } from '../modules/auth/application/use-cases/VerifyEmail';
+import { EmailVerificationRepository } from '../modules/auth/domain/ports/EmailVerificationRepository';
+import { EmailService } from '../modules/auth/domain/ports/EmailService';
+import { PrismaEmailVerificationRepository } from '../modules/auth/infrastructure/repositories/PrismaEmailVerificationRepository';
+import { VerificationEmailService } from '../modules/auth/infrastructure/services/VerificationEmailService';
 
 // Automation Module REMOVED - Architecture simplified
 
@@ -86,6 +92,12 @@ export class Container {
   private _validatePermissions: ValidatePermissions | null = null;
   private _authAdminFacade: AuthAdminFacade | null = null;
   private _nextAuthAdapter: NextAuthAdapter | null = null;
+
+  // Email verification dependencies
+  private _emailVerificationRepository: EmailVerificationRepository | null = null;
+  private _emailService: EmailService | null = null;
+  private _sendVerificationEmail: SendVerificationEmail | null = null;
+  private _verifyEmail: VerifyEmail | null = null;
 
   // Automation module REMOVED - Simplified architecture
 
@@ -323,6 +335,45 @@ export class Container {
       );
     }
     return this._nextAuthAdapter;
+  }
+
+  // =============================================
+  // Email Verification Dependencies
+  // =============================================
+
+  get emailVerificationRepository(): EmailVerificationRepository {
+    if (!this._emailVerificationRepository) {
+      this._emailVerificationRepository = new PrismaEmailVerificationRepository();
+    }
+    return this._emailVerificationRepository;
+  }
+
+  get emailService(): EmailService {
+    if (!this._emailService) {
+      this._emailService = new VerificationEmailService();
+    }
+    return this._emailService;
+  }
+
+  get sendVerificationEmail(): SendVerificationEmail {
+    if (!this._sendVerificationEmail) {
+      this._sendVerificationEmail = new SendVerificationEmail(
+        this.emailVerificationRepository,
+        this.emailService
+      );
+    }
+    return this._sendVerificationEmail;
+  }
+
+  get verifyEmail(): VerifyEmail {
+    if (!this._verifyEmail) {
+      this._verifyEmail = new VerifyEmail(
+        this.emailVerificationRepository,
+        this.userRepository,
+        this.emailService
+      );
+    }
+    return this._verifyEmail;
   }
 
   // =============================================

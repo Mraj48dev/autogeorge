@@ -249,6 +249,14 @@ export class User extends AggregateRoot<UserId> {
   }
 
   /**
+   * Marks email as verified
+   */
+  markEmailAsVerified(): void {
+    this._emailVerified = new Date();
+    this.markAsUpdated();
+  }
+
+  /**
    * Checks if user can perform an action on a resource
    */
   canAccess(requiredPermission: Permission): boolean {

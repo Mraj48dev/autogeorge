@@ -1,9 +1,10 @@
-import Link from 'next/link';
-import { SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
-import { currentUser } from '@clerk/nextjs/server';
+'use client';
 
-export default async function HomePage() {
-  const user = await currentUser();
+import Link from 'next/link';
+import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
+
+export default function HomePage() {
+  const { user } = useUser();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}

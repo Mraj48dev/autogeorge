@@ -38,6 +38,15 @@ import { GenerateImagePrompt } from '../modules/prompt-engineer/application/use-
 import { ValidateImagePrompt } from '../modules/prompt-engineer/application/use-cases/ValidateImagePrompt';
 import { PromptEngineerFacade } from '../modules/prompt-engineer/admin/PromptEngineerFacade';
 
+// Auth Module
+import { UserRepository } from '../modules/auth/domain/ports/UserRepository';
+import { AuthService } from '../modules/auth/domain/ports/AuthService';
+import { PrismaUserRepository } from '../modules/auth/infrastructure/repositories/PrismaUserRepository';
+import { ClerkAuthService } from '../modules/auth/infrastructure/services/ClerkAuthService';
+import { AuthenticateUser } from '../modules/auth/application/use-cases/AuthenticateUser';
+import { GetCurrentUser } from '../modules/auth/application/use-cases/GetCurrentUser';
+import { AuthAdminFacade } from '../modules/auth/admin/AuthAdminFacade';
+
 // Automation Module REMOVED - Architecture simplified
 
 // Configuration
@@ -64,6 +73,13 @@ export class Container {
   private _generateImagePrompt: GenerateImagePrompt | null = null;
   private _validateImagePrompt: ValidateImagePrompt | null = null;
   private _promptEngineerFacade: PromptEngineerFacade | null = null;
+
+  // Auth module dependencies
+  private _userRepository: UserRepository | null = null;
+  private _authService: AuthService | null = null;
+  private _authenticateUser: AuthenticateUser | null = null;
+  private _getCurrentUser: GetCurrentUser | null = null;
+  private _authAdminFacade: AuthAdminFacade | null = null;
 
   // Automation module REMOVED - Simplified architecture
 
@@ -220,6 +236,55 @@ export class Container {
       );
     }
     return this._promptEngineerFacade;
+  }
+
+  // =============================================
+  // Auth Module Dependencies
+  // =============================================
+
+  get userRepository(): UserRepository {
+    if (!this._userRepository) {
+      this._userRepository = new PrismaUserRepository(this.prisma);
+    }
+    return this._userRepository;
+  }
+
+  get authService(): AuthService {
+    if (!this._authService) {
+      this._authService = new ClerkAuthService();
+    }
+    return this._authService;
+  }
+
+  get authenticateUser(): AuthenticateUser {
+    if (!this._authenticateUser) {
+      this._authenticateUser = new AuthenticateUser(
+        this.userRepository,
+        this.authService
+      );
+    }
+    return this._authenticateUser;
+  }
+
+  get getCurrentUser(): GetCurrentUser {
+    if (!this._getCurrentUser) {
+      this._getCurrentUser = new GetCurrentUser(
+        this.userRepository,
+        this.authService
+      );
+    }
+    return this._getCurrentUser;
+  }
+
+  get authAdminFacade(): AuthAdminFacade {
+    if (!this._authAdminFacade) {
+      this._authAdminFacade = new AuthAdminFacade(
+        this.authenticateUser,
+        this.getCurrentUser,
+        this.userRepository
+      );
+    }
+    return this._authAdminFacade;
   }
 
   // =============================================

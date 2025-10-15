@@ -9,7 +9,7 @@
     "build:prod": "npm run build && npx prisma db push",
     "build:vercel": "npx prisma generate && next build",
     "start": "next start",
-    "vercel-build": "npm install --save-dev @types/react @types/react-dom && npx prisma@5.22.0 generate && next build",
+    "vercel-build": "npx prisma@5.22.0 generate && next build",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
@@ -68,14 +68,14 @@
     "tailwindcss": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.2",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@types/react": "^18.3.26",
+    "@types/react-dom": "^18.3.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.1",
     "@testing-library/jest-dom": "^6.2.0",
     "@testing-library/react": "^14.1.2",
-    "@types/react": "^18.3.26",
-    "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^6.17.0",
     "@typescript-eslint/parser": "^6.17.0",
     "@vitejs/plugin-react": "^4.2.1",

@@ -188,7 +188,7 @@ export default function HomePage() {
         <div className="text-center text-gray-600">
           <p>&copy; 2024 AutoGeorge. Tutti i diritti riservati.</p>
           <p className="mt-2 text-sm">
-            Powered by AI • Built with ❤️ • Clean Architecture
+            Powered by AI • Built with ❤️ • Clean Architecture • v2.0
           </p>
         </div>
       </footer>

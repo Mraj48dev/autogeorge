@@ -7,13 +7,14 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/health',
   '/api/cron(.*)', // Allow cron endpoints to be public
+  '/api/debug-clerk',
   '/monitor', // Public RSS monitor page
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+export default clerkMiddleware((auth, req) => {
   // Protect all routes except public ones
   if (!isPublicRoute(req)) {
-    await auth.protect();
+    auth().protect();
   }
 });
 

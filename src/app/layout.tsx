@@ -30,6 +30,11 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="it">
+        <head>
+          <meta name="cache-control" content="no-cache, no-store, must-revalidate" />
+          <meta name="pragma" content="no-cache" />
+          <meta name="expires" content="0" />
+        </head>
         <body className="min-h-screen bg-gray-50 antialiased">
           {children}
         </body>

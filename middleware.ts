@@ -2,24 +2,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * MIDDLEWARE DI EMERGENZA - BLOCCO TOTALE
- * Blocca TUTTO finché non risolviamo il problema auth
+ * 🚨 LOCKDOWN TOTALE - SICUREZZA MASSIMA
+ * BLOCCA COMPLETAMENTE TUTTO FINO A SISTEMA AUTH SICURO
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Permetti solo le pagine di auth e API di auth
-  if (
-    pathname.startsWith('/auth/') ||
-    pathname.startsWith('/api/auth/') ||
-    pathname === '/auth' ||
-    pathname === '/'
-  ) {
+  // BLOCCO TOTALE: Solo pagina manutenzione
+  if (pathname === '/maintenance') {
     return NextResponse.next();
   }
 
-  // BLOCCA TUTTO IL RESTO
-  return NextResponse.redirect(new URL('/auth/signin', request.url));
+  // REDIRECT TUTTO ALLA PAGINA MANUTENZIONE
+  return NextResponse.redirect(new URL('/maintenance', request.url));
 }
 
 export const config = {

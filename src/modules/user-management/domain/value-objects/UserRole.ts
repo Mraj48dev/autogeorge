@@ -70,6 +70,24 @@ export class UserRole extends ValueObject<UserRoleProps> {
     return Object.values(UserRoleType).includes(this.value);
   }
 
+  public canManageSources(): boolean {
+    return [
+      UserRoleType.SUPER_ADMIN,
+      UserRoleType.ORGANIZATION_ADMIN,
+      UserRoleType.CONTENT_MANAGER
+    ].includes(this.value);
+  }
+
+  public canViewSources(): boolean {
+    return [
+      UserRoleType.SUPER_ADMIN,
+      UserRoleType.ORGANIZATION_ADMIN,
+      UserRoleType.CONTENT_MANAGER,
+      UserRoleType.CONTENT_EDITOR,
+      UserRoleType.CONTENT_VIEWER
+    ].includes(this.value);
+  }
+
   public getHierarchyLevel(): number {
     const hierarchy = {
       [UserRoleType.SUPER_ADMIN]: 100,

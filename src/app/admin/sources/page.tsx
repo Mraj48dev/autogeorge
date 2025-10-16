@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { SourcesManagerGuard } from '@/shared/components/auth/AuthGuard';
 
 interface Source {
   id: string;
@@ -358,7 +359,8 @@ export default function SourcesPage() {
   };
 
   return (
-    <div>
+    <SourcesManagerGuard>
+      <div>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -998,6 +1000,7 @@ export default function SourcesPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </SourcesManagerGuard>
   );
 }

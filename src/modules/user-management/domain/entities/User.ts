@@ -220,44 +220,36 @@ export class User extends Entity<UserProps> {
 
       case UserRoleType.ORGANIZATION_ADMIN:
         return [
-          'articles:view', 'articles:create', 'articles:edit', 'articles:publish',
-          'sources:view', 'sources:create', 'sources:edit', 'sources:delete',
-          'wordpress:configure', 'wordpress:publish', 'wordpress:manage_media',
-          'images:generate', 'images:edit', 'images:upload',
-          'users:view', 'users:create', 'users:edit', 'users:assign_roles',
-          'analytics:view', 'analytics:export',
-          'automation:configure', 'automation:view'
+          'admin:access',
+          'content:view', 'content:create', 'content:edit', 'content:publish', 'content:delete',
+          'sources:view', 'sources:manage',
+          'users:view', 'users:manage',
+          'organization:view', 'organization:manage',
+          'api:access'
         ];
 
       case UserRoleType.CONTENT_MANAGER:
         return [
-          'articles:view', 'articles:create', 'articles:edit', 'articles:publish',
-          'sources:view',
-          'wordpress:publish', 'wordpress:manage_media',
-          'images:generate', 'images:edit', 'images:upload',
-          'analytics:view',
-          'automation:trigger', 'automation:view'
+          'content:view', 'content:create', 'content:edit', 'content:publish',
+          'sources:view', 'sources:manage'
         ];
 
       case UserRoleType.CONTENT_EDITOR:
         return [
-          'articles:view', 'articles:edit', 'articles:approve',
-          'sources:view',
-          'images:edit',
-          'analytics:view'
+          'content:view', 'content:edit',
+          'sources:view'
         ];
 
       case UserRoleType.CONTENT_VIEWER:
         return [
-          'articles:view',
-          'sources:view',
-          'analytics:view'
+          'content:view',
+          'sources:view'
         ];
 
       case UserRoleType.API_USER:
         return [
           'api:access',
-          'articles:view', 'articles:create',
+          'content:view',
           'sources:view'
         ];
 

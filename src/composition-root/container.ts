@@ -71,6 +71,7 @@ export class Container {
   private _articleRepository: ArticleRepository | null = null;
   private _aiService: AiService | null = null;
   private _generateArticle: GenerateArticle | null = null;
+  private _autoGenerateArticles: any | null = null;
   private _contentAdminFacade: ContentAdminFacade | null = null;
 
   // PromptEngineer module dependencies
@@ -190,10 +191,21 @@ export class Container {
     return this._generateArticle;
   }
 
+  get autoGenerateArticles(): any {
+    if (!this._autoGenerateArticles) {
+      // Mock implementation per ora
+      this._autoGenerateArticles = {
+        execute: async () => ({ isSuccess: () => true, value: {} })
+      };
+    }
+    return this._autoGenerateArticles;
+  }
+
   get contentAdminFacade(): ContentAdminFacade {
     if (!this._contentAdminFacade) {
       this._contentAdminFacade = new ContentAdminFacade(
-        this.generateArticle
+        this.generateArticle,
+        this.autoGenerateArticles
       );
     }
     return this._contentAdminFacade;

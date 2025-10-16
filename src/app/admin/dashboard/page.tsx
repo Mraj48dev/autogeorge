@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { AuthGuard, useAuthUser } from '../../../modules/auth/admin';
-import { UserRole } from '../../../modules/auth/domain';
+import { AdminGuard } from '@/shared/components/auth/AuthGuard';
+import { useUserRole } from '@/shared/hooks/useAuthorization';
 
 interface SystemStats {
   articlesCount: number;

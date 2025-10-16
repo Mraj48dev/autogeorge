@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SourcesContainer, createSourcesContainer } from '../../../../modules/sources/infrastructure/container/SourcesContainer';
 import { Config } from '../../../../modules/sources/shared/config/env';
+import { AuthMiddleware } from '@/shared/middleware/authorization';
 
 /**
  * GET /api/admin/sources
  * Lists all sources with pagination and filtering
+ * Protected: Requires 'sources:view' permission
  */
-export async function GET(request: NextRequest) {
+const getSourcesHandler = async (request: NextRequest) => {
   try {
     // TEMPORARY FUNCTIONS: Check for utility parameters
     const { searchParams } = new URL(request.url);
@@ -188,13 +190,17 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+};
+
+// Apply authorization middleware
+export const GET = AuthMiddleware.sourcesView(getSourcesHandler);
 
 /**
  * POST /api/admin/sources
  * Creates a new source
+ * Protected: Requires 'sources:manage' permission
  */
-export async function POST(request: NextRequest) {
+const createSourceHandler = async (request: NextRequest) => {
   try {
     // Initialize the sources container
     const container = createSourcesContainer();
@@ -244,4 +250,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+};
+
+// Apply authorization middleware
+export const POST = AuthMiddleware.sourcesManage(createSourceHandler);

@@ -128,18 +128,72 @@ model Source {
   @@map("sources")
 }
 
+// Enterprise User Management Model
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  provider      String    @default("credentials")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
+  id                String          @id @default(cuid())
+  clerkUserId       String?         @unique // Clerk.com user ID for external auth
+  name              String?
+  firstName         String?
+  lastName          String?
+  email             String          @unique
+  emailVerified     DateTime?
+  image             String?
+  provider          String          @default("clerk")
 
+  // Role and Security
+  role              String          @default("viewer") // admin, editor, viewer
+  isActive          Boolean         @default(true)
+  isEmailVerified   Boolean         @default(false)
+  isTwoFactorEnabled Boolean        @default(false)
+
+  // Clerk Integration
+  clerkPublicMetadata Json?         // Clerk public metadata
+  clerkPrivateMetadata Json?        // Clerk private metadata
+  clerkUnsafeMetadata Json?         // Clerk unsafe metadata
+
+  // Security Tracking
+  lastSignInAt      DateTime?
+  lastSignInIp      String?
+  lastActiveAt      DateTime?
+  failedLoginAttempts Int           @default(0)
+  lockedAt          DateTime?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+
+  // Business Context
+  organizationId    String?         // For multi-tenant support
+  department        String?
+  jobTitle          String?
+  phoneNumber       String?
+  timezone          String?         @default("UTC")
+  language          String?         @default("it")
+
+  // Preferences
+  preferences       Json?           // User preferences in JSON
+  notificationSettings Json?        // Notification preferences
+
+  // Timestamps
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime?       // Soft delete
+
+  // Legacy Relations (keep for backward compatibility)
+  accounts          Account[]
+  sessions          Session[]
+
+  // New Enterprise Relations
+  userRoles         UserRole[]      // Many-to-many with roles
+  auditLogs         PermissionAuditLog[] @relation("AuditLogUser")
+  targetAuditLogs   PermissionAuditLog[] @relation("AuditLogTargetUser")
+  generationSettings GenerationSettings?
+  wordPressSite     WordPressSite?
+
+  @@index([clerkUserId])
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@index([organizationId])
+  @@index([lastActiveAt])
   @@map("users")
 }
 
@@ -471,6 +525,243 @@ model HealthReport {
   @@index([overallStatus])
   @@index([periodStart, periodEnd])
   @@map("health_reports")
+}
+
+// =====================================================
+// ENTERPRISE PERMISSION SYSTEM - B2B GRADE SECURITY
+// =====================================================
+
+// Permission Entity - Atomic permissions (resource:action format)
+model Permission {
+  id              String          @id @default(cuid())
+  name            String          @unique // Format: "resource:action" (e.g., "articles:create")
+  resource        String          // Resource type (articles, users, etc.)
+  action          String          // Action type (create, read, update, delete, manage)
+  description     String          // Human-readable description
+  category        String?         // Grouping category for UI organization
+  isSystemPermission Boolean      @default(false) // Cannot be deleted/modified
+
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  rolePermissions RolePermission[] // Many-to-many with roles
+  auditLogs       PermissionAuditLog[]
+
+  @@index([resource, action])
+  @@index([category])
+  @@index([isSystemPermission])
+  @@map("permissions")
+}
+
+// Role Definition with Dynamic Permissions
+model Role {
+  id              String          @id @default(cuid())
+  name            String          @unique // "admin", "editor", "viewer", custom roles
+  displayName     String          // User-friendly name
+  description     String          // Role description for UI
+  level           Int             // Hierarchy level (higher = more permissions)
+  isSystemRole    Boolean         @default(false) // Built-in roles that cannot be deleted
+  isActive        Boolean         @default(true)
+
+  // Customization
+  color           String?         // UI color for role badges
+  icon            String?         // UI icon identifier
+
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdBy       String?         // User ID who created this role
+
+  // Relations
+  userRoles       UserRole[]      // Many-to-many with users
+  rolePermissions RolePermission[] // Many-to-many with permissions
+  auditLogs       PermissionAuditLog[]
+
+  @@index([level])
+  @@index([isSystemRole])
+  @@index([isActive])
+  @@map("roles")
+}
+
+// User-Role Assignment (Many-to-Many)
+model UserRole {
+  id              String          @id @default(cuid())
+  userId          String
+  roleId          String
+
+  // Assignment Context
+  assignedBy      String?         // User ID who assigned this role
+  assignedAt      DateTime        @default(now())
+  expiresAt       DateTime?       // Optional role expiration
+  isActive        Boolean         @default(true)
+
+  // Business Context
+  organizationId  String?         // For multi-tenant scenarios
+  department      String?         // Department-specific role assignment
+  reason          String?         // Business reason for assignment
+
+  // Relations
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, organizationId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([expiresAt])
+  @@index([organizationId])
+  @@map("user_roles")
+}
+
+// Role-Permission Assignment (Many-to-Many)
+model RolePermission {
+  id              String          @id @default(cuid())
+  roleId          String
+  permissionId    String
+
+  // Assignment Metadata
+  grantedBy       String?         // User ID who granted this permission
+  grantedAt       DateTime        @default(now())
+  revokedAt       DateTime?       // When permission was revoked
+  isActive        Boolean         @default(true)
+
+  // Contextual Permissions
+  resourceFilter  Json?           // Optional filters for resource-specific permissions
+  conditions      Json?           // Additional permission conditions
+
+  // Relations
+  role            Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission      Permission      @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@index([isActive])
+  @@map("role_permissions")
+}
+
+// Comprehensive Audit Trail for Security Compliance
+model PermissionAuditLog {
+  id              String          @id @default(cuid())
+
+  // Event Classification
+  eventType       String          // PERMISSION_CHECK, ROLE_UPDATED, ACCESS_GRANTED, ACCESS_DENIED, etc.
+  action          String          // Specific action performed
+  resource        String?         // Resource involved
+  resourceId      String?         // Specific resource ID
+
+  // Principal (who performed the action)
+  userId          String?         // Acting user
+  userEmail       String?         // Email for audit trail
+  userRole        String?         // Role at time of action
+
+  // Target (who/what was affected)
+  targetUserId    String?         // Target user (for admin actions)
+  targetEmail     String?         // Target user email
+  roleId          String?         // Role involved
+  permissionId    String?         // Permission involved
+
+  // Result and Context
+  granted         Boolean         @default(false) // Was access granted?
+  reason          String?         // Why access was granted/denied
+  riskScore       Int?            // Risk assessment score (1-10)
+
+  // Technical Context
+  ipAddress       String?         // Source IP address
+  userAgent       String?         // Browser/client information
+  sessionId       String?         // Session identifier
+  requestId       String?         // Request correlation ID
+
+  // Business Context
+  organizationId  String?         // Organization context
+  department      String?         // Department context
+
+  // Additional Data
+  metadata        Json?           // Additional context data
+  errorDetails    Json?           // Error information if applicable
+
+  // Timestamps
+  timestamp       DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+
+  // Relations
+  user            User?           @relation("AuditLogUser", fields: [userId], references: [id])
+  targetUser      User?           @relation("AuditLogTargetUser", fields: [targetUserId], references: [id])
+  role            Role?           @relation(fields: [roleId], references: [id])
+  permission      Permission?     @relation(fields: [permissionId], references: [id])
+
+  @@index([eventType, timestamp])
+  @@index([userId, timestamp])
+  @@index([targetUserId, timestamp])
+  @@index([resource, action])
+  @@index([granted])
+  @@index([riskScore])
+  @@index([ipAddress])
+  @@index([organizationId])
+  @@index([timestamp])
+  @@map("permission_audit_logs")
+}
+
+// Security Events and Alerts
+model SecurityEvent {
+  id              String          @id @default(cuid())
+
+  // Event Classification
+  eventType       String          // SUSPICIOUS_LOGIN, PRIVILEGE_ESCALATION, BULK_ACCESS, etc.
+  severity        String          // LOW, MEDIUM, HIGH, CRITICAL
+  status          String          // ACTIVE, INVESTIGATING, RESOLVED, FALSE_POSITIVE
+
+  // Event Details
+  title           String          // Brief event title
+  description     String          // Detailed description
+  category        String          // Authentication, Authorization, Data_Access, etc.
+
+  // Principal Information
+  userId          String?         // User involved
+  userEmail       String?         // Email for correlation
+  sessionId       String?         // Session identifier
+
+  // Technical Details
+  ipAddress       String?         // Source IP
+  userAgent       String?         // Client information
+  endpoint        String?         // API endpoint accessed
+  requestData     Json?           // Request details
+
+  // Risk Assessment
+  riskScore       Int             @default(1) // 1-10 risk level
+  confidence      Float           @default(0.0) // 0.0-1.0 confidence in detection
+  falsePositive   Boolean         @default(false)
+
+  // Investigation
+  investigatedBy  String?         // User ID of investigator
+  investigatedAt  DateTime?       // Investigation timestamp
+  investigationNotes String?      // Investigation findings
+  resolution      String?         // How event was resolved
+
+  // Notifications
+  alertsSent      Json?           // Record of sent alerts
+  escalated       Boolean         @default(false)
+  escalatedAt     DateTime?       // Escalation timestamp
+
+  // Business Context
+  organizationId  String?         // Organization involved
+  impactedResources Json?         // Resources that may be affected
+
+  // Timestamps
+  occurredAt      DateTime        @default(now())
+  detectedAt      DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  resolvedAt      DateTime?       // Resolution timestamp
+
+  @@index([eventType, severity])
+  @@index([userId, occurredAt])
+  @@index([status, severity])
+  @@index([riskScore])
+  @@index([occurredAt])
+  @@index([organizationId])
+  @@map("security_events")
 }
 
 

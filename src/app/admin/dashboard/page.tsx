@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { AdminGuard } from '@/shared/components/auth/AuthGuard';
-import { useUserRole } from '@/shared/hooks/useAuthorization';
 
 interface SystemStats {
   articlesCount: number;
@@ -238,8 +237,8 @@ function AdminDashboardContent() {
 
 export default function AdminDashboard() {
   return (
-    <AuthGuard requiredRole={UserRole.ADMIN}>
+    <AdminGuard>
       <AdminDashboardContent />
-    </AuthGuard>
+    </AdminGuard>
   );
 }

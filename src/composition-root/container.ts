@@ -42,6 +42,17 @@ import { PromptEngineerFacade } from '../modules/prompt-engineer/admin/PromptEng
 import { AuthService } from '../modules/auth/domain';
 import { MockAuthService, ClerkAuthService } from '../modules/auth/infrastructure';
 
+// User Management Module
+import { UserRepository } from '../modules/user-management/domain/ports/UserRepository';
+import { AuthenticationService } from '../modules/user-management/domain/ports/AuthenticationService';
+import { PrismaUserRepository } from '../modules/user-management/infrastructure/repositories/PrismaUserRepository';
+import { ClerkAuthenticationService } from '../modules/user-management/infrastructure/services/ClerkAuthenticationService';
+import { CreateUser } from '../modules/user-management/application/use-cases/CreateUser';
+import { AuthorizeAction } from '../modules/user-management/application/use-cases/AuthorizeAction';
+import { AssignRole } from '../modules/user-management/application/use-cases/AssignRole';
+import { GetUsers } from '../modules/user-management/application/use-cases/GetUsers';
+import { UserManagementAdminFacade } from '../modules/user-management/admin/UserManagementAdminFacade';
+
 // Automation Module REMOVED - Architecture simplified
 
 // Configuration
@@ -71,6 +82,15 @@ export class Container {
 
   // Auth module dependencies
   private _authService: AuthService | null = null;
+
+  // User Management module dependencies
+  private _userRepository: UserRepository | null = null;
+  private _authenticationService: AuthenticationService | null = null;
+  private _createUser: CreateUser | null = null;
+  private _authorizeAction: AuthorizeAction | null = null;
+  private _assignRole: AssignRole | null = null;
+  private _getUsers: GetUsers | null = null;
+  private _userManagementAdminFacade: UserManagementAdminFacade | null = null;
 
   // Automation module REMOVED - Simplified architecture
 
@@ -239,6 +259,70 @@ export class Container {
       this._authService = new ClerkAuthService();
     }
     return this._authService;
+  }
+
+  // =============================================
+  // User Management Module Dependencies
+  // =============================================
+
+  get userRepository(): UserRepository {
+    if (!this._userRepository) {
+      this._userRepository = new PrismaUserRepository(this.prisma);
+    }
+    return this._userRepository;
+  }
+
+  get authenticationService(): AuthenticationService {
+    if (!this._authenticationService) {
+      this._authenticationService = new ClerkAuthenticationService(this.userRepository);
+    }
+    return this._authenticationService;
+  }
+
+  get createUser(): CreateUser {
+    if (!this._createUser) {
+      this._createUser = new CreateUser(
+        this.userRepository,
+        this.authenticationService
+      );
+    }
+    return this._createUser;
+  }
+
+  get authorizeAction(): AuthorizeAction {
+    if (!this._authorizeAction) {
+      this._authorizeAction = new AuthorizeAction(this.userRepository);
+    }
+    return this._authorizeAction;
+  }
+
+  get assignRole(): AssignRole {
+    if (!this._assignRole) {
+      this._assignRole = new AssignRole(
+        this.userRepository,
+        this.authenticationService
+      );
+    }
+    return this._assignRole;
+  }
+
+  get getUsers(): GetUsers {
+    if (!this._getUsers) {
+      this._getUsers = new GetUsers(this.userRepository);
+    }
+    return this._getUsers;
+  }
+
+  get userManagementAdminFacade(): UserManagementAdminFacade {
+    if (!this._userManagementAdminFacade) {
+      this._userManagementAdminFacade = new UserManagementAdminFacade(
+        this.createUser,
+        this.authorizeAction,
+        this.assignRole,
+        this.getUsers
+      );
+    }
+    return this._userManagementAdminFacade;
   }
 
   // =============================================
@@ -440,4 +524,22 @@ export function getContainer(): Container {
     throw new Error('Container not initialized. Call createContainer() first.');
   }
   return instance;
+}
+
+/**
+ * Creates a container specifically configured for user management operations
+ * Useful for API routes that need user management functionality
+ */
+export function createUserManagementContainer(): {
+  userManagementFacade: UserManagementAdminFacade;
+  authorizeAction: AuthorizeAction;
+  container: Container;
+} {
+  const container = createContainer();
+
+  return {
+    userManagementFacade: container.userManagementAdminFacade,
+    authorizeAction: container.authorizeAction,
+    container
+  };
 }

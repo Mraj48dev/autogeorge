@@ -7,6 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User Management Enums
+enum UserRole {
+  SUPER_ADMIN
+  ORGANIZATION_ADMIN
+  CONTENT_MANAGER
+  CONTENT_EDITOR
+  CONTENT_VIEWER
+  API_USER
+}
+
 model Article {
   id        String   @id @default(cuid())
 
@@ -135,10 +145,25 @@ model User {
   emailVerified DateTime?
   image         String?
   provider      String    @default("credentials")
+
+  // USER MANAGEMENT FIELDS
+  clerkUserId        String?   @unique  // Clerk integration
+  role               UserRole  @default(CONTENT_VIEWER)
+  organizationId     String?   // Multi-tenant support
+  isActive           Boolean   @default(true)
+  lastLoginAt        DateTime?
+  failedLoginAttempts Int      @default(0)
+
+  // Timestamps
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // NextAuth relations
   accounts      Account[]
   sessions      Session[]
+
+  // User Management relations
+  userPermissions UserPermission[]
 
   @@map("users")
 }
@@ -471,6 +496,25 @@ model HealthReport {
   @@index([overallStatus])
   @@index([periodStart, periodEnd])
   @@map("health_reports")
+}
+
+// User Management Permissions System
+model UserPermission {
+  id         String @id @default(cuid())
+  userId     String
+  permission String  // Format: "resource:action" (e.g., "articles:create")
+  resource   String? // Optional specific resource ID
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission, resource])
+  @@index([userId])
+  @@index([permission])
+  @@map("user_permissions")
 }
 
 

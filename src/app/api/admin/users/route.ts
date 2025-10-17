@@ -13,21 +13,15 @@ export async function GET(request: NextRequest) {
     // Test database connection first (simplified)
     console.log('Testing database connection...');
 
-    // Fetch real users from database (only safe fields)
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    // Fetch ALL users from database using raw SQL to bypass Prisma schema issues
+    const users = await prisma.$queryRaw`
+      SELECT id, email, name, "createdAt", "updatedAt"
+      FROM users
+      ORDER BY "createdAt" DESC
+    `;
 
     console.log(`📊 Found ${users.length} users in database:`, users.map(u => u.email));
+    console.log('📋 Sample user data:', users[0]);
 
     // If no users found in database, return mock data as fallback
     if (users.length === 0) {
@@ -78,15 +72,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Map database users to frontend format
+    // Map database users to frontend format (handle raw SQL result)
     const formattedUsers = users.map(user => ({
       id: user.id,
       email: user.email,
       role: 'USER', // Default role since field missing in DB
       isActive: true, // Default active
-      name: user.name,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      name: user.name || 'Unknown User',
+      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
+      updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
       lastLoginAt: null
     }));
 

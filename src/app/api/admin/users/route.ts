@@ -13,17 +13,21 @@ export async function GET(request: NextRequest) {
     // Test database connection first (simplified)
     console.log('Testing database connection...');
 
-    // Fetch real users from database
+    // Fetch real users from database (corrected fields)
     const users = await prisma.user.findMany({
       select: {
         id: true,
         email: true,
-        role: true,
-        isActive: true,
+        emailVerified: true,
+        name: true,
+        image: true,
+        provider: true,
         createdAt: true,
         updatedAt: true,
-        name: true,
-        lastLoginAt: true
+        clerkUserId: true,
+        isActive: true,
+        lastLoginAt: true,
+        organizationId: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -85,9 +89,11 @@ export async function GET(request: NextRequest) {
     const formattedUsers = users.map(user => ({
       id: user.id,
       email: user.email,
-      role: user.role,
+      role: 'USER', // Default role since field missing in DB
       isActive: user.isActive,
       name: user.name,
+      provider: user.provider,
+      clerkUserId: user.clerkUserId,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       lastLoginAt: user.lastLoginAt?.toISOString()

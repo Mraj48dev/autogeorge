@@ -7,105 +7,65 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User Management Enums
-enum UserRole {
-  SUPER_ADMIN
-  ORGANIZATION_ADMIN
-  CONTENT_MANAGER
-  CONTENT_EDITOR
-  CONTENT_VIEWER
-  API_USER
-}
-
 model Article {
-  id        String   @id @default(cuid())
-
-  // Campi base dell'articolo (oggetti WordPress)
-  title         String
-  titleRaw      String?     // title.raw da WordPress
-  titleRendered String?     // title.rendered da WordPress
-  content       String
-  contentRaw    String?     // content.raw da WordPress
-  contentRendered String?   // content.rendered da WordPress
-  contentProtected Boolean? // content.protected da WordPress
-  excerpt       String?
-  excerptRaw    String?     // excerpt.raw da WordPress
-  excerptRendered String?   // excerpt.rendered da WordPress
-  excerptProtected Boolean? // excerpt.protected da WordPress
-  status        String      @default("generated")
-  slug          String?
-
-  // Nuova struttura JSON articolo
-  articleData   Json?       // Struttura JSON completa dell'articolo (metadati, seo, contenuto, immagine, link)
-
-  // Metadati WordPress
-  wordpressId       Int?        // ID del post su WordPress
-  wordpressSiteId   String?     // Riferimento al sito WordPress
-  wordpressUrl      String?     // URL del post pubblicato (link)
-  wordpressStatus   String?     // draft, publish, private, future
-  wordpressType     String?     // Tipo di post WordPress
-  wordpressGuid     Json?       // Globally unique identifier object
-
-  // Tassonomie
-  categories        Json?       // Array di ID categorie WordPress
-  tags              Json?       // Array di ID tag WordPress
-
-  // Media e allegati
-  featuredMediaId   Int?        // ID immagine in evidenza WordPress
-  featuredMediaUrl  String?     // URL immagine in evidenza
-  featuredMedia     WordPressMedia? @relation("FeaturedMedia", fields: [featuredMediaId, wordpressSiteId], references: [wordpressId, wordpressSiteId])
-
-  // Metadati di pubblicazione (WordPress native)
-  publishedAt       DateTime?   // Data di pubblicazione (date)
-  publishedAtGmt    DateTime?   // Data di pubblicazione GMT (date_gmt)
-  modifiedAt        DateTime?   // Ultima modifica su WordPress (modified)
-  modifiedAtGmt     DateTime?   // Ultima modifica GMT (modified_gmt)
-  scheduledAt       DateTime?   // Data programmata (per status=future)
-
-  // Configurazione post
-  postFormat        String?     // standard, aside, gallery, etc.
-  postTemplate      String?     // Template personalizzato
-  postPassword      String?     // Password per contenuti protetti
-
-  // Controlli di interazione
-  commentStatus     String?     // open, closed
-  pingStatus        String?     // open, closed
-  isSticky          Boolean?    // Post in evidenza
-
-  // Metadati autore
-  authorId          Int?        // ID autore WordPress
-  authorName        String?     // Nome autore
-
-  // Custom fields e meta
-  customFields      Json?       // Custom fields del post
-  yoastSeo          Json?       // Metadati Yoast SEO
-  metaFields        Json?       // Altri meta fields
-  wordpressData     Json?       // JSON completo della risposta WordPress
-
-  // Statistiche e tracciamento
-  viewCount         Int?        // Numero di visualizzazioni
-  shareCount        Int?        // Numero di condivisioni
-
-  // Fonte e generazione
-  sourceId          String?     // Fonte da cui è stato generato
-  sourceType        String?     // manual, rss, telegram, etc.
-  sourceUrl         String?     // URL fonte originale
-  sourceTitle       String?     // Titolo fonte
-
-  // AI e generazione
-  aiModel           String?     // Modello AI usato per generazione
-  aiPrompts         Json?       // Prompt utilizzati
-  generationConfig  Json?       // Configurazione generazione
-
-  // Metadati sistema
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  lastSyncAt        DateTime?   // Ultima sincronizzazione con WordPress
-
-  // Relazioni
-  source            Source?     @relation(fields: [sourceId], references: [id])
-  wordpressSite     WordPressSite? @relation(fields: [wordpressSiteId], references: [id])
-  featuredImages    FeaturedImage[] // Relazione con immagini generate
+  id               String          @id @default(cuid())
+  title            String
+  content          String
+  status           String          @default("generated")
+  sourceId         String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  aiModel          String?
+  aiPrompts        Json?
+  authorId         Int?
+  authorName       String?
+  categories       Json?
+  commentStatus    String?
+  customFields     Json?
+  excerpt          String?
+  featuredMediaId  Int?
+  featuredMediaUrl String?
+  generationConfig Json?
+  isSticky         Boolean?
+  lastSyncAt       DateTime?
+  metaFields       Json?
+  modifiedAt       DateTime?
+  pingStatus       String?
+  postFormat       String?
+  postPassword     String?
+  postTemplate     String?
+  publishedAt      DateTime?
+  scheduledAt      DateTime?
+  shareCount       Int?
+  slug             String?
+  sourceTitle      String?
+  sourceType       String?
+  sourceUrl        String?
+  tags             Json?
+  viewCount        Int?
+  wordpressId      Int?
+  wordpressSiteId  String?
+  wordpressStatus  String?
+  wordpressUrl     String?
+  yoastSeo         Json?
+  contentProtected Boolean?
+  contentRaw       String?
+  contentRendered  String?
+  excerptProtected Boolean?
+  excerptRaw       String?
+  excerptRendered  String?
+  modifiedAtGmt    DateTime?
+  publishedAtGmt   DateTime?
+  titleRaw         String?
+  titleRendered    String?
+  wordpressData    Json?
+  wordpressGuid    Json?
+  wordpressType    String?
+  articleData      Json?
+  featuredMedia    WordPressMedia? @relation("FeaturedMedia", fields: [featuredMediaId, wordpressSiteId], references: [wordpressId, wordpressSiteId])
+  source           Source?         @relation(fields: [sourceId], references: [id])
+  wordpressSite    WordPressSite?  @relation(fields: [wordpressSiteId], references: [id])
+  featuredImages   FeaturedImage[]
 
   @@index([wordpressId, wordpressSiteId])
   @@index([publishedAt])
@@ -125,12 +85,12 @@ model Source {
   configuration   Json?
   metadata        Json?
   lastFetchAt     DateTime?
-  lastFetchStatus String?    // success, error, pending
   lastErrorAt     DateTime?
   lastError       String?
-  isActive        Boolean    @default(true)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+  isActive        Boolean    @default(true)
+  lastFetchStatus String?
   articles        Article[]
   feedItems       FeedItem[]
 
@@ -139,31 +99,23 @@ model Source {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  provider      String    @default("credentials")
-
-  // USER MANAGEMENT FIELDS
-  clerkUserId        String?   @unique  // Clerk integration
-  role               UserRole  @default(CONTENT_VIEWER)
-  organizationId     String?   // Multi-tenant support
-  isActive           Boolean   @default(true)
-  lastLoginAt        DateTime?
-  failedLoginAttempts Int      @default(0)
-
-  // Timestamps
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // NextAuth relations
-  accounts      Account[]
-  sessions      Session[]
-
-  // User Management relations
-  userPermissions UserPermission[]
+  id                  String           @id @default(cuid())
+  name                String?
+  email               String           @unique
+  emailVerified       DateTime?
+  image               String?
+  provider            String           @default("credentials")
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  clerkUserId         String?          @unique
+  failedLoginAttempts Int              @default(0)
+  isActive            Boolean          @default(true)
+  lastLoginAt         DateTime?
+  organizationId      String?
+  role                UserRole         @default(CONTENT_VIEWER)
+  accounts            Account[]
+  sessions            Session[]
+  userPermissions     UserPermission[]
 
   @@map("users")
 }
@@ -215,11 +167,11 @@ model FeedItem {
   url         String?
   publishedAt DateTime
   fetchedAt   DateTime @default(now())
-  status      String   @default("pending") // "pending" | "draft" | "processed"
-  processed   Boolean  @default(false) // TEMPORARY: Keep for migration safety
+  processed   Boolean  @default(false)
   articleId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  status      String   @default("pending")
   source      Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
 
   @@index([sourceId, publishedAt])
@@ -228,116 +180,93 @@ model FeedItem {
 }
 
 model GenerationSettings {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  titlePrompt           String
-  contentPrompt         String
-  imagePrompt           String   @default("in stile cartoon. Individua un dettaglio rappresentativo dell'idea base dell'articolo. Non usare scritte né simboli.")
-  imageStyle            String   @default("natural")
-  imageModel            String   @default("dall-e-3")
-  imageSize             String   @default("1792x1024")
-
-  // Nuovi campi per gestione modalità generazione immagini
-  imageGenerationMode   String   @default("manual") // 'manual' | 'ai_assisted' | 'full_auto'
-  enablePromptEngineering Boolean @default(false)
-  promptTemplate        String?  // Template per ChatGPT
-  allowPromptEditing    Boolean  @default(true)   // Per ai_assisted mode
-  promptEngineeringModel String  @default("gpt-4") // Modello AI per prompt engineering
-
-  defaultModel          String   @default("sonar-pro")
-  defaultTemperature    Float    @default(0.7)
-  defaultMaxTokens      Int      @default(20000)
-  defaultLanguage       String   @default("it")
-  defaultTone           String   @default("professionale")
-  defaultStyle          String   @default("giornalistico")
-  defaultTargetAudience String   @default("generale")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  titlePrompt             String
+  contentPrompt           String
+  defaultModel            String   @default("sonar-pro")
+  defaultTemperature      Float    @default(0.7)
+  defaultMaxTokens        Int      @default(20000)
+  defaultLanguage         String   @default("it")
+  defaultTone             String   @default("professionale")
+  defaultStyle            String   @default("giornalistico")
+  defaultTargetAudience   String   @default("generale")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  imagePrompt             String   @default("in stile cartoon. Individua un dettaglio rappresentativo dell'idea base dell'articolo. Non usare scritte né simboli.")
+  imageStyle              String   @default("natural")
+  imageModel              String   @default("dall-e-3")
+  imageSize               String   @default("1792x1024")
+  allowPromptEditing      Boolean  @default(true)
+  enablePromptEngineering Boolean  @default(false)
+  imageGenerationMode     String   @default("manual")
+  promptEngineeringModel  String   @default("gpt-4")
+  promptTemplate          String?
 
   @@map("generation_settings")
 }
 
 model WordPressSite {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  name             String
-  url              String
-  username         String
-  password         String
-  defaultCategory  String?
-  defaultStatus    String   @default("draft")
-  defaultAuthor    String?
-  enableAutoGeneration Boolean @default(false)
-  enableAutoPublish Boolean @default(false)
-  enableFeaturedImage Boolean @default(true)
-  enableTags       Boolean @default(true)
-  enableCategories Boolean @default(true)
-  customFields     Json?
-  isActive         Boolean  @default(true)
-  lastPublishAt    DateTime?
-  lastError        String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Relazioni
-  articles         Article[]
-  media            WordPressMedia[]
+  id                   String           @id @default(cuid())
+  userId               String           @unique
+  name                 String
+  url                  String
+  username             String
+  password             String
+  defaultCategory      String?
+  defaultStatus        String           @default("draft")
+  defaultAuthor        String?
+  enableAutoPublish    Boolean          @default(false)
+  enableFeaturedImage  Boolean          @default(true)
+  enableTags           Boolean          @default(true)
+  enableCategories     Boolean          @default(true)
+  customFields         Json?
+  isActive             Boolean          @default(true)
+  lastPublishAt        DateTime?
+  lastError            String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  enableAutoGeneration Boolean          @default(false)
+  articles             Article[]
+  media                WordPressMedia[]
 
   @@map("wordpress_sites")
 }
 
 model WordPressMedia {
-  id               String   @id @default(cuid())
-
-  // Metadati WordPress Media
-  wordpressId      Int      // ID del media su WordPress
-  wordpressSiteId  String   // Riferimento al sito WordPress
-  status           String   // publish, draft, etc.
-  slug             String?  // Identificatore univoco
-  author           Int?     // ID autore che ha caricato
-
-  // Date WordPress native
-  uploadedAt       DateTime? // data caricamento
-  uploadedAtGmt    DateTime? // data caricamento GMT
-  modifiedAt       DateTime? // ultima modifica
-  modifiedAtGmt    DateTime? // ultima modifica GMT
-
-  // Metadati base del file
-  title            String?   // Titolo del media
-  altText          String?   // Testo alternativo (importante per SEO)
-  caption          String?   // Didascalia
-  description      String?   // Descrizione completa
-
-  // Informazioni tecniche del file
-  mediaType        String?   // image, file, video, audio
-  mimeType         String?   // image/jpeg, image/png, etc.
-  sourceUrl        String    // URL originale del file
-  link             String?   // URL pagina media WordPress
-
-  // Dettagli tecnici avanzati
-  fileSize         Int?      // Dimensione in bytes
-  fileName         String?   // Nome file originale
-  width            Int?      // Larghezza immagine
-  height           Int?      // Altezza immagine
-
-  // Metadati WordPress avanzati
-  guid             Json?     // Globally unique identifier
-  mediaDetails     Json?     // Dettagli specifici media (sizes, exif, etc.)
-  postId           Int?      // ID post associato (se allegato)
-
-  // Metadati aggiuntivi
-  customFields     Json?     // Custom fields del media
-  metaFields       Json?     // Meta fields WordPress
-  wordpressData    Json?     // JSON completo risposta WordPress
-
-  // Metadati sistema
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  lastSyncAt       DateTime? // Ultima sincronizzazione
-
-  // Relazioni
-  wordpressSite    WordPressSite @relation(fields: [wordpressSiteId], references: [id])
-  articlesAsFeature Article[] @relation("FeaturedMedia")
+  id                String        @id @default(cuid())
+  wordpressId       Int
+  wordpressSiteId   String
+  status            String
+  slug              String?
+  author            Int?
+  uploadedAt        DateTime?
+  uploadedAtGmt     DateTime?
+  modifiedAt        DateTime?
+  modifiedAtGmt     DateTime?
+  title             String?
+  altText           String?
+  caption           String?
+  description       String?
+  mediaType         String?
+  mimeType          String?
+  sourceUrl         String
+  link              String?
+  fileSize          Int?
+  fileName          String?
+  width             Int?
+  height            Int?
+  guid              Json?
+  mediaDetails      Json?
+  postId            Int?
+  customFields      Json?
+  metaFields        Json?
+  wordpressData     Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  lastSyncAt        DateTime?
+  articlesAsFeature Article[]     @relation("FeaturedMedia")
+  wordpressSite     WordPressSite @relation(fields: [wordpressSiteId], references: [id])
 
   @@unique([wordpressId, wordpressSiteId])
   @@index([mediaType])
@@ -346,44 +275,39 @@ model WordPressMedia {
 }
 
 model Publication {
-  id            String   @id @default(cuid())
-  articleId     String
-  externalId    String
-  externalUrl   String
-  status        String
-  platform      String
-  target        Json
-  content       Json
-  metadata      Json
-  publishedAt   DateTime?
-  retryCount    Int      @default(0)
-  lastError     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String    @id @default(cuid())
+  articleId   String
+  externalId  String
+  externalUrl String
+  status      String
+  platform    String
+  target      Json
+  content     Json
+  metadata    Json
+  publishedAt DateTime?
+  retryCount  Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("publications")
 }
 
 model FeaturedImage {
-  id           String   @id @default(cuid())
-  articleId    String   // Riferimento all'articolo
-  aiPrompt     String   // Prompt AI utilizzato per la generazione
-  filename     String   // Nome del file dell'immagine
-  altText      String   // Testo alternativo per l'immagine
-  url          String?  // URL dell'immagine generata (null se generazione fallita)
-  status       String   // pending, searching, found, generated, uploaded, failed
-  searchQuery  String?  // Query di ricerca utilizzata (opzionale)
-  errorMessage String?  // Messaggio di errore in caso di fallimento
-
-  // WordPress upload fields
-  wordpressMediaId Int?    // ID dell'immagine nella media library di WordPress
-  wordpressUrl     String? // URL dell'immagine su WordPress
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relazione con Article
-  article      Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  articleId        String
+  aiPrompt         String
+  filename         String
+  altText          String
+  url              String?
+  status           String
+  searchQuery      String?
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  wordpressMediaId Int?
+  wordpressUrl     String?
+  article          Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@index([articleId])
   @@index([status])
@@ -394,15 +318,15 @@ model FeaturedImage {
 
 model ImagePrompt {
   id               String   @id @default(cuid())
-  articleId        String   // Riferimento all'articolo
-  articleTitle     String   // Titolo dell'articolo per context
-  articleExcerpt   String   // Estratto del contenuto per context
-  generatedPrompt  String   // Prompt generato dall'AI
-  originalTemplate String   // Template originale utilizzato
-  aiModel          String   // Modello AI utilizzato (gpt-4, gpt-3.5-turbo)
-  status           String   // pending, generated, validated, failed
-  metadata         String?  // Metadati aggiuntivi in JSON (tokens, confidence, etc.)
-  errorMessage     String?  // Messaggio di errore se fallimento
+  articleId        String
+  articleTitle     String
+  articleExcerpt   String
+  generatedPrompt  String
+  originalTemplate String
+  aiModel          String
+  status           String
+  metadata         String?
+  errorMessage     String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -415,16 +339,13 @@ model ImagePrompt {
 model HealthCheck {
   id           String   @id @default(cuid())
   timestamp    DateTime @default(now())
-  status       String   // healthy, degraded, unhealthy
-  responseTime Int      // Response time in milliseconds
-  details      Json     // Full health check response
-  version      String?  // Application version (git commit)
-  environment  String?  // production, development, etc.
-
-  // Alert tracking
+  status       String
+  responseTime Int
+  details      Json
+  version      String?
+  environment  String?
   alertSent    Boolean  @default(false)
-  alertType    String?  // email, slack, webhook
-
+  alertType    String?
   createdAt    DateTime @default(now())
 
   @@index([timestamp])
@@ -434,29 +355,22 @@ model HealthCheck {
 }
 
 model SystemAlert {
-  id           String   @id @default(cuid())
-  type         String   // service_down, performance_degraded, error_rate_high, etc.
-  service      String   // database, api, rss-sources, etc.
-  severity     String   // low, medium, high, critical
-  status       String   // active, acknowledged, resolved
-  title        String   // Alert title/summary
-  message      String   // Detailed alert message
-  details      Json?    // Additional context data
-
-  // Timestamps
-  triggeredAt  DateTime @default(now())
-  resolvedAt   DateTime?
-  acknowledgedAt DateTime?
-
-  // Notification tracking
-  notificationsSent Json? // Array of sent notifications with timestamps
-
-  // Metrics
-  occurrenceCount Int    @default(1)
-  lastOccurrence  DateTime @default(now())
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String    @id @default(cuid())
+  type              String
+  service           String
+  severity          String
+  status            String
+  title             String
+  message           String
+  details           Json?
+  triggeredAt       DateTime  @default(now())
+  resolvedAt        DateTime?
+  acknowledgedAt    DateTime?
+  notificationsSent Json?
+  occurrenceCount   Int       @default(1)
+  lastOccurrence    DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([type, service])
   @@index([severity])
@@ -466,30 +380,23 @@ model SystemAlert {
 }
 
 model HealthReport {
-  id                    String   @id @default(cuid())
-  timestamp             DateTime @default(now())
-  reportType            String   // summary_12h, summary_daily, incident_report
-  periodStart           DateTime // Inizio periodo analizzato
-  periodEnd             DateTime // Fine periodo analizzato
-
-  // Metriche principali
-  overallStatus         String   // healthy, degraded, unhealthy
-  totalChecks           Int      // Numero totale health checks nel periodo
-  uptimePercentage      Float    // Percentuale uptime
-  totalAlerts           Int      // Totale alert nel periodo
-  criticalAlerts        Int      // Alert critici
-  averageResponseTime   Int      // Tempo risposta medio (ms)
-
-  // Dati completi del report
-  reportData            Json     // Analisi completa in JSON
-  htmlReport            String   @db.Text // Report HTML per email
-
-  // Tracking notifiche
-  emailSent             Boolean  @default(false)
-  emailSentAt           DateTime?
-  emailRecipients       Json?    // Lista recipient email
-
-  createdAt             DateTime @default(now())
+  id                  String    @id @default(cuid())
+  timestamp           DateTime  @default(now())
+  reportType          String
+  periodStart         DateTime
+  periodEnd           DateTime
+  overallStatus       String
+  totalChecks         Int
+  uptimePercentage    Float
+  totalAlerts         Int
+  criticalAlerts      Int
+  averageResponseTime Int
+  reportData          Json
+  htmlReport          String
+  emailSent           Boolean   @default(false)
+  emailSentAt         DateTime?
+  emailRecipients     Json?
+  createdAt           DateTime  @default(now())
 
   @@index([timestamp])
   @@index([reportType])
@@ -498,18 +405,14 @@ model HealthReport {
   @@map("health_reports")
 }
 
-// User Management Permissions System
 model UserPermission {
-  id         String @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
-  permission String  // Format: "resource:action" (e.g., "articles:create")
-  resource   String? // Optional specific resource ID
-
+  permission String
+  resource   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-
-  // Relations
-  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, permission, resource])
   @@index([userId])
@@ -517,4 +420,11 @@ model UserPermission {
   @@map("user_permissions")
 }
 
-
+enum UserRole {
+  SUPER_ADMIN
+  ORGANIZATION_ADMIN
+  CONTENT_MANAGER
+  CONTENT_EDITOR
+  CONTENT_VIEWER
+  API_USER
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
 import { clerkClient } from '@clerk/nextjs/server';
+import { verifyAdminAccess } from '@/shared/auth/adminAuth';
 
 /**
  * POST /api/admin/sync-clerk-users
@@ -8,6 +9,12 @@ import { clerkClient } from '@clerk/nextjs/server';
  * Updated to ensure Vercel deployment
  */
 export async function POST(request: NextRequest) {
+  // Verify admin access first
+  const authResult = await verifyAdminAccess();
+  if (!authResult.authorized) {
+    return authResult.response;
+  }
+
   try {
     console.log('🔄 Starting Clerk users synchronization...');
 

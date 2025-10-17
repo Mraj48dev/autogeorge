@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useAuthorizedUser } from '@/shared/hooks/useAuthorizedUser';
 
 interface User {
   id: string;
@@ -22,7 +22,7 @@ const USER_ROLES = [
 ];
 
 export default function UsersAdminPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user, isAuthorized, isLoading } = useAuthorizedUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export default function UsersAdminPage() {
   }, [isLoaded, isSignedIn]);
 
   // Render loading state
-  if (!isLoaded) {
+  if (isLoading || !isLoaded) {
     return <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
     </div>;
@@ -137,6 +137,26 @@ export default function UsersAdminPage() {
       <div className="bg-white p-8 rounded-lg shadow-md">
         <h2 className="text-xl font-bold mb-4">Accesso Richiesto</h2>
         <p>Devi essere autenticato per accedere a questa pagina.</p>
+      </div>
+    </div>;
+  }
+
+  // Render unauthorized access
+  if (!isAuthorized) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="bg-red-50 border border-red-200 p-8 rounded-lg shadow-md max-w-md">
+        <div className="flex items-center mb-4">
+          <svg className="h-6 w-6 text-red-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 18.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <h2 className="text-xl font-bold text-red-800">Accesso Negato</h2>
+        </div>
+        <p className="text-red-700 mb-4">
+          Il tuo account non è autorizzato ad accedere a questo sistema.
+        </p>
+        <p className="text-red-600 text-sm">
+          Contatta l'amministratore per richiedere l'accesso.
+        </p>
       </div>
     </div>;
   }

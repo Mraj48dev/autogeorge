@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { verifyAdminAccess } from '@/shared/auth/adminAuth';
 
 /**
  * GET /api/admin/users
@@ -7,6 +8,12 @@ import { prisma } from '@/shared/database/prisma';
  * Protected via frontend auth check only
  */
 export async function GET(request: NextRequest) {
+  // Verify admin access first
+  const authResult = await verifyAdminAccess();
+  if (!authResult.authorized) {
+    return authResult.response;
+  }
+
   try {
     console.log('🔍 Fetching users from database...');
 

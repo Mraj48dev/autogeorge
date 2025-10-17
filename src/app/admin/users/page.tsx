@@ -92,6 +92,31 @@ export default function UsersAdminPage() {
     }
   };
 
+  const handleSyncClerkUsers = async () => {
+    if (confirm('Sincronizzare gli utenti di Clerk con il database? Questa operazione importerà tutti gli utenti mancanti.')) {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/admin/sync-clerk-users', {
+          method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          alert(`Sincronizzazione completata!\n\nAggiunti: ${data.summary.added}\nEsistenti: ${data.summary.existing}\nErrori: ${data.summary.errors}\n\nTotale utenti Clerk: ${data.totalClerkUsers}\nTotale utenti DB: ${data.finalDatabaseCount}`);
+          fetchUsers(); // Refresh the list
+        } else {
+          alert(`Errore durante la sincronizzazione: ${data.error || 'Errore sconosciuto'}`);
+        }
+      } catch (error) {
+        console.error('Sync error:', error);
+        alert('Errore durante la sincronizzazione');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     // Only fetch users if authenticated
     if (isLoaded && isSignedIn) {
@@ -127,10 +152,20 @@ export default function UsersAdminPage() {
   return (
     <div className="container mx-auto p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestione Utenti</h1>
-          <p className="text-gray-600">
-            Gestisci gli utenti del sistema, i loro ruoli e permessi.
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestione Utenti</h1>
+              <p className="text-gray-600">
+                Gestisci gli utenti del sistema, i loro ruoli e permessi.
+              </p>
+            </div>
+            <button
+              onClick={handleSyncClerkUsers}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              🔄 Sincronizza con Clerk
+            </button>
+          </div>
         </div>
 
         {error && (

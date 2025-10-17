@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Lista tutti gli utenti - MOCK DATA per demo
  * Protected via frontend auth check only
  */
-const getUsersHandler = async (request: NextRequest) => {
+export async function GET(request: NextRequest) {
   try {
     // Return mock data - no server-side auth for now to avoid issues
     const mockUsers = [
@@ -53,6 +53,4 @@ const getUsersHandler = async (request: NextRequest) => {
       { status: 500 }
     );
   }
-};
-
-export const GET = getUsersHandler;
+}

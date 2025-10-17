@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { createUserManagementContainer } from '@/composition-root/container';
+// import { auth } from '@clerk/nextjs/server';
+// import { createUserManagementContainer } from '@/composition-root/container';
 
 /**
  * API endpoint for checking user permissions from frontend components.
- *
- * This endpoint maintains module separation by using the DI container
- * to access user-management functionality.
+ * TEMPORARILY DISABLED: Clerk auth() calls cause middleware errors
  */
+export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    { error: 'Endpoint temporarily disabled - auth middleware issues' },
+    { status: 503 }
+  );
+}
+
+/*
+// ORIGINAL CODE - COMMENTED OUT DUE TO auth() MIDDLEWARE ISSUES
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
@@ -72,3 +79,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+*/

@@ -27,26 +27,6 @@ export default function UsersAdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Simple auth check - just require sign in
-  if (!isLoaded) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-    </div>;
-  }
-
-  if (!isSignedIn) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="bg-white p-8 rounded-lg shadow-md">
-        <h2 className="text-xl font-bold mb-4">Accesso Richiesto</h2>
-        <p>Devi essere autenticato per accedere a questa pagina.</p>
-      </div>
-    </div>;
-  }
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -70,6 +50,30 @@ export default function UsersAdminPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Only fetch users if authenticated
+    if (isLoaded && isSignedIn) {
+      fetchUsers();
+    }
+  }, [isLoaded, isSignedIn]);
+
+  // Render loading state
+  if (!isLoaded) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>;
+  }
+
+  // Render auth required state
+  if (!isSignedIn) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="bg-white p-8 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-4">Accesso Richiesto</h2>
+        <p>Devi essere autenticato per accedere a questa pagina.</p>
+      </div>
+    </div>;
+  }
 
   const getRoleInfo = (role: string) => {
     return USER_ROLES.find(r => r.value === role) || {

@@ -42,10 +42,38 @@ export function useAuthorization(options: UseAuthorizationOptions = {}): UseAuth
       setIsLoading(true);
       setError(null);
 
-      // DISABLED: API endpoint causes 503 errors due to auth() middleware issues
-      // TEMPORARY: Return false for all permission checks to avoid API calls
-      console.warn('Permission check disabled due to auth middleware issues');
-      return false;
+      // Call the authorization API endpoint (maintains module separation)
+      const response = await fetch('/api/auth/check-permission', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          permission,
+          resourceId,
+          organizationId,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Authentication required');
+          return false;
+        }
+        if (response.status === 403) {
+          setError('Insufficient permissions');
+          return false;
+        }
+        if (response.status === 503) {
+          // Service disabled - fail gracefully
+          setError('Authorization service temporarily unavailable');
+          return false;
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.hasPermission === true;
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

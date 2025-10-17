@@ -11,6 +11,19 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Starting Clerk users synchronization...');
 
+    // Check if clerkClient is properly configured
+    if (!clerkClient || !clerkClient.users) {
+      console.error('❌ Clerk client not properly configured');
+      return NextResponse.json({
+        error: 'Clerk client not configured',
+        details: 'clerkClient.users is undefined. Please ensure CLERK_SECRET_KEY is properly set in Vercel environment variables.',
+        requiredEnvVars: {
+          'CLERK_SECRET_KEY': 'Must be set to your actual Clerk secret key (starts with sk_)',
+          'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY': 'Must be set to your Clerk publishable key (starts with pk_)'
+        }
+      }, { status: 500 });
+    }
+
     // Fetch all users from Clerk
     const clerkUsers = await clerkClient.users.getUserList();
 

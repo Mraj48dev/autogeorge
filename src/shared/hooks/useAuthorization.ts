@@ -42,33 +42,10 @@ export function useAuthorization(options: UseAuthorizationOptions = {}): UseAuth
       setIsLoading(true);
       setError(null);
 
-      // Call the authorization API endpoint (maintains module separation)
-      const response = await fetch('/api/auth/check-permission', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          permission,
-          resourceId,
-          organizationId,
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setError('Authentication required');
-          return false;
-        }
-        if (response.status === 403) {
-          setError('Insufficient permissions');
-          return false;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.hasPermission === true;
+      // DISABLED: API endpoint causes 503 errors due to auth() middleware issues
+      // TEMPORARY: Return false for all permission checks to avoid API calls
+      console.warn('Permission check disabled due to auth middleware issues');
+      return false;
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -176,19 +153,11 @@ export function useUserRole() {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch('/api/auth/user-role', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        setRole(result.role);
+        // DISABLED: API endpoint causes 503 errors due to auth() middleware issues
+        // TEMPORARY: Return null for user role to avoid API calls
+        console.warn('User role fetch disabled due to auth middleware issues');
+        setRole(null);
+        return;
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';

@@ -51,6 +51,47 @@ export default function UsersAdminPage() {
     }
   };
 
+  const handleEditUser = async (user: User) => {
+    const newRole = prompt(`Modifica ruolo per ${user.email}:`, user.role);
+    if (newRole && newRole !== user.role) {
+      try {
+        const response = await fetch(`/api/admin/users/${user.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: newRole, isActive: user.isActive })
+        });
+
+        if (response.ok) {
+          alert('Utente aggiornato con successo!');
+          fetchUsers(); // Refresh the list
+        } else {
+          alert('Errore durante l\'aggiornamento');
+        }
+      } catch (error) {
+        alert('Errore durante l\'aggiornamento');
+      }
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Sei sicuro di voler modificare lo stato di questo utente?')) {
+      try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Stato utente modificato!');
+          fetchUsers(); // Refresh the list
+        } else {
+          alert('Errore durante la modifica');
+        }
+      } catch (error) {
+        alert('Errore durante la modifica');
+      }
+    }
+  };
+
   useEffect(() => {
     // Only fetch users if authenticated
     if (isLoaded && isSignedIn) {
@@ -149,6 +190,9 @@ export default function UsersAdminPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Creato
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Azioni
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -191,6 +235,24 @@ export default function UsersAdminPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {new Date(user.createdAt).toLocaleDateString('it-IT')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded text-xs"
+                              >
+                                Modifica
+                              </button>
+                              {user.email !== 'mraj48bis@gmail.com' && (
+                                <button
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-xs"
+                                >
+                                  {user.isActive ? 'Disattiva' : 'Attiva'}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

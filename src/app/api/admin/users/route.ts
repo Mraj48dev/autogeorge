@@ -1,47 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * GET /api/admin/users
- * Lista tutti gli utenti - MOCK DATA per demo
+ * Lista tutti gli utenti dal database reale
  * Protected via frontend auth check only
  */
 export async function GET(request: NextRequest) {
   try {
-    // Return mock data - no server-side auth for now to avoid issues
-    const mockUsers = [
-      {
-        id: 'current-user',
-        email: 'mraj48bis@gmail.com',
-        role: 'SUPER_ADMIN',
+    // Fetch real users from database
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        role: true,
         isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: true,
+        updatedAt: true,
+        name: true,
+        lastLoginAt: true
       },
-      {
-        id: 'demo-user-1',
-        email: 'editor@example.com',
-        role: 'CONTENT_EDITOR',
-        isActive: true,
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 86400000).toISOString()
-      },
-      {
-        id: 'demo-user-2',
-        email: 'viewer@example.com',
-        role: 'CONTENT_VIEWER',
-        isActive: false,
-        createdAt: new Date(Date.now() - 172800000).toISOString(),
-        updatedAt: new Date(Date.now() - 172800000).toISOString()
+      orderBy: {
+        createdAt: 'desc'
       }
-    ];
+    });
+
+    // Map database users to frontend format
+    const formattedUsers = users.map(user => ({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      name: user.name,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+      lastLoginAt: user.lastLoginAt?.toISOString()
+    }));
 
     return NextResponse.json({
       success: true,
-      users: mockUsers,
+      users: formattedUsers,
       pagination: {
         page: 1,
         limit: 20,
-        total: mockUsers.length,
+        total: formattedUsers.length,
         pages: 1
       }
     });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
 import { clerkClient } from '@clerk/nextjs/server';
-import { verifyAdminAccess } from '@/shared/auth/adminAuth';
+import { verifySimpleAuth } from '@/shared/auth/simpleAuth';
 
 /**
  * POST /api/admin/sync-clerk-users
@@ -10,7 +10,7 @@ import { verifyAdminAccess } from '@/shared/auth/adminAuth';
  */
 export async function POST(request: NextRequest) {
   // Verify admin access first
-  const authResult = await verifyAdminAccess();
+  const authResult = verifySimpleAuth(request);
   if (!authResult.authorized) {
     return authResult.response;
   }

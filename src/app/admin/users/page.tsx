@@ -30,7 +30,14 @@ export default function UsersAdminPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/users');
+      const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+
+      const response = await fetch('/api/admin/users', {
+        headers: {
+          'x-admin-token': 'autogeorge-admin-2025-security-token',
+          'x-user-email': userEmail || ''
+        }
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch users: ${response.status}`);
@@ -96,8 +103,14 @@ export default function UsersAdminPage() {
     if (confirm('Sincronizzare gli utenti di Clerk con il database? Questa operazione importerà tutti gli utenti mancanti.')) {
       try {
         setLoading(true);
+        const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+
         const response = await fetch('/api/admin/sync-clerk-users', {
-          method: 'POST'
+          method: 'POST',
+          headers: {
+            'x-admin-token': 'autogeorge-admin-2025-security-token',
+            'x-user-email': userEmail || ''
+          }
         });
 
         const data = await response.json();

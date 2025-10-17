@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
-import { verifyAdminAccess } from '@/shared/auth/adminAuth';
+import { verifySimpleAuth } from '@/shared/auth/simpleAuth';
 
 /**
  * GET /api/admin/users
@@ -9,7 +9,7 @@ import { verifyAdminAccess } from '@/shared/auth/adminAuth';
  */
 export async function GET(request: NextRequest) {
   // Verify admin access first
-  const authResult = await verifyAdminAccess();
+  const authResult = verifySimpleAuth(request);
   if (!authResult.authorized) {
     return authResult.response;
   }

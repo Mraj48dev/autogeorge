@@ -5,6 +5,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 /**
  * POST /api/admin/sync-clerk-users
  * Synchronize users from Clerk to our database
+ * Updated to ensure Vercel deployment
  */
 export async function POST(request: NextRequest) {
   try {

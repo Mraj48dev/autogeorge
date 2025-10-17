@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AuthGuard } from '@/modules/auth/admin/auth-guard.component';
-import { UserRole } from '@/modules/auth/domain';
+import { useUser } from '@clerk/nextjs';
 
 interface User {
   id: string;
@@ -23,9 +22,26 @@ const USER_ROLES = [
 ];
 
 export default function UsersAdminPage() {
+  const { isLoaded, isSignedIn, user } = useUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Simple auth check - just require sign in
+  if (!isLoaded) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>;
+  }
+
+  if (!isSignedIn) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="bg-white p-8 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-4">Accesso Richiesto</h2>
+        <p>Devi essere autenticato per accedere a questa pagina.</p>
+      </div>
+    </div>;
+  }
 
   useEffect(() => {
     fetchUsers();
@@ -64,8 +80,7 @@ export default function UsersAdminPage() {
   };
 
   return (
-    <AuthGuard requiredRole={UserRole.ADMIN}>
-      <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestione Utenti</h1>
           <p className="text-gray-600">
@@ -205,6 +220,5 @@ export default function UsersAdminPage() {
           </div>
         </div>
       </div>
-    </AuthGuard>
   );
 }

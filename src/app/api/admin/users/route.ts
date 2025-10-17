@@ -18,16 +18,31 @@ const getUsersHandler = async (request: NextRequest) => {
       );
     }
 
-    // For now, return mock data to demonstrate the UI works
-    // In a real implementation, you would fetch from your auth system
+    // Return mock data for the current user + additional demo users
     const mockUsers = [
       {
         id: userId,
         email: 'mraj48bis@gmail.com',
-        role: 'ADMIN',
+        role: 'SUPER_ADMIN',
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'demo-user-1',
+        email: 'editor@example.com',
+        role: 'CONTENT_EDITOR',
+        isActive: true,
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000).toISOString()
+      },
+      {
+        id: 'demo-user-2',
+        email: 'viewer@example.com',
+        role: 'CONTENT_VIEWER',
+        isActive: false,
+        createdAt: new Date(Date.now() - 172800000).toISOString(),
+        updatedAt: new Date(Date.now() - 172800000).toISOString()
       }
     ];
 

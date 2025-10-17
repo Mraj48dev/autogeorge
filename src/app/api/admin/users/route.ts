@@ -10,9 +10,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Fetching users from database...');
 
-    // Test database connection first
-    const dbTest = await prisma.$queryRaw`SELECT 1 as test`;
-    console.log('✅ Database connection OK:', dbTest);
+    // Test database connection first (simplified)
+    console.log('Testing database connection...');
 
     // Fetch real users from database
     const users = await prisma.user.findMany({

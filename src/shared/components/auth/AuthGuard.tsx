@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { useAuthorization } from '@/shared/hooks/useAuthorization';
 import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 
 export interface AuthGuardProps {
@@ -15,11 +14,8 @@ export interface AuthGuardProps {
 }
 
 /**
- * AuthGuard component that conditionally renders content based on user permissions.
- *
- * This component maintains strict module separation by only using the shared
- * authorization hook, which internally communicates with user-management
- * through the DI container.
+ * Simplified AuthGuard component that only checks Clerk authentication.
+ * Complex permission system disabled for now.
  */
 export function AuthGuard({
   children,
@@ -30,15 +26,9 @@ export function AuthGuard({
   requireAuth = true
 }: AuthGuardProps) {
   const { isSignedIn, isLoaded } = useAuth();
-  const { hasPermission, isLoading, error } = useAuthorization({
-    permission,
-    resourceId,
-    organizationId,
-    enabled: isSignedIn && !!permission
-  });
 
-  // Show loading state while authentication/authorization is loading
-  if (!isLoaded || isLoading) {
+  // Show loading state while authentication is loading
+  if (!isLoaded) {
     return (
       <div className="flex items-center justify-center p-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -57,19 +47,10 @@ export function AuthGuard({
     );
   }
 
-  // Check permission requirement
-  if (permission && !hasPermission) {
-    return fallback || (
-      <Alert>
-        <AlertDescription>
-          You don't have permission to access this content.
-          {error && ` (${error})`}
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  // For now, all authenticated users have access
+  // TODO: Implement proper permission system later
 
-  // Render children if all checks pass
+  // Render children if authenticated
   return <>{children}</>;
 }
 

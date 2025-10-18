@@ -23,21 +23,21 @@ export default function HomePage() {
           ) : user ? (
             <div className="flex items-center space-x-4">
               <Link
-                href="/admin"
+                href="/admin/sites"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
               >
-                Dashboard
+                I Miei Siti
               </Link>
               <UserButton afterSignOutUrl="/" />
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <SignInButton mode="redirect" redirectUrl="/admin/dashboard" forceRedirectUrl="/registration">
+              <SignInButton mode="redirect" redirectUrl="/admin/sites" forceRedirectUrl="/registration">
                 <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
                   Accedi
                 </button>
               </SignInButton>
-              <SignUpButton mode="redirect" redirectUrl="/admin/dashboard" forceRedirectUrl="/signup">
+              <SignUpButton mode="redirect" redirectUrl="/admin/sites" forceRedirectUrl="/signup">
                 <button className="bg-white hover:bg-gray-50 text-gray-900 px-6 py-2 rounded-lg font-medium border border-gray-200 transition-colors">
                   Registrati
                 </button>
@@ -91,7 +91,7 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <SignUpButton mode="redirect" redirectUrl="/admin/dashboard" forceRedirectUrl="/signup">
+                <SignUpButton mode="redirect" redirectUrl="/admin/sites" forceRedirectUrl="/signup">
                   <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105">
                     Inizia Ora
                   </button>
@@ -102,7 +102,7 @@ export default function HomePage() {
                 >
                   🔍 Monitor RSS
                 </Link>
-                <SignUpButton mode="redirect" redirectUrl="/admin/dashboard" forceRedirectUrl="/signup">
+                <SignUpButton mode="redirect" redirectUrl="/admin/sites" forceRedirectUrl="/signup">
                   <button className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-lg font-semibold border border-gray-200 transition-colors">
                     Registrati Gratis
                   </button>

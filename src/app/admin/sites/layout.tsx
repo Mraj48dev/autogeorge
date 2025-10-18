@@ -1,4 +1,7 @@
+'use client';
+
 import { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { BUILD_INFO } from '@/lib/buildinfo';
 import LiveClock from '@/components/LiveClock';
 
@@ -7,6 +10,16 @@ interface SitesLayoutProps {
 }
 
 export default function SitesLayout({ children }: SitesLayoutProps) {
+  const pathname = usePathname();
+
+  // Only apply this layout to the sites selection page, not site-specific pages
+  const isSiteSpecificPage = pathname.includes('/admin/sites/') && pathname !== '/admin/sites';
+
+  if (isSiteSpecificPage) {
+    // For site-specific pages, let the [siteId]/layout.tsx handle everything
+    return <>{children}</>;
+  }
+
   // Complete layout for sites selection - NO SIDEBAR
   return (
     <div className="min-h-screen bg-gray-50">

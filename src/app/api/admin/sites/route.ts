@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/admin/sites error:', error);
+    console.error('GET /api/admin/sites error (simplified):', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

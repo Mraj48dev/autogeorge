@@ -17,7 +17,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const isSitesSelectionPage = pathname === '/admin/sites' || pathname === '/admin';
 
   if (isSitesSelectionPage) {
-    return children;
+    return <>{children}</>;
   }
   return (
     <div className="min-h-screen bg-gray-50">

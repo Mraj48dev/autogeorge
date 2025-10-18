@@ -25,7 +25,7 @@ const AUTHORIZED_EMAILS = [
 ];
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, sessionClaims } = auth();
+  const { userId, sessionClaims } = await auth();
   const userEmail = sessionClaims?.email as string;
 
   // Allow public routes

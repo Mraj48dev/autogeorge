@@ -29,7 +29,6 @@ export default function SignInPage() {
                 headerSubtitle: 'hidden'
               }
             }}
-            redirectUrl="/admin/dashboard"
           />
         </div>
 

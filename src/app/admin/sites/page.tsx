@@ -9,7 +9,7 @@ import { Label } from '@/shared/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Loader2, Plus, Settings, Trash2, ExternalLink, Activity, FileText, Rss, TrendingUp, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+// import { toast } from 'sonner';
 
 interface SiteStatistics {
   totalSources: number;
@@ -102,7 +102,7 @@ export default function SitesPage() {
       }
     } catch (error) {
       console.error('Error fetching sites:', error);
-      toast.error('Errore nel caricamento dei siti');
+      console.error('Errore nel caricamento dei siti');
     } finally {
       setLoading(false);
     }
@@ -126,7 +126,7 @@ export default function SitesPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Sito creato con successo!');
+        alert('Sito creato con successo!');
         setShowCreateForm(false);
         setFormData({
           name: '',
@@ -146,14 +146,14 @@ export default function SitesPage() {
 
         // Show connection test warnings if any
         if (result.data.connectionTest && result.data.connectionTest.warnings.length > 0) {
-          toast.warning(`Sito creato ma: ${result.data.connectionTest.warnings.join(', ')}`);
+          alert(`Sito creato ma: ${result.data.connectionTest.warnings.join(', ')}`);
         }
       } else {
         throw new Error(result.error || 'Failed to create site');
       }
     } catch (error) {
       console.error('Error creating site:', error);
-      toast.error('Errore nella creazione del sito: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      alert('Errore nella creazione del sito: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setCreateLoading(false);
     }
@@ -173,14 +173,14 @@ export default function SitesPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Sito eliminato con successo!');
+        alert('Sito eliminato con successo!');
         fetchSites();
       } else {
         throw new Error(result.error || 'Failed to delete site');
       }
     } catch (error) {
       console.error('Error deleting site:', error);
-      toast.error('Errore nell\'eliminazione del sito');
+      alert('Errore nell\'eliminazione del sito');
     } finally {
       setDeleteLoading(null);
     }

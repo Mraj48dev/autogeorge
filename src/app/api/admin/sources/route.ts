@@ -9,23 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     // Get all sources from database
     const sources = await prisma.source.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        url: true,
-        isActive: true,
-        lastFetchAt: true,
-        createdAt: true,
-        updatedAt: true,
-        // Count total articles/feed items for this source
-        _count: {
-          select: {
-            articles: true
-          }
-        }
-      }
+      orderBy: { createdAt: 'desc' }
     });
 
     // Transform for frontend

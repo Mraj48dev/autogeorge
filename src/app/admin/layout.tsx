@@ -13,10 +13,11 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
 
-  // Don't show sidebar for sites selection page
+  // Don't show sidebar for sites selection page and site-specific pages
   const isSitesSelectionPage = pathname === '/admin/sites' || pathname === '/admin';
+  const isSiteSpecificPage = pathname.includes('/admin/sites/') && pathname !== '/admin/sites';
 
-  if (isSitesSelectionPage) {
+  if (isSitesSelectionPage || isSiteSpecificPage) {
     return <>{children}</>;
   }
   return (

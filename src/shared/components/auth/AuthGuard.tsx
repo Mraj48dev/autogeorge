@@ -93,7 +93,7 @@ export function withAuthGuard<P extends object>(
  * Specialized guard components for common use cases
  */
 export const AdminGuard: React.FC<Omit<AuthGuardProps, 'permission'>> = (props) => (
-  <AuthGuard {...props} permission="admin:access" />
+  <AuthGuard {...props} requireAuth={true} />
 );
 
 export const ContentManagerGuard: React.FC<Omit<AuthGuardProps, 'permission'>> = (props) => (

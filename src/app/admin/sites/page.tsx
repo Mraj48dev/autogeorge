@@ -1,17 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Settings, Trash2, ExternalLink, Activity, FileText, Rss, TrendingUp } from 'lucide-react';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
+import { Loader2, Plus, Settings, Trash2, ExternalLink, Activity, FileText, Rss, TrendingUp, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -53,11 +49,6 @@ interface UserSiteInfo {
   statistics: SiteStatistics;
 }
 
-interface GetUserSitesResponse {
-  sites: UserSiteInfo[];
-  totalSites: number;
-}
-
 interface CreateSiteFormData {
   name: string;
   url: string;
@@ -77,7 +68,7 @@ export default function SitesPage() {
   const router = useRouter();
   const [sites, setSites] = useState<UserSiteInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
@@ -136,7 +127,7 @@ export default function SitesPage() {
 
       if (result.success) {
         toast.success('Sito creato con successo!');
-        setCreateDialogOpen(false);
+        setShowCreateForm(false);
         setFormData({
           name: '',
           url: '',
@@ -168,7 +159,11 @@ export default function SitesPage() {
     }
   };
 
-  const handleDeleteSite = async (siteId: string) => {
+  const handleDeleteSite = async (siteId: string, siteName: string) => {
+    if (!confirm(`Sei sicuro di voler eliminare il sito "${siteName}"? Questa operazione non può essere annullata.`)) {
+      return;
+    }
+
     setDeleteLoading(siteId);
     try {
       const response = await fetch(`/api/admin/sites/${siteId}`, {
@@ -228,103 +223,117 @@ export default function SitesPage() {
             Gestisci i tuoi siti WordPress collegati ad AutoGeorge
           </p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Aggiungi Sito
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Aggiungi Nuovo Sito</DialogTitle>
-              <DialogDescription>
-                Collega un nuovo sito WordPress per iniziare a generare contenuti automaticamente.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Nome</Label>
+        <Button onClick={() => setShowCreateForm(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Aggiungi Sito
+        </Button>
+      </div>
+
+      {/* Create Form Modal */}
+      {showCreateForm && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Aggiungi Nuovo Sito</CardTitle>
+                <CardDescription>
+                  Collega un nuovo sito WordPress per iniziare a generare contenuti automaticamente.
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Nome Sito</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="col-span-3"
                   placeholder="Il mio blog"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="url" className="text-right">URL</Label>
+              <div>
+                <Label htmlFor="url">URL</Label>
                 <Input
                   id="url"
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                  className="col-span-3"
                   placeholder="https://miosito.com"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="username" className="text-right">Username</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="username">Username WordPress</Label>
                 <Input
                   id="username"
                   value={formData.username}
                   onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                  className="col-span-3"
                   placeholder="admin"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="password" className="text-right">Password</Label>
+              <div>
+                <Label htmlFor="password">Password WordPress</Label>
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  className="col-span-3"
                 />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="defaultStatus" className="text-right">Stato Predefinito</Label>
-                <Select
-                  value={formData.defaultStatus}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, defaultStatus: value }))}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Bozza</SelectItem>
-                    <SelectItem value="publish">Pubblicato</SelectItem>
-                    <SelectItem value="private">Privato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="enableAutoPublish"
-                  checked={formData.enableAutoPublish}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enableAutoPublish: !!checked }))}
-                />
-                <Label htmlFor="enableAutoPublish">Pubblicazione automatica</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="enableAutoGeneration"
-                  checked={formData.enableAutoGeneration}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enableAutoGeneration: !!checked }))}
-                />
-                <Label htmlFor="enableAutoGeneration">Generazione automatica</Label>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="submit" onClick={handleCreateSite} disabled={createLoading}>
+            <div>
+              <Label htmlFor="defaultStatus">Stato Predefinito Articoli</Label>
+              <Select
+                value={formData.defaultStatus}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, defaultStatus: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Bozza</SelectItem>
+                  <SelectItem value="publish">Pubblicato</SelectItem>
+                  <SelectItem value="private">Privato</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={formData.enableAutoPublish}
+                  onChange={(e) => setFormData(prev => ({ ...prev, enableAutoPublish: e.target.checked }))}
+                  className="rounded"
+                />
+                <span className="text-sm">Pubblicazione automatica</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={formData.enableAutoGeneration}
+                  onChange={(e) => setFormData(prev => ({ ...prev, enableAutoGeneration: e.target.checked }))}
+                  className="rounded"
+                />
+                <span className="text-sm">Generazione automatica</span>
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleCreateSite} disabled={createLoading}>
                 {createLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Crea Sito
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+              <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                Annulla
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {sites.length === 0 ? (
         <Card>
@@ -334,14 +343,10 @@ export default function SitesPage() {
               <p className="text-muted-foreground mb-4">
                 Aggiungi il tuo primo sito WordPress per iniziare
               </p>
-              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Aggiungi Primo Sito
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
+              <Button onClick={() => setShowCreateForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Aggiungi Primo Sito
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -399,39 +404,18 @@ export default function SitesPage() {
                     <Settings className="w-4 h-4 mr-1" />
                     Gestisci
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={deleteLoading === site.id}
-                      >
-                        {deleteLoading === site.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Questa azione eliminerà definitivamente il sito "{site.name}" e tutti i dati associati.
-                          Questa operazione non può essere annullata.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annulla</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteSite(site.id)}
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          Elimina Sito
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleteLoading === site.id}
+                    onClick={() => handleDeleteSite(site.id, site.name)}
+                  >
+                    {deleteLoading === site.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

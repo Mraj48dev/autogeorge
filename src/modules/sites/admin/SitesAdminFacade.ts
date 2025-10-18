@@ -1,4 +1,4 @@
-import { Result } from '@/shared/utils/Result';
+import { Result } from '@/shared/domain/types/Result';
 import { CreateSite, CreateSiteRequest, CreateSiteResponse } from '../application/use-cases/CreateSite';
 import { GetUserSites, GetUserSitesResponse } from '../application/use-cases/GetUserSites';
 import { UpdateSite, UpdateSiteRequest, UpdateSiteResponse } from '../application/use-cases/UpdateSite';

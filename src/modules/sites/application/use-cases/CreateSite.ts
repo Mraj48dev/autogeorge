@@ -1,4 +1,4 @@
-import { Result } from '@/shared/utils/Result';
+import { Result } from '@/shared/domain/types/Result';
 import { Site } from '../../domain/entities/Site';
 import { SiteRepository } from '../../domain/ports/SiteRepository';
 import { WordPressConnectionService } from '../../domain/ports/WordPressConnectionService';

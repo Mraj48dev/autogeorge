@@ -1,4 +1,4 @@
-import { Result } from '@/shared/utils/Result';
+import { Result } from '@/shared/domain/types/Result';
 import { Site } from '../../domain/entities/Site';
 import { WordPressConnectionService, WordPressConnectionTest } from '../../domain/ports/WordPressConnectionService';
 import { Logger } from '@/shared/infrastructure/monitoring/Logger';
@@ -73,8 +73,7 @@ export class WordPressConnectionTestService implements WordPressConnectionServic
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json'
-        },
-        timeout: 10000
+        }
       });
 
       if (response.ok) {
@@ -110,7 +109,6 @@ export class WordPressConnectionTestService implements WordPressConnectionServic
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 10000
       });
 
       if (!response.ok) {
@@ -133,8 +131,7 @@ export class WordPressConnectionTestService implements WordPressConnectionServic
     try {
       const url = site.url;
       const response = await fetch(url, {
-        method: 'HEAD',
-        timeout: 10000
+        method: 'HEAD'
       });
 
       if (response.ok || response.status < 500) {
@@ -157,7 +154,6 @@ export class WordPressConnectionTestService implements WordPressConnectionServic
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 10000
       });
 
       if (!response.ok) {

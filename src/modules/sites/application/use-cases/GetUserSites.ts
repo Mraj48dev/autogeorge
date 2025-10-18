@@ -1,4 +1,4 @@
-import { Result } from '@/shared/utils/Result';
+import { Result } from '@/shared/domain/types/Result';
 import { Site, SiteStatistics } from '../../domain/entities/Site';
 import { SiteRepository } from '../../domain/ports/SiteRepository';
 import { Logger } from '@/shared/infrastructure/monitoring/Logger';

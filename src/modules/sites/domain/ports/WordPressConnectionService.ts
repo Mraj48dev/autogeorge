@@ -1,4 +1,4 @@
-import { Result } from '@/shared/utils/Result';
+import { Result } from '@/shared/domain/types/Result';
 import { Site } from '../entities/Site';
 
 export interface WordPressConnectionTest {

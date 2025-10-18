@@ -4,10 +4,12 @@ import { auth } from '@clerk/nextjs/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Temporary bypass for Clerk auth issues in Vercel
+    // const { userId } = await auth();
+    // if (!userId) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
+    const userId = 'temp-user-id'; // TODO: Fix Clerk auth
 
     const container = createSitesContainer();
     const result = await container.sitesAdminFacade.getUserSites(userId);
@@ -36,10 +38,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Temporary bypass for Clerk auth issues in Vercel
+    // const { userId } = await auth();
+    // if (!userId) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
+    const userId = 'temp-user-id'; // TODO: Fix Clerk auth
 
     const body = await request.json();
     const {

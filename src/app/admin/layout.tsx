@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { BUILD_INFO } from '@/lib/buildinfo';
 import LiveClock from '@/components/LiveClock';
 
@@ -8,6 +11,14 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  const pathname = usePathname();
+
+  // Don't show sidebar for sites selection page
+  const isSitesSelectionPage = pathname === '/admin/sites' || pathname === '/admin';
+
+  if (isSitesSelectionPage) {
+    return children;
+  }
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}

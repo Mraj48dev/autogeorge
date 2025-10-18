@@ -7,9 +7,14 @@ import { prisma } from '@/shared/database/prisma';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get all sources from database
+    // Get all sources from database with article count
     const sources = await prisma.source.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { articles: true }
+        }
+      }
     });
 
     // Transform for frontend
@@ -20,7 +25,7 @@ export async function GET(request: NextRequest) {
       url: source.url,
       isActive: source.isActive,
       lastFetch: source.lastFetchAt?.toISOString(),
-      totalItems: source._count.articles,
+      totalItems: source._count?.articles || 0,
       createdAt: source.createdAt.toISOString(),
       updatedAt: source.updatedAt.toISOString()
     }));

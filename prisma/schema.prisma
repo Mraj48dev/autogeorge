@@ -208,7 +208,7 @@ model GenerationSettings {
 
 model WordPressSite {
   id                   String           @id @default(cuid())
-  userId               String           @unique
+  userId               String
   name                 String
   url                  String
   username             String

@@ -1,71 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/shared/database/prisma';
+import { createSitesContainer } from '@/modules/sites/infrastructure/container/SitesContainer';
+import { auth } from '@clerk/nextjs/server';
 
 export async function GET(request: NextRequest) {
   try {
-    // Recupera tutti i siti WordPress configurati
-    const sites = await prisma.wordPressSite.findMany({
-      where: {
-        isActive: true
-      },
-      select: {
-        id: true,
-        name: true,
-        url: true,
-        username: true,
-        password: true,
-        defaultCategory: true,
-        defaultStatus: true,
-        defaultAuthor: true,
-        enableAutoGeneration: true,
-        enableAutoPublish: true,
-        enableFeaturedImage: true,
-        enableTags: true,
-        enableCategories: true,
-        customFields: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Mappa i siti nel formato necessario per il frontend
-    const mappedSites = sites.map(site => ({
-      id: site.id,
-      name: site.name,
-      url: site.url,
-      username: site.username,
-      password: site.password,
-      defaultCategory: site.defaultCategory,
-      defaultStatus: site.defaultStatus,
-      defaultAuthor: site.defaultAuthor,
-      enableAutoGeneration: site.enableAutoGeneration,
-      enableAutoPublish: site.enableAutoPublish,
-      enableFeaturedImage: site.enableFeaturedImage,
-      enableTags: site.enableTags,
-      enableCategories: site.enableCategories,
-      customFields: site.customFields,
-      isActive: site.isActive,
-      createdAt: site.createdAt,
-      updatedAt: site.updatedAt
-    }));
+    const container = createSitesContainer();
+    const result = await container.sitesAdminFacade.getUserSites(userId);
+
+    if (result.isFailure()) {
+      console.error('GET /api/admin/sites error:', result.error.message);
+      return NextResponse.json(
+        { error: 'Failed to get sites' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      sites: mappedSites,
-      count: mappedSites.length
+      data: result.data
     });
 
   } catch (error) {
-    console.error('Errore nel recupero siti WordPress:', error);
+    console.error('GET /api/admin/sites unexpected error:', error);
     return NextResponse.json(
-      {
-        error: 'Errore interno del server',
-        details: error instanceof Error ? error.message : 'Errore sconosciuto'
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -73,50 +36,70 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const siteData = await request.json();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Valida i dati obbligatori
-    if (!siteData.name || !siteData.url || !siteData.username || !siteData.password) {
+    const body = await request.json();
+    const {
+      name,
+      url,
+      username,
+      password,
+      defaultCategory,
+      defaultStatus = 'draft',
+      defaultAuthor,
+      enableAutoPublish = false,
+      enableFeaturedImage = true,
+      enableTags = true,
+      enableCategories = true,
+      customFields,
+      enableAutoGeneration = false
+    } = body;
+
+    // Validation
+    if (!name || !url || !username || !password) {
+      return NextResponse.json({
+        error: 'Missing required fields: name, url, username, password'
+      }, { status: 400 });
+    }
+
+    const container = createSitesContainer();
+    const result = await container.sitesAdminFacade.createSite({
+      userId,
+      name,
+      url,
+      username,
+      password,
+      defaultCategory,
+      defaultStatus,
+      defaultAuthor,
+      enableAutoPublish,
+      enableFeaturedImage,
+      enableTags,
+      enableCategories,
+      customFields,
+      enableAutoGeneration
+    });
+
+    if (result.isFailure()) {
+      console.error('POST /api/admin/sites error:', result.error.message);
       return NextResponse.json(
-        { error: 'Nome, URL, username e password sono obbligatori' },
+        { error: result.error.message },
         { status: 400 }
       );
     }
 
-    // Crea un nuovo sito WordPress
-    const newSite = await prisma.wordPressSite.create({
-      data: {
-        userId: siteData.userId || 'default', // TODO: Usare l'ID dell'utente autenticato
-        name: siteData.name,
-        url: siteData.url.replace(/\/$/, ''), // Rimuovi trailing slash
-        username: siteData.username,
-        password: siteData.password,
-        defaultCategory: siteData.defaultCategory || null,
-        defaultStatus: siteData.defaultStatus || 'draft',
-        defaultAuthor: siteData.defaultAuthor || null,
-        enableAutoGeneration: siteData.enableAutoGeneration || false,
-        enableAutoPublish: siteData.enableAutoPublish || false,
-        enableFeaturedImage: siteData.enableFeaturedImage !== false,
-        enableTags: siteData.enableTags !== false,
-        enableCategories: siteData.enableCategories !== false,
-        customFields: siteData.customFields || null,
-        isActive: true
-      }
-    });
-
     return NextResponse.json({
       success: true,
-      site: newSite,
-      message: 'Sito WordPress creato con successo'
+      data: result.data
     });
 
   } catch (error) {
-    console.error('Errore nella creazione sito WordPress:', error);
+    console.error('POST /api/admin/sites unexpected error:', error);
     return NextResponse.json(
-      {
-        error: 'Errore interno del server',
-        details: error instanceof Error ? error.message : 'Errore sconosciuto'
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

@@ -187,8 +187,8 @@ export default function SitesPage() {
   };
 
   const handleManageSite = (siteId: string) => {
-    // Redirect to current admin with site context
-    router.push(`/admin?siteId=${siteId}`);
+    // Redirect to site-specific admin dashboard
+    router.push(`/admin/sites/${siteId}/dashboard`);
   };
 
   const getSiteStatusBadge = (site: Site, stats: SiteStatistics) => {

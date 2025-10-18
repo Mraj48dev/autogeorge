@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { AdminGuard } from '@/shared/components/auth/AuthGuard';
 
 interface SystemStats {
@@ -14,7 +15,7 @@ interface SystemStats {
 }
 
 function AdminDashboardContent() {
-  const { user } = useAuthUser();
+  const { user } = useUser();
   const [stats, setStats] = useState<SystemStats>({
     articlesCount: 0,
     sourcesCount: 0,
@@ -79,13 +80,9 @@ function AdminDashboardContent() {
           {user && (
             <div className="text-right">
               <p className="text-sm text-gray-500">Bentornato,</p>
-              <p className="font-semibold text-gray-900">{user.name || user.email}</p>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                user.role === 'editor' ? 'bg-blue-100 text-blue-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {user.role}
+              <p className="font-semibold text-gray-900">{user?.fullName || user?.emailAddresses?.[0]?.emailAddress}</p>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                admin
               </span>
             </div>
           )}

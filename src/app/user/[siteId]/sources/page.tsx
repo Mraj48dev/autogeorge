@@ -73,8 +73,8 @@ export default function Sources() {
   const fetchSources = async () => {
     try {
       setLoading(true);
-      // Use real database endpoint with multi-tenant support
-      const response = await fetch('/api/real-user-sources');
+      // Use existing working admin endpoint with multi-tenant support
+      const response = await fetch('/api/admin/sources');
       const data = await response.json();
       if (response.ok) {
         setSources(data.sources || []);
@@ -97,8 +97,8 @@ export default function Sources() {
         setTestingConnection(true);
       }
 
-      // Use real database endpoint for source creation/editing
-      const url = editingSource ? `/api/real-user-sources/${editingSource.id}` : '/api/real-user-sources';
+      // Use existing working admin endpoint for source creation/editing
+      const url = editingSource ? `/api/admin/sources/${editingSource.id}` : '/api/admin/sources';
       const method = editingSource ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -192,7 +192,7 @@ export default function Sources() {
     }
 
     try {
-      const response = await fetch(`/api/real-user-sources`, {
+      const response = await fetch(`/api/admin/sources`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -244,8 +244,8 @@ export default function Sources() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-green-800">
-                <strong>Sistema Multi-Tenant Attivo:</strong> Utilizzando database reale con isolamento dati per utente.
-                Tutte le operazioni sono salvate nella tabella sources.
+                <strong>Database Reale Connesso:</strong> API /api/admin/sources multi-tenant.
+                Dati salvati in PostgreSQL con isolamento utente.
               </p>
             </div>
           </div>

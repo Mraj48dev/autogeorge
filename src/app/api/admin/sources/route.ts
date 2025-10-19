@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * GET /api/admin/sources
@@ -106,6 +107,61 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('POST /api/admin/sources error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/admin/sources
+ * Delete a source - MULTI-TENANT VERSION
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+
+    const body = await request.json();
+    const { sourceId } = body;
+
+    if (!sourceId) {
+      return NextResponse.json(
+        { error: 'sourceId is required' },
+        { status: 400 }
+      );
+    }
+
+    // First verify the source belongs to this user
+    const existingSource = await prisma.source.findFirst({
+      where: {
+        id: sourceId,
+        userId: user.userId
+      }
+    });
+
+    if (!existingSource) {
+      return NextResponse.json(
+        { error: 'Source not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    // Delete the source
+    await prisma.source.delete({
+      where: {
+        id: sourceId
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Source deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('DELETE /api/admin/sources error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

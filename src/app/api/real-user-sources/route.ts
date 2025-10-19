@@ -6,10 +6,33 @@ import { prisma } from '@/shared/database/prisma';
  * Real user sources endpoint - uses actual database with Prisma
  * This endpoint works around the userId cache issue by creating sources without userId filter initially
  */
+async function ensureUserExists(clerkUserId: string, userEmail?: string) {
+  // Check if user exists in our database
+  let user = await prisma.user.findUnique({
+    where: { clerkUserId }
+  });
+
+  if (!user) {
+    // Create user record if it doesn't exist
+    console.log(`👤 Creating user record for Clerk user: ${clerkUserId}`);
+    user = await prisma.user.create({
+      data: {
+        clerkUserId,
+        email: userEmail || `${clerkUserId}@clerk.dev`,
+        name: 'User',
+        role: 'CONTENT_VIEWER'
+      }
+    });
+    console.log(`✅ User record created: ${user.id}`);
+  }
+
+  return user;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get authenticated user from Clerk
-    const { userId } = auth();
+    const { userId, sessionClaims } = auth();
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -19,6 +42,9 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 Getting sources for user: ${userId}`);
 
+    // Ensure user exists in our database
+    const user = await ensureUserExists(userId, sessionClaims?.email as string);
+
     // Query sources from database
     // NOTE: Due to Prisma cache issue, we get all sources and filter in application layer
     const allSources = await prisma.source.findMany({
@@ -27,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter by userId in application layer (temporary workaround)
-    const userSources = allSources.filter(source => source.userId === userId);
+    const userSources = allSources.filter(source => source.userId === user.id);
 
     console.log(`📊 Found ${allSources.length} total sources, ${userSources.length} for user ${userId}`);
 
@@ -55,13 +81,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user from Clerk
-    const { userId } = auth();
+    const { userId, sessionClaims } = auth();
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    // Ensure user exists in our database
+    const user = await ensureUserExists(userId, sessionClaims?.email as string);
 
     // Parse request body
     const body = await request.json();
@@ -76,7 +105,7 @@ export async function POST(request: NextRequest) {
     const createdSource = await prisma.source.create({
       data: {
         id: `source_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId: userId, // Associate with current user
+        userId: user.id, // Associate with current user
         name: body.name,
         type: body.type,
         status: 'active',
@@ -112,13 +141,16 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Get authenticated user from Clerk
-    const { userId } = auth();
+    const { userId, sessionClaims } = auth();
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    // Ensure user exists in our database
+    const user = await ensureUserExists(userId, sessionClaims?.email as string);
 
     // Parse request body to get sourceId
     const body = await request.json();
@@ -137,7 +169,7 @@ export async function DELETE(request: NextRequest) {
     const existingSource = await prisma.source.findFirst({
       where: {
         id: sourceId,
-        userId: userId
+        userId: user.id
       }
     });
 

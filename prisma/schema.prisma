@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  // Force regeneration for multi-tenant support
 }
 
 datasource db {

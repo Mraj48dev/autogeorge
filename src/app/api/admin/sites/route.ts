@@ -4,8 +4,11 @@ import { requireAuth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔐 GET /api/admin/sites - Starting authentication...');
+
     // Require authentication and get user context
     const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
 
     // Get user's sites only
     const sites = await prisma.wordPressSite.findMany({
@@ -78,8 +81,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔐 POST /api/admin/sites - Starting authentication...');
+
     // Require authentication and get user context
     const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
 
     const body = await request.json();
     const {

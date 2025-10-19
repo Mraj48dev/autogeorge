@@ -22,14 +22,19 @@ export interface AuthContext {
  */
 export async function getCurrentUser(request: NextRequest): Promise<AuthContext | null> {
   try {
+    console.log('🔍 getCurrentUser - Getting Clerk auth...');
+
     // Get Clerk authentication
-    const { userId: clerkUserId } = auth();
+    const { userId: clerkUserId } = await auth();
+    console.log('🔑 Clerk response:', { clerkUserId });
 
     if (!clerkUserId) {
+      console.log('❌ No Clerk user ID found');
       return null;
     }
 
     // Find user in our database by Clerk ID
+    console.log('🔍 Looking up user in database...');
     const user = await prisma.user.findUnique({
       where: { clerkUserId },
       select: {
@@ -41,7 +46,10 @@ export async function getCurrentUser(request: NextRequest): Promise<AuthContext 
       }
     });
 
+    console.log('👤 Database user lookup result:', { user, isActive: user?.isActive });
+
     if (!user || !user.isActive) {
+      console.log('❌ User not found or inactive');
       return null;
     }
 

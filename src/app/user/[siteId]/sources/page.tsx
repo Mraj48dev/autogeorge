@@ -192,12 +192,12 @@ export default function Sources() {
     }
 
     try {
-      const response = await fetch(`/api/admin/sources`, {
+      // Use dynamic route with ID in URL
+      const response = await fetch(`/api/admin/sources/${sourceId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ sourceId }),
       });
 
       if (response.ok) {

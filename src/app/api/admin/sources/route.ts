@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
 import { prisma } from '@/shared/database/prisma';
 
 /**
@@ -9,40 +8,33 @@ import { prisma } from '@/shared/database/prisma';
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔐 GET /api/admin/sources - Starting authentication...');
+
     // Require authentication and get user context
     const user = await requireAuth(request);
     console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
 
-    // Get user's sources using clean architecture with multi-tenant filtering
-    const sourcesContainer = createSourcesContainer();
-    const getSourcesResult = await sourcesContainer.sourcesAdminFacade.getSources({
-      userId: user.userId, // NEW: Multi-tenant filtering
-      limit: 100,
-      sortBy: 'createdAt',
-      sortOrder: 'desc'
+    // Get user's sources directly from database with multi-tenant filtering
+    const sources = await prisma.source.findMany({
+      where: { userId: user.userId },
+      orderBy: { createdAt: 'desc' }
     });
 
-    if (getSourcesResult.isFailure()) {
-      console.error('❌ Failed to get user sources:', getSourcesResult.error);
-      return NextResponse.json(
-        { error: 'Failed to retrieve sources', details: getSourcesResult.error.message },
-        { status: 500 }
-      );
-    }
-
-    const sources = getSourcesResult.value.sources;
-
-    // Transform for frontend
-    const transformedSources = sources.map((source: any) => ({
+    // Transform for frontend - match the interface expected by the frontend
+    const transformedSources = sources.map((source) => ({
       id: source.id,
       name: source.name,
-      type: source.type || 'RSS',
+      type: source.type,
       url: source.url,
-      isActive: true, // Sources from clean architecture are active by default
-      lastFetch: source.lastFetchAt ? new Date(source.lastFetchAt).toISOString() : null,
-      totalItems: source.totalItems || 0,
-      createdAt: source.createdAt ? new Date(source.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: source.updatedAt ? new Date(source.updatedAt).toISOString() : new Date().toISOString()
+      status: source.status || 'active',
+      defaultCategory: source.defaultCategory,
+      isActive: source.isActive,
+      lastFetch: source.lastFetchAt ? source.lastFetchAt.toISOString() : null,
+      totalItems: 0, // Will be populated from feedItems if needed
+      createdAt: source.createdAt.toISOString(),
+      updatedAt: source.updatedAt.toISOString(),
+      configuration: source.configuration || {},
+      metadata: source.metadata || {}
     }));
 
     return NextResponse.json({
@@ -67,16 +59,36 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔐 POST /api/admin/sources - Starting authentication...');
+
     // Require authentication and get user context
     const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
 
     const body = await request.json();
-    const { name, url, type = 'RSS', isActive = true } = body;
+    console.log('📝 Request body:', body);
+
+    const {
+      name,
+      url,
+      type = 'RSS',
+      defaultCategory,
+      configuration = {},
+      testConnection = false
+    } = body;
 
     // Basic validation
-    if (!name || !url) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Name and URL are required' },
+        { error: 'Name is required' },
+        { status: 400 }
+      );
+    }
+
+    // URL is required for RSS feeds
+    if (type === 'RSS' && !url) {
+      return NextResponse.json(
+        { error: 'URL is required for RSS feeds' },
         { status: 400 }
       );
     }
@@ -86,11 +98,21 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.userId, // Associate with current user
         name,
-        url,
+        url: url || null,
         type,
-        isActive
+        status: 'active',
+        defaultCategory: defaultCategory || null,
+        configuration: configuration,
+        metadata: {},
+        isActive: true,
+        lastFetchAt: null,
+        lastErrorAt: null,
+        lastError: null,
+        lastFetchStatus: null
       }
     });
+
+    console.log('✅ Source created successfully:', { sourceId: source.id, name: source.name });
 
     return NextResponse.json({
       success: true,
@@ -99,16 +121,20 @@ export async function POST(request: NextRequest) {
         name: source.name,
         type: source.type,
         url: source.url,
+        status: source.status,
+        defaultCategory: source.defaultCategory,
         isActive: source.isActive,
         createdAt: source.createdAt.toISOString(),
-        updatedAt: source.updatedAt.toISOString()
+        updatedAt: source.updatedAt.toISOString(),
+        configuration: source.configuration,
+        metadata: source.metadata
       }
     });
 
   } catch (error) {
     console.error('POST /api/admin/sources error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -120,11 +146,15 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    console.log('🔐 DELETE /api/admin/sources - Starting authentication...');
+
     // Require authentication and get user context
     const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
 
     const body = await request.json();
     const { sourceId } = body;
+    console.log('📝 Delete request for sourceId:', sourceId);
 
     if (!sourceId) {
       return NextResponse.json(
@@ -142,6 +172,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!existingSource) {
+      console.log('❌ Source not found or access denied:', { sourceId, userId: user.userId });
       return NextResponse.json(
         { error: 'Source not found or access denied' },
         { status: 404 }
@@ -155,6 +186,8 @@ export async function DELETE(request: NextRequest) {
       }
     });
 
+    console.log('✅ Source deleted successfully:', { sourceId, name: existingSource.name });
+
     return NextResponse.json({
       success: true,
       message: 'Source deleted successfully'
@@ -163,7 +196,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('DELETE /api/admin/sources error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

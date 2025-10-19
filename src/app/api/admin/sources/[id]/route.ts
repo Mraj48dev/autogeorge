@@ -1,94 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSourcesContainer } from '@/modules/sources/infrastructure/container/SourcesContainer';
+import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/shared/database/prisma';
 
 /**
  * PUT /api/admin/sources/[id]
- * Updates an existing source
+ * Update a source - MULTI-TENANT VERSION
  */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const sourceId = params.id;
+    console.log('🔐 PUT /api/admin/sources/[id] - Starting authentication...');
 
-    if (!sourceId) {
-      return NextResponse.json(
-        { error: 'Source ID is required' },
-        { status: 400 }
-      );
-    }
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
+
+    const sourceId = params.id;
+    console.log('📝 Updating sourceId:', sourceId);
 
     const body = await request.json();
+    console.log('📝 Update data:', body);
 
-    console.log(`🌐 [API] PUT /api/admin/sources/${sourceId}`, {
-      sourceId,
-      bodyReceived: {
-        name: body.name,
-        type: body.type,
-        url: body.url,
-        configuration: body.configuration,
-        hasAutoGenerate: body.configuration?.autoGenerate,
-        configurationKeys: body.configuration ? Object.keys(body.configuration) : []
-      }
-    });
+    const {
+      name,
+      url,
+      type,
+      defaultCategory,
+      configuration
+    } = body;
 
-    // Validate required fields
-    if (!body.name || !body.type) {
+    // Basic validation
+    if (!name) {
       return NextResponse.json(
-        { error: 'Name and type are required' },
+        { error: 'Name is required' },
         { status: 400 }
       );
     }
 
-    const updateRequest = {
-      sourceId,
-      name: body.name,
-      url: body.url,
-      defaultCategory: body.defaultCategory,
-      configuration: body.configuration || {},
-      metadata: body.metadata || {},
-    };
-
-    console.log(`📤 [API] Sending updateSource request:`, {
-      updateRequest,
-      configurationAutoGenerate: updateRequest.configuration?.autoGenerate
-    });
-
-    const container = createSourcesContainer();
-    const result = await container.sourcesAdminFacade.updateSource(updateRequest);
-
-    if (result.isFailure()) {
-      console.log(`❌ [API] UpdateSource failed:`, {
-        sourceId,
-        error: result.error.message
-      });
+    // URL is required for RSS feeds
+    if (type === 'RSS' && !url) {
       return NextResponse.json(
-        { error: result.error.message },
+        { error: 'URL is required for RSS feeds' },
         { status: 400 }
       );
     }
 
-    console.log(`✅ [API] Source updated successfully:`, {
-      sourceId,
-      updatedSource: {
-        id: result.value.source.id,
-        name: result.value.source.name,
-        configuration: result.value.source.configuration,
-        autoGenerate: result.value.source.configuration?.autoGenerate
+    // First verify the source belongs to this user
+    const existingSource = await prisma.source.findFirst({
+      where: {
+        id: sourceId,
+        userId: user.userId
       }
     });
+
+    if (!existingSource) {
+      console.log('❌ Source not found or access denied:', { sourceId, userId: user.userId });
+      return NextResponse.json(
+        { error: 'Source not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    // Update the source
+    const updatedSource = await prisma.source.update({
+      where: {
+        id: sourceId
+      },
+      data: {
+        name,
+        url: url || null,
+        type: type || existingSource.type,
+        defaultCategory: defaultCategory || null,
+        configuration: configuration || existingSource.configuration,
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('✅ Source updated successfully:', { sourceId, name: updatedSource.name });
 
     return NextResponse.json({
       success: true,
-      message: `Source "${body.name}" updated successfully`,
-      source: result.value.source
+      source: {
+        id: updatedSource.id,
+        name: updatedSource.name,
+        type: updatedSource.type,
+        url: updatedSource.url,
+        status: updatedSource.status,
+        defaultCategory: updatedSource.defaultCategory,
+        isActive: updatedSource.isActive,
+        createdAt: updatedSource.createdAt.toISOString(),
+        updatedAt: updatedSource.updatedAt.toISOString(),
+        configuration: updatedSource.configuration,
+        metadata: updatedSource.metadata
+      }
     });
 
   } catch (error) {
-    console.error('Error updating source:', error);
+    console.error('PUT /api/admin/sources/[id] error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -96,14 +108,21 @@ export async function PUT(
 
 /**
  * PATCH /api/admin/sources/[id]
- * Partially updates a source (e.g., status changes)
+ * Partially updates a source (e.g., status changes) - MULTI-TENANT VERSION
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('🔐 PATCH /api/admin/sources/[id] - Starting authentication...');
+
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
+
     const sourceId = params.id;
+    console.log('📝 Patching sourceId:', sourceId);
 
     if (!sourceId) {
       return NextResponse.json(
@@ -113,37 +132,75 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const container = createSourcesContainer();
+    console.log('📝 Patch data:', body);
 
-    if (body.status) {
-      const result = await container.sourcesAdminFacade.updateSourceStatus({
-        sourceId,
-        status: body.status,
-      });
-
-      if (result.isFailure()) {
-        return NextResponse.json(
-          { error: result.error.message },
-          { status: 400 }
-        );
+    // First verify the source belongs to this user
+    const existingSource = await prisma.source.findFirst({
+      where: {
+        id: sourceId,
+        userId: user.userId
       }
+    });
 
-      return NextResponse.json({
-        success: true,
-        message: `Source status updated to ${body.status}`,
-        source: result.value.source
-      });
+    if (!existingSource) {
+      console.log('❌ Source not found or access denied:', { sourceId, userId: user.userId });
+      return NextResponse.json(
+        { error: 'Source not found or access denied' },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(
-      { error: 'No valid update fields provided' },
-      { status: 400 }
-    );
+    const updateData: any = {};
+
+    if (body.status) {
+      updateData.status = body.status;
+    }
+
+    if (body.isActive !== undefined) {
+      updateData.isActive = body.isActive;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid update fields provided' },
+        { status: 400 }
+      );
+    }
+
+    updateData.updatedAt = new Date();
+
+    // Update the source
+    const updatedSource = await prisma.source.update({
+      where: {
+        id: sourceId
+      },
+      data: updateData
+    });
+
+    console.log('✅ Source patched successfully:', { sourceId, updateData });
+
+    return NextResponse.json({
+      success: true,
+      message: `Source updated successfully`,
+      source: {
+        id: updatedSource.id,
+        name: updatedSource.name,
+        type: updatedSource.type,
+        url: updatedSource.url,
+        status: updatedSource.status,
+        defaultCategory: updatedSource.defaultCategory,
+        isActive: updatedSource.isActive,
+        createdAt: updatedSource.createdAt.toISOString(),
+        updatedAt: updatedSource.updatedAt.toISOString(),
+        configuration: updatedSource.configuration,
+        metadata: updatedSource.metadata
+      }
+    });
 
   } catch (error) {
-    console.error('Error patching source:', error);
+    console.error('PATCH /api/admin/sources/[id] error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -151,82 +208,83 @@ export async function PATCH(
 
 /**
  * DELETE /api/admin/sources/[id]
- * Deletes a source - Direct Prisma implementation for reliability
+ * Delete a specific source by ID - MULTI-TENANT VERSION
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('🔐 DELETE /api/admin/sources/[id] - Starting authentication...');
+
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
+
     const sourceId = params.id;
+    console.log('📝 Delete request for sourceId:', sourceId);
 
     if (!sourceId) {
       return NextResponse.json(
-        { error: 'Source ID is required' },
+        { error: 'sourceId is required' },
         { status: 400 }
       );
     }
 
-    // Use direct Prisma for reliability in production
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-
-    try {
-      // Verifica che la source esista
-      const existingSource = await prisma.source.findUnique({
-        where: { id: sourceId }
-      });
-
-      if (!existingSource) {
-        return NextResponse.json(
-          { error: 'Source not found' },
-          { status: 404 }
-        );
+    // First verify the source belongs to this user
+    const existingSource = await prisma.source.findFirst({
+      where: {
+        id: sourceId,
+        userId: user.userId
       }
+    });
 
-      console.log(`🗑️ Deleting source: ${existingSource.name} (${sourceId})`);
-
-      // Prima elimina tutti i feedItems correlati
-      const deletedFeedItems = await prisma.feedItem.deleteMany({
-        where: { sourceId: sourceId }
-      });
-
-      console.log(`🗑️ Deleted ${deletedFeedItems.count} feed items`);
-
-      // Poi elimina tutti gli articles correlati
-      const deletedArticles = await prisma.article.deleteMany({
-        where: { sourceId: sourceId }
-      });
-
-      console.log(`🗑️ Deleted ${deletedArticles.count} articles`);
-
-      // Infine elimina la source
-      await prisma.source.delete({
-        where: { id: sourceId }
-      });
-
-      console.log(`✅ Source "${existingSource.name}" deleted successfully`);
-
-      return NextResponse.json({
-        success: true,
-        message: `Source "${existingSource.name}" deleted successfully`,
-        deletedItems: {
-          feedItems: deletedFeedItems.count,
-          articles: deletedArticles.count
-        }
-      });
-
-    } finally {
-      await prisma.$disconnect();
+    if (!existingSource) {
+      console.log('❌ Source not found or access denied:', { sourceId, userId: user.userId });
+      return NextResponse.json(
+        { error: 'Source not found or access denied' },
+        { status: 404 }
+      );
     }
 
+    console.log(`🗑️ Deleting source: ${existingSource.name} (${sourceId})`);
+
+    // First delete related feedItems
+    const deletedFeedItems = await prisma.feedItem.deleteMany({
+      where: { sourceId: sourceId }
+    });
+
+    console.log(`🗑️ Deleted ${deletedFeedItems.count} feed items`);
+
+    // Then delete related articles
+    const deletedArticles = await prisma.article.deleteMany({
+      where: { sourceId: sourceId }
+    });
+
+    console.log(`🗑️ Deleted ${deletedArticles.count} articles`);
+
+    // Finally delete the source
+    await prisma.source.delete({
+      where: {
+        id: sourceId
+      }
+    });
+
+    console.log('✅ Source deleted successfully:', { sourceId, name: existingSource.name });
+
+    return NextResponse.json({
+      success: true,
+      message: `Source "${existingSource.name}" deleted successfully`,
+      deletedItems: {
+        feedItems: deletedFeedItems.count,
+        articles: deletedArticles.count
+      }
+    });
+
   } catch (error) {
-    console.error('Error deleting source:', error);
+    console.error('DELETE /api/admin/sources/[id] error:', error);
     return NextResponse.json(
-      {
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

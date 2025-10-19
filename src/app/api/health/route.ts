@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Connessione database (se disponibile)
  * - Stato servizi esterni
  * - Metriche di performance
+ * - Multi-tenant support readiness
  *
  * Utilizzo: GET /api/health
  */

@@ -66,7 +66,7 @@ export default function Dashboard() {
   }, [isSignedIn]);
 
   const handleManageSite = (siteId: string) => {
-    router.push(`/admin/sites/${siteId}/dashboard`);
+    router.push(`/user/${siteId}/monitor`);
   };
 
   const handleCreateSite = () => {

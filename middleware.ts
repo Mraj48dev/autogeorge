@@ -15,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/cron(.*)',
   '/api/test-sources(.*)', // NEW: Allow testing multi-tenant endpoints
   '/api/test-user-sources(.*)', // NEW: Allow testing user-specific endpoints
+  '/api/test-mock-sources(.*)', // NEW: Allow testing mock sources without auth
   '/api/debug(.*)', // NEW: Allow debug endpoints
   '/sign-in(.*)',
   '/sign-up(.*)'

@@ -83,6 +83,8 @@ export default function Dashboard() {
   };
 
   const handleCreateSite = () => {
+    // TODO: Create user-specific site creation page
+    // For now, still use admin interface
     router.push('/admin/sites');
   };
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { SourcesManagerGuard } from '@/shared/components/auth/AuthGuard';
+import { useSiteContext } from '@/contexts/SiteContext';
 
 interface Source {
   id: string;
@@ -27,13 +28,6 @@ interface Source {
   };
 }
 
-interface WordPressSite {
-  id: string;
-  name: string;
-  url: string;
-  username: string;
-  password: string;
-}
 
 interface WordPressCategory {
   id: number;
@@ -59,6 +53,7 @@ interface CreateSourceRequest {
 }
 
 export default function SourcesPage() {
+  const { currentSite } = useSiteContext();
   const [activeTab, setActiveTab] = useState('rss');
   const [showModal, setShowModal] = useState(false);
   const [editingSource, setEditingSource] = useState<Source | null>(null);
@@ -80,24 +75,21 @@ export default function SourcesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
 
-  // WordPress data states
-  const [wordpressSites, setWordpressSites] = useState<WordPressSite[]>([]);
-  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+  // WordPress categories for current site
   const [wpCategories, setWpCategories] = useState<WordPressCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSources();
-    loadWordPressSites();
   }, []);
 
-  // Load WordPress categories when site is selected
+  // Load WordPress categories when site changes
   useEffect(() => {
-    if (selectedSiteId) {
-      loadWordPressCategories(selectedSiteId);
+    if (currentSite) {
+      loadWordPressCategories(currentSite.id);
     }
-  }, [selectedSiteId]);
+  }, [currentSite]);
 
   const fetchSources = async () => {
     try {
@@ -116,27 +108,6 @@ export default function SourcesPage() {
     }
   };
 
-  const loadWordPressSites = async () => {
-    try {
-      const response = await fetch('/api/admin/sites');
-      if (response.ok) {
-        const data = await response.json();
-        const sitesData = data.sites || [];
-        setWordpressSites(sitesData);
-
-        // Auto-select the first site if there's only one
-        if (sitesData.length === 1) {
-          setSelectedSiteId(sitesData[0].id);
-        } else if (sitesData.length > 0) {
-          // Select the first active site
-          const activeSite = sitesData.find((site: WordPressSite) => site.id) || sitesData[0];
-          setSelectedSiteId(activeSite.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading WordPress sites:', error);
-    }
-  };
 
   const loadWordPressCategories = async (siteId: string) => {
     setCategoriesLoading(true);
@@ -780,29 +751,20 @@ export default function SourcesPage() {
                     Categoria di pubblicazione (opzionale)
                   </label>
 
-                  {/* WordPress Site Selector */}
-                  {wordpressSites.length > 1 && (
+                  {/* Current Site Display */}
+                  {currentSite && (
                     <div className="mb-3">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Sito WordPress
+                        Sito WordPress Corrente
                       </label>
-                      <select
-                        value={selectedSiteId}
-                        onChange={(e) => setSelectedSiteId(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Seleziona sito...</option>
-                        {wordpressSites.map((site) => (
-                          <option key={site.id} value={site.id}>
-                            {site.name} ({site.url})
-                          </option>
-                        ))}
-                      </select>
+                      <div className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                        {currentSite.name} ({currentSite.url})
+                      </div>
                     </div>
                   )}
 
                   {/* Categories Dropdown */}
-                  {selectedSiteId ? (
+                  {currentSite ? (
                     <div>
                       {categoriesLoading ? (
                         <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 flex items-center">
@@ -851,21 +813,13 @@ export default function SourcesPage() {
                       )}
                     </div>
                   ) : (
-                    <div>
-                      {wordpressSites.length === 0 ? (
-                        <div className="w-full px-3 py-2 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-700 text-sm mb-2">
-                          ⚠️ Nessun sito WordPress configurato. Configura prima un sito nelle impostazioni.
-                        </div>
-                      ) : (
-                        <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm">
-                          Seleziona un sito WordPress per vedere le categorie disponibili
-                        </div>
-                      )}
+                    <div className="w-full px-3 py-2 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-700 text-sm mb-2">
+                      ⚠️ Nessun sito selezionato. Seleziona un sito per vedere le categorie disponibili.
                     </div>
                   )}
 
                   <p className="text-xs text-gray-500 mt-1">
-                    {selectedSiteId && !categoriesError ? (
+                    {currentSite && !categoriesError ? (
                       <>Seleziona una categoria esistente dal tuo sito WordPress</>
                     ) : (
                       <>Specifica la categoria predefinita in cui verranno pubblicati gli articoli generati da questa fonte</>

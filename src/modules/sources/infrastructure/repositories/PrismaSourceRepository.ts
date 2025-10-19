@@ -289,6 +289,7 @@ export class PrismaSourceRepository implements SourceRepository {
           take: limit,
           select: {
             id: true,
+            userId: true, // NEW: Include userId in select for multi-tenant filtering
             name: true,
             type: true,
             status: true,

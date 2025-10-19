@@ -33,31 +33,37 @@ export class CreateSource extends BaseUseCase<CreateSourceRequest, CreateSourceR
         return Result.failure(requestValidation.error);
       }
 
+      // NEW: Multi-tenant validation
+      if (!request.userId) {
+        return Result.failure(new Error('User ID is required for source creation'));
+      }
+
       // Create value objects
       const name = SourceName.fromString(request.name);
       const type = SourceType.fromString(request.type);
       const url = request.url ? SourceUrl.fromString(request.url) : undefined;
 
-      // Check for duplicates
+      // Check for duplicates (scoped to user)
       if (url) {
+        // TODO: Update repository to check duplicates within user scope
         const existsResult = await this.sourceRepository.existsByTypeAndUrl(type, url.getValue());
         if (existsResult.isFailure()) {
           return Result.failure(existsResult.error);
         }
         if (existsResult.value) {
-          return Result.failure(new Error('A source with this type and URL already exists'));
+          return Result.failure(new Error('You already have a source with this type and URL'));
         }
       }
 
-      // Create source entity
+      // Create source entity with user association
       let source: Source;
       try {
         if (type.isRss() && url) {
-          source = Source.createRssSource(name, url, request.configuration, request.defaultCategory);
+          source = Source.createRssSource(name, url, request.configuration, request.defaultCategory, request.userId);
         } else if (type.isTelegram() && url) {
-          source = Source.createTelegramSource(name, url, request.configuration, request.defaultCategory);
+          source = Source.createTelegramSource(name, url, request.configuration, request.defaultCategory, request.userId);
         } else if (type.isCalendar()) {
-          source = Source.createCalendarSource(name, request.configuration, request.defaultCategory);
+          source = Source.createCalendarSource(name, request.configuration, request.defaultCategory, request.userId);
         } else {
           return Result.failure(new Error('Invalid source type or missing required URL'));
         }
@@ -128,7 +134,7 @@ export interface CreateSourceRequest {
   defaultCategory?: string;
   configuration?: SourceConfiguration;
   testConnection?: boolean;
-  userId?: string; // NEW: Multi-tenant user association
+  userId: string; // NEW: Multi-tenant user association (REQUIRED)
 }
 
 // Response interface

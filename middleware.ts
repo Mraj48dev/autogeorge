@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/api/health',
   '/api/cron(.*)',
+  '/api/test-sources(.*)', // NEW: Allow testing multi-tenant endpoints
   '/sign-in(.*)',
   '/sign-up(.*)'
 ]);

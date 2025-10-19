@@ -34,6 +34,7 @@ export class PrismaSourceRepository implements SourceRepository {
 
       const data = {
         id: source.id.getValue(),
+        userId: source.userId, // NEW: Multi-tenant user association
         name: source.name.getValue(),
         type: source.type.getValue(),
         status: source.status.getValue(),
@@ -61,6 +62,7 @@ export class PrismaSourceRepository implements SourceRepository {
         where: { id: source.id.getValue() },
         create: data,
         update: {
+          userId: data.userId, // NEW: Multi-tenant user association
           name: data.name,
           status: data.status,
           url: data.url,
@@ -513,7 +515,8 @@ export class PrismaSourceRepository implements SourceRepository {
       prismaSource.lastErrorAt,
       prismaSource.lastError,
       prismaSource.createdAt,
-      prismaSource.updatedAt
+      prismaSource.updatedAt,
+      prismaSource.userId // NEW: Multi-tenant user association
     );
   }
 

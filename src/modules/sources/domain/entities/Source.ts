@@ -39,6 +39,7 @@ export class Source extends AggregateRoot<SourceId> {
   private _lastFetchAt?: Date;
   private _lastErrorAt?: Date;
   private _lastError?: string;
+  private _userId?: string; // NEW: Multi-tenant user association
 
   constructor(
     id: SourceId,
@@ -53,7 +54,8 @@ export class Source extends AggregateRoot<SourceId> {
     lastErrorAt?: Date,
     lastError?: string,
     createdAt?: Date,
-    updatedAt?: Date
+    updatedAt?: Date,
+    userId?: string // NEW: Multi-tenant user association
   ) {
     super(id, createdAt, updatedAt);
     this._name = name;
@@ -66,6 +68,7 @@ export class Source extends AggregateRoot<SourceId> {
     this._lastFetchAt = lastFetchAt;
     this._lastErrorAt = lastErrorAt;
     this._lastError = lastError;
+    this._userId = userId; // NEW: Multi-tenant user association
 
     this.validateInvariants();
   }
@@ -77,7 +80,8 @@ export class Source extends AggregateRoot<SourceId> {
     name: SourceName,
     url: SourceUrl,
     configuration?: RssConfiguration,
-    defaultCategory?: string
+    defaultCategory?: string,
+    userId?: string // NEW: Multi-tenant user association
   ): Source {
     const id = SourceId.generate();
     const type = SourceType.rss();
@@ -89,7 +93,14 @@ export class Source extends AggregateRoot<SourceId> {
       SourceStatus.active(),
       url,
       defaultCategory,
-      configuration
+      configuration,
+      undefined, // metadata
+      undefined, // lastFetchAt
+      undefined, // lastErrorAt
+      undefined, // lastError
+      undefined, // createdAt
+      undefined, // updatedAt
+      userId // NEW: Multi-tenant user association
     );
 
     source.addDomainEvent(
@@ -111,7 +122,8 @@ export class Source extends AggregateRoot<SourceId> {
     name: SourceName,
     url: SourceUrl,
     configuration?: TelegramConfiguration,
-    defaultCategory?: string
+    defaultCategory?: string,
+    userId?: string // NEW: Multi-tenant user association
   ): Source {
     const id = SourceId.generate();
     const type = SourceType.telegram();
@@ -123,7 +135,14 @@ export class Source extends AggregateRoot<SourceId> {
       SourceStatus.active(),
       url,
       defaultCategory,
-      configuration
+      configuration,
+      undefined, // metadata
+      undefined, // lastFetchAt
+      undefined, // lastErrorAt
+      undefined, // lastError
+      undefined, // createdAt
+      undefined, // updatedAt
+      userId // NEW: Multi-tenant user association
     );
 
     source.addDomainEvent(
@@ -144,7 +163,8 @@ export class Source extends AggregateRoot<SourceId> {
   static createCalendarSource(
     name: SourceName,
     configuration?: CalendarConfiguration,
-    defaultCategory?: string
+    defaultCategory?: string,
+    userId?: string // NEW: Multi-tenant user association
   ): Source {
     const id = SourceId.generate();
     const type = SourceType.calendar();
@@ -156,7 +176,14 @@ export class Source extends AggregateRoot<SourceId> {
       SourceStatus.active(),
       undefined,
       defaultCategory,
-      configuration
+      configuration,
+      undefined, // metadata
+      undefined, // lastFetchAt
+      undefined, // lastErrorAt
+      undefined, // lastError
+      undefined, // createdAt
+      undefined, // updatedAt
+      userId // NEW: Multi-tenant user association
     );
 
     source.addDomainEvent(
@@ -209,6 +236,11 @@ export class Source extends AggregateRoot<SourceId> {
 
   get lastError(): string | undefined {
     return this._lastError;
+  }
+
+  // NEW: Multi-tenant getter
+  get userId(): string | undefined {
+    return this._userId;
   }
 
   /**
@@ -555,6 +587,7 @@ export class Source extends AggregateRoot<SourceId> {
       lastFetchAt: this._lastFetchAt,
       lastErrorAt: this._lastErrorAt,
       lastError: this._lastError,
+      userId: this._userId, // NEW: Multi-tenant user association
     };
   }
 }

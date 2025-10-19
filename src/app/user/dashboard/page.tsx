@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { Plus, Globe, Rss, Calendar, BarChart3, FileText, Image } from 'lucide-react';
 
 interface Site {
   id: string;
@@ -13,10 +17,19 @@ interface Site {
   updatedAt: string;
 }
 
+interface UserStats {
+  totalSources: number;
+  activeSources: number;
+  totalArticles: number;
+  totalPublications: number;
+  totalImages: number;
+}
+
 export default function Dashboard() {
   const router = useRouter();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const [sites, setSites] = useState<Site[]>([]);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

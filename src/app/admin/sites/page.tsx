@@ -9,7 +9,6 @@ import { Label } from '@/shared/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Loader2, Plus, Settings, Trash2, ExternalLink, Activity, FileText, Rss, TrendingUp, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-// import { toast } from 'sonner';
 
 interface SiteStatistics {
   totalSources: number;
@@ -102,7 +101,6 @@ export default function SitesPage() {
       }
     } catch (error) {
       console.error('Error fetching sites:', error);
-      console.error('Errore nel caricamento dei siti');
     } finally {
       setLoading(false);
     }

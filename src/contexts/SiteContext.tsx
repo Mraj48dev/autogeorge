@@ -58,7 +58,18 @@ export function SiteProvider({ children }: SiteProviderProps) {
         throw new Error(data.error || 'Failed to fetch sites');
       }
 
-      return data.sites || [];
+      // Extract sites from nested data structure: data.data.sites
+      const sites = data.data?.sites || [];
+
+      // Transform sites to match expected format
+      return sites.map((siteInfo: any) => ({
+        id: siteInfo.site.id,
+        name: siteInfo.site.name,
+        url: siteInfo.site.url,
+        isActive: siteInfo.site.isActive,
+        createdAt: siteInfo.site.createdAt,
+        updatedAt: siteInfo.site.updatedAt
+      }));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
@@ -125,7 +136,7 @@ export function SiteProvider({ children }: SiteProviderProps) {
         throw new Error(data.error || 'Failed to create site');
       }
 
-      const newSite = data.site;
+      const newSite = data.data.site;
       setSites(prevSites => [...prevSites, newSite]);
 
       // Auto-select the new site

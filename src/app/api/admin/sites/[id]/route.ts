@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { requireAuth, verifyResourceOwnership } from '@/lib/auth';
 
 interface RouteContext {
   params: { id: string };
@@ -7,15 +8,29 @@ interface RouteContext {
 
 export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
-    const userId = 'temp-user-id';
+    console.log('🔐 PUT /api/admin/sites/[id] - Starting authentication...');
+
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
+
     const { id: siteId } = params;
     const body = await request.json();
+
+    // Verify site ownership
+    const hasAccess = await verifyResourceOwnership(user.userId, 'site', siteId);
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: 'Site not found or access denied' },
+        { status: 404 }
+      );
+    }
 
     // Direct Prisma update
     const site = await prisma.wordPressSite.update({
       where: {
         id: siteId,
-        userId: userId // Ensure user owns the site
+        userId: user.userId // Ensure user owns the site
       },
       data: {
         ...body,
@@ -53,6 +68,14 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
   } catch (error) {
     console.error('PUT /api/admin/sites/[id] error:', error);
+
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -62,14 +85,28 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
-    const userId = 'temp-user-id';
+    console.log('🔐 DELETE /api/admin/sites/[id] - Starting authentication...');
+
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
+
     const { id: siteId } = params;
+
+    // Verify site ownership
+    const hasAccess = await verifyResourceOwnership(user.userId, 'site', siteId);
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: 'Site not found or access denied' },
+        { status: 404 }
+      );
+    }
 
     // Direct Prisma delete
     await prisma.wordPressSite.delete({
       where: {
         id: siteId,
-        userId: userId // Ensure user owns the site
+        userId: user.userId // Ensure user owns the site
       }
     });
 
@@ -80,6 +117,14 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
   } catch (error) {
     console.error('DELETE /api/admin/sites/[id] error:', error);
+
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -188,7 +188,20 @@ export const multiTenantQueries = {
     offset?: number;
   }) => {
     const where: any = {
-      source: { userId }
+      OR: [
+        // Articles from user's sources
+        {
+          source: {
+            userId: userId
+          }
+        },
+        // Articles from user's WordPress sites (direct relationship)
+        {
+          wordpressSite: {
+            userId: userId
+          }
+        }
+      ]
     };
 
     if (options?.sourceId) {

@@ -61,8 +61,16 @@ export default function Articles() {
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
-            // Filtra articoli per il sito corrente se necessario
-            setArticles(result.data.articles || []);
+            // Estrai tutti gli articoli dalle fonti raggruppate
+            const allArticles: Article[] = [];
+            if (result.data.articlesBySource) {
+              Object.values(result.data.articlesBySource).forEach((sourceGroup: any) => {
+                if (sourceGroup.articles) {
+                  allArticles.push(...sourceGroup.articles);
+                }
+              });
+            }
+            setArticles(allArticles);
           }
         }
       } catch (error) {

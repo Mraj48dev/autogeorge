@@ -51,15 +51,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      sites: sitesWithStats.map(s => ({
-        id: s.site.id,
-        name: s.site.name,
-        url: s.site.url,
-        isActive: s.site.isActive,
-        createdAt: s.site.createdAt,
-        updatedAt: s.site.updatedAt
-      })),
-      totalSites: sites.length
+      data: {
+        sites: sitesWithStats,
+        totalSites: sites.length
+      }
     });
 
   } catch (error) {
@@ -133,17 +128,20 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      site: {
-        id: site.id,
-        name: site.name,
-        url: site.url,
-        isActive: site.isActive,
-        createdAt: site.createdAt.toISOString(),
-        updatedAt: site.updatedAt.toISOString()
-      },
-      connectionTest: {
-        success: true,
-        message: 'Site created successfully'
+      data: {
+        site: {
+          id: site.id,
+          name: site.name,
+          url: site.url,
+          isActive: site.isActive,
+          createdAt: site.createdAt.toISOString(),
+          updatedAt: site.updatedAt.toISOString()
+        },
+        connectionTest: {
+          success: true,
+          warnings: [],
+          message: 'Site created successfully'
+        }
       }
     });
 

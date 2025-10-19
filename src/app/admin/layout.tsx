@@ -5,20 +5,52 @@ import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { BUILD_INFO } from '@/lib/buildinfo';
 import LiveClock from '@/components/LiveClock';
+import { SiteProvider, useSiteContext } from '@/contexts/SiteContext';
+import { SiteSelector } from '@/components/ui/SiteSelector';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname();
+  const { currentSite, isLoading: sitesLoading } = useSiteContext();
 
-  // Don't show sidebar for sites selection page and site-specific pages
-  const isSitesSelectionPage = pathname === '/admin/sites' || pathname === '/admin';
-  const isSiteSpecificPage = pathname.includes('/admin/sites/') && pathname !== '/admin/sites';
+  // Special page that doesn't need the full layout (only sites selection page)
+  const isSitesSelectionPage = pathname === '/admin/sites';
 
-  if (isSitesSelectionPage || isSiteSpecificPage) {
+  if (isSitesSelectionPage) {
     return <>{children}</>;
+  }
+
+  // Show loading state while sites are loading
+  if (sitesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Caricamento siti...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no site selected, redirect to sites selection
+  if (!currentSite) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Nessun sito selezionato</h2>
+          <p className="text-gray-600 mb-4">Seleziona un sito per continuare</p>
+          <Link
+            href="/admin/sites"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Seleziona Sito
+          </Link>
+        </div>
+      </div>
+    );
   }
   return (
     <div className="min-h-screen bg-gray-50">
@@ -26,15 +58,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
               <Link href="/" className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">AG</span>
                 </div>
                 <h1 className="text-xl font-semibold text-gray-900">
-                  AutoGeorge Admin
+                  AutoGeorge
                 </h1>
               </Link>
+
+              {/* Site Selector */}
+              <div className="border-l border-gray-200 pl-4">
+                <SiteSelector />
+              </div>
             </div>
             <div className="text-sm text-gray-500">
               <div>v1.0.0</div>
@@ -168,5 +205,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  return (
+    <SiteProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </SiteProvider>
   );
 }

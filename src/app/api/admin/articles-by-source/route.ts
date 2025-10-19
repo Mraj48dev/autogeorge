@@ -40,50 +40,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Build where clause for legacy compatibility
-    const where: any = {
-      source: { userId: user.userId } // Multi-tenant filtering
-    };
-
-    // Only show processed articles (not draft content from feeds)
-    if (status) {
-      where.status = status;
-    } else {
-      // Default: only show articles that have been processed by AI
-      where.status = {
-        in: ['generated', 'generated_image_draft', 'generated_with_image', 'ready_to_publish', 'published', 'failed']
-      };
-    }
-
-    if (sourceId) where.sourceId = sourceId;
-    if (dateFrom || dateTo) {
-      where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = dateFrom;
-      if (dateTo) where.createdAt.lte = dateTo;
-    }
-
-    // Get articles with source information
-    const articles = await prisma.article.findMany({
-      where,
-      include: {
-        source: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: limit,
-      skip: offset
-    });
-
     // Group articles by source
     const groupedBySource: Record<string, any> = {};
 
-    articles.forEach(article => {
+    filteredArticles.forEach(article => {
       const sourceId = article.sourceId || 'unknown';
       const sourceName = article.source?.name || 'Fonte sconosciuta';
 
@@ -128,8 +88,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Get total count for pagination
-    const totalCount = await prisma.article.count({ where });
+    // Get total count for pagination (use filtered articles length)
+    const totalCount = filteredArticles.length;
 
     // Generate summary
     const sources = Object.values(groupedBySource);
@@ -163,7 +123,7 @@ export async function GET(request: NextRequest) {
           total: totalCount,
           limit,
           offset,
-          hasMore: offset + articles.length < totalCount
+          hasMore: offset + filteredArticles.length < totalCount
         },
         summary
       }

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { requireAuth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = 'temp-user-id';
+    // Require authentication and get user context
+    const user = await requireAuth(request);
 
-    // Direct Prisma query for now
+    // Get user's sites only
     const sites = await prisma.wordPressSite.findMany({
-      where: { userId },
+      where: { userId: user.userId },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -46,14 +48,27 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: {
-        sites: sitesWithStats,
-        totalSites: sites.length
-      }
+      sites: sitesWithStats.map(s => ({
+        id: s.site.id,
+        name: s.site.name,
+        url: s.site.url,
+        isActive: s.site.isActive,
+        createdAt: s.site.createdAt,
+        updatedAt: s.site.updatedAt
+      })),
+      totalSites: sites.length
     });
 
   } catch (error) {
-    console.error('GET /api/admin/sites error (simplified):', error);
+    console.error('GET /api/admin/sites error:', error);
+
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -63,7 +78,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = 'temp-user-id';
+    // Require authentication and get user context
+    const user = await requireAuth(request);
 
     const body = await request.json();
     const {
@@ -89,10 +105,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Direct Prisma create
+    // Create site with user association
     const site = await prisma.wordPressSite.create({
       data: {
-        userId,
+        userId: user.userId,
         name,
         url,
         username,
@@ -111,35 +127,26 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: {
-        site: {
-          id: site.id,
-          userId: site.userId,
-          name: site.name,
-          url: site.url,
-          username: site.username,
-          password: site.password,
-          defaultCategory: site.defaultCategory,
-          defaultStatus: site.defaultStatus,
-          defaultAuthor: site.defaultAuthor,
-          enableAutoPublish: site.enableAutoPublish,
-          enableFeaturedImage: site.enableFeaturedImage,
-          enableTags: site.enableTags,
-          enableCategories: site.enableCategories,
-          customFields: site.customFields,
-          isActive: site.isActive,
-          lastPublishAt: site.lastPublishAt?.toISOString(),
-          lastError: site.lastError,
-          createdAt: site.createdAt.toISOString(),
-          updatedAt: site.updatedAt.toISOString(),
-          enableAutoGeneration: site.enableAutoGeneration
-        },
-        connectionTest: { warnings: [] }
+      site: {
+        id: site.id,
+        name: site.name,
+        url: site.url,
+        isActive: site.isActive,
+        createdAt: site.createdAt.toISOString(),
+        updatedAt: site.updatedAt.toISOString()
       }
     });
 
   } catch (error) {
     console.error('POST /api/admin/sites error:', error);
+
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

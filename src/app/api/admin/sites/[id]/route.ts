@@ -6,7 +6,8 @@ interface RouteContext {
   params: { id: string };
 }
 
-export async function PUT(request: NextRequest, { params }: RouteContext) {
+// Common function for updating site settings
+async function updateSite(request: NextRequest, { params }: RouteContext) {
   try {
     console.log('🔐 PUT /api/admin/sites/[id] - Starting authentication...');
 
@@ -81,6 +82,15 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       { status: 500 }
     );
   }
+}
+
+// Export PUT and PATCH handlers that use the same logic
+export async function PUT(request: NextRequest, context: RouteContext) {
+  return updateSite(request, context);
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  return updateSite(request, context);
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteContext) {

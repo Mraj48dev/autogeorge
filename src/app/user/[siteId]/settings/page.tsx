@@ -92,28 +92,56 @@ export default function Settings() {
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
+      let siteUpdateSuccess = false;
+      let generationUpdateSuccess = false;
+
       // Save site settings
       if (siteSettings) {
-        await fetch(`/api/admin/sites/${siteId}`, {
+        const siteResponse = await fetch(`/api/admin/sites/${siteId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(siteSettings)
         });
+
+        if (siteResponse.ok) {
+          const result = await siteResponse.json();
+          if (result.success) {
+            siteUpdateSuccess = true;
+            // Update local state with saved data
+            setSiteSettings(result.data.site);
+          }
+        }
       }
 
       // Save generation settings
       if (generationSettings) {
-        await fetch('/api/admin/generation-settings', {
+        const genResponse = await fetch('/api/admin/generation-settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(generationSettings)
         });
+
+        if (genResponse.ok) {
+          const result = await genResponse.json();
+          if (result.success) {
+            generationUpdateSuccess = true;
+            setGenerationSettings(result.data);
+          }
+        }
       }
 
-      alert('Impostazioni salvate con successo!');
+      if (siteUpdateSuccess && generationUpdateSuccess) {
+        alert('✅ Impostazioni salvate con successo!\n\nI cambiamenti si rifletteranno anche nella Dashboard.');
+      } else if (siteUpdateSuccess) {
+        alert('✅ Impostazioni sito salvate.\n⚠️ Errore nel salvataggio delle impostazioni AI.');
+      } else if (generationUpdateSuccess) {
+        alert('✅ Impostazioni AI salvate.\n⚠️ Errore nel salvataggio delle impostazioni sito.');
+      } else {
+        alert('❌ Errore nel salvataggio delle impostazioni');
+      }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Errore nel salvataggio delle impostazioni');
+      alert('❌ Errore di connessione nel salvataggio delle impostazioni');
     } finally {
       setSaving(false);
     }

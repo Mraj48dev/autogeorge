@@ -27,6 +27,8 @@ export default function UserSites() {
   const [formData, setFormData] = useState({
     name: '',
     url: '',
+    username: '',
+    password: '',
     isActive: true
   });
   const [submitting, setSubmitting] = useState(false);
@@ -92,7 +94,7 @@ export default function UserSites() {
         await fetchSites();
         setShowCreateModal(false);
         setEditingSite(null);
-        setFormData({ name: '', url: '', isActive: true });
+        setFormData({ name: '', url: '', username: '', password: '', isActive: true });
       } else {
         const data = await response.json();
         alert('Errore: ' + (data.error || 'Operazione fallita'));
@@ -129,7 +131,7 @@ export default function UserSites() {
 
   const openCreateModal = () => {
     setEditingSite(null);
-    setFormData({ name: '', url: '', isActive: true });
+    setFormData({ name: '', url: '', username: '', password: '', isActive: true });
     setShowCreateModal(true);
   };
 
@@ -138,6 +140,8 @@ export default function UserSites() {
     setFormData({
       name: site.name,
       url: site.url,
+      username: '', // Don't pre-fill for security
+      password: '', // Don't pre-fill for security
       isActive: site.isActive
     });
     setShowCreateModal(true);
@@ -302,6 +306,37 @@ export default function UserSites() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="https://miosito.com"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Username WordPress
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Admin username WordPress"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password WordPress
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Password admin WordPress"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Credenziali per accedere all'admin di WordPress
+                    </p>
                   </div>
 
                   <div>

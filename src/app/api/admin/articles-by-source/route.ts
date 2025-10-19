@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { requireAuth, multiTenantQueries } from '@/lib/auth';
 
 /**
  * GET /api/admin/articles-by-source
- * Retrieves articles grouped by source with optional filtering
+ * Retrieves user's articles grouped by source with optional filtering - MULTI-TENANT VERSION
  */
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+
     const { searchParams } = new URL(request.url);
 
     // Extract query parameters
@@ -17,8 +21,29 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
 
-    // Build where clause
-    const where: any = {};
+    // Get user's articles with filtering
+    const articles = await multiTenantQueries.getUserArticles(user.userId, {
+      sourceId,
+      status,
+      limit,
+      offset
+    });
+
+    // Additional date filtering if needed
+    let filteredArticles = articles;
+    if (dateFrom || dateTo) {
+      filteredArticles = articles.filter(article => {
+        const articleDate = new Date(article.createdAt);
+        if (dateFrom && articleDate < dateFrom) return false;
+        if (dateTo && articleDate > dateTo) return false;
+        return true;
+      });
+    }
+
+    // Build where clause for legacy compatibility
+    const where: any = {
+      source: { userId: user.userId } // Multi-tenant filtering
+    };
 
     // Only show processed articles (not draft content from feeds)
     if (status) {

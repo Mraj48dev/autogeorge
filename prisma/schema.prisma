@@ -77,6 +77,7 @@ model Article {
 
 model Source {
   id              String     @id @default(cuid())
+  userId          String?    // NEW: Multi-tenant user association (nullable during migration)
   name            String
   type            String
   status          String     @default("active")
@@ -91,10 +92,14 @@ model Source {
   updatedAt       DateTime   @updatedAt
   isActive        Boolean    @default(true)
   lastFetchStatus String?
+  user            User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   articles        Article[]
   feedItems       FeedItem[]
 
-  @@unique([type, url])
+  @@index([userId])
+  @@index([userId, type])
+  // @@unique([userId, type, url]) // TODO: Add after migration completes
+  @@unique([type, url]) // Keep original constraint for now
   @@map("sources")
 }
 
@@ -116,6 +121,10 @@ model User {
   accounts            Account[]
   sessions            Session[]
   userPermissions     UserPermission[]
+  sources             Source[]           // NEW: User's sources relationship
+  publications        Publication[]      // NEW: User's publications relationship
+  featuredImages      FeaturedImage[]    // NEW: User's featured images relationship
+  imagePrompts        ImagePrompt[]      // NEW: User's image prompts relationship
 
   @@map("users")
 }
@@ -276,6 +285,7 @@ model WordPressMedia {
 
 model Publication {
   id          String    @id @default(cuid())
+  userId      String?   // NEW: Multi-tenant user association (nullable during migration)
   articleId   String
   externalId  String
   externalUrl String
@@ -289,12 +299,15 @@ model Publication {
   lastError   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("publications")
 }
 
 model FeaturedImage {
   id               String   @id @default(cuid())
+  userId           String?  // NEW: Multi-tenant user association (nullable during migration)
   articleId        String
   aiPrompt         String
   filename         String
@@ -307,8 +320,10 @@ model FeaturedImage {
   updatedAt        DateTime @updatedAt
   wordpressMediaId Int?
   wordpressUrl     String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   article          Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@index([articleId])
   @@index([status])
   @@index([createdAt])
@@ -318,6 +333,7 @@ model FeaturedImage {
 
 model ImagePrompt {
   id               String   @id @default(cuid())
+  userId           String?  // NEW: Multi-tenant user association (nullable during migration)
   articleId        String
   articleTitle     String
   articleExcerpt   String
@@ -329,7 +345,9 @@ model ImagePrompt {
   errorMessage     String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@index([articleId])
   @@index([status])
   @@index([createdAt])

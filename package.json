@@ -27,6 +27,7 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:seed": "tsx scripts/seed.ts",
+    "migrate:multitenant": "tsx scripts/migrate-to-multitenant.ts",
     "admin:health": "tsx src/composition-root/main.ts health",
     "admin:generate-article": "tsx src/composition-root/main.ts generate-article",
     "admin:list-use-cases": "tsx src/composition-root/main.ts list-use-cases",

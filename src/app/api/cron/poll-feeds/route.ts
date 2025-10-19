@@ -66,12 +66,9 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      // Get all active RSS sources from database using clean architecture
-      const getSourcesResult = await sourcesContainer.sourcesAdminFacade.getSources({
-        limit: 100,
-        type: 'rss',
-        status: 'active'
-      });
+      // Get all active RSS sources from database using clean architecture (MULTI-TENANT)
+      console.log('🔍 [CRON] Getting sources for ALL users (multi-tenant system operation)');
+      const getSourcesResult = await sourcesContainer.sourcesAdminFacade.getAllActiveSourcesForPolling();
 
       if (getSourcesResult.isFailure()) {
         console.error('❌ Failed to get sources:', getSourcesResult.error);
@@ -81,7 +78,7 @@ export async function GET(request: NextRequest) {
         }, { status: 500 });
       }
 
-      const activeSources = getSourcesResult.value.sources.filter(s => s.url); // Only sources with URLs
+      const activeSources = getSourcesResult.value.filter(s => s.url); // Only sources with URLs
 
       console.log(`📊 Found ${activeSources.length} active RSS sources to poll`);
 

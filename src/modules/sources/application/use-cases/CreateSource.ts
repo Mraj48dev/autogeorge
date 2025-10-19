@@ -128,6 +128,7 @@ export interface CreateSourceRequest {
   defaultCategory?: string;
   configuration?: SourceConfiguration;
   testConnection?: boolean;
+  userId?: string; // NEW: Multi-tenant user association
 }
 
 // Response interface

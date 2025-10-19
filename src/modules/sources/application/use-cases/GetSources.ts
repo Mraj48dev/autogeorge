@@ -26,6 +26,11 @@ export class GetSources extends BaseUseCase<GetSourcesRequest, GetSourcesRespons
         sortOrder: request.sortOrder || 'desc',
       };
 
+      // NEW: Multi-tenant filtering
+      if (request.userId) {
+        options.userId = request.userId;
+      }
+
       if (request.type) {
         options.type = request.type;
       }
@@ -90,6 +95,7 @@ export interface GetSourcesRequest {
   sortOrder?: 'asc' | 'desc';
   type?: any; // SourceType - will be converted
   status?: any; // SourceStatus - will be converted
+  userId?: string; // NEW: Multi-tenant filtering
 }
 
 // Response interface

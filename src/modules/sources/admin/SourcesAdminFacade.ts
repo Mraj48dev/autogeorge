@@ -104,4 +104,28 @@ export class SourcesAdminFacade {
       byStatus: {},
     });
   }
+
+  /**
+   * System operation: Gets all active sources for RSS polling (multi-tenant)
+   * Used by cron jobs - bypasses user filtering for system operations
+   */
+  async getAllActiveSourcesForPolling(): Promise<Result<any[], Error>> {
+    try {
+      // Get sources directly from repository without user filtering
+      const sourcesResult = await this.getSourcesUseCase.execute({
+        type: 'rss',
+        status: 'active',
+        limit: 100
+        // Note: NO userId filter - this is a system operation
+      });
+
+      if (sourcesResult.isFailure()) {
+        return Result.failure(sourcesResult.error);
+      }
+
+      return Result.success(sourcesResult.value.sources);
+    } catch (error) {
+      return Result.failure(new Error(`Failed to get sources for polling: ${error instanceof Error ? error.message : 'Unknown error'}`));
+    }
+  }
 }

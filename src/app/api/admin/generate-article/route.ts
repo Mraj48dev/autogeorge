@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { requireAuth } from '@/lib/auth';
 import { OpenAIService } from '@/modules/content/infrastructure/services/OpenAIService';
 import { Article } from '@/modules/content/domain/entities/Article';
 
@@ -14,8 +15,11 @@ interface GenerateArticleRequest {
 }
 
 export async function POST(request: NextRequest) {
-
   try {
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
+
     const body: GenerateArticleRequest = await request.json();
 
     // Validate required fields
@@ -24,6 +28,29 @@ export async function POST(request: NextRequest) {
         { error: 'Prompt deve essere di almeno 10 caratteri' },
         { status: 400 }
       );
+    }
+
+    // SECURITY: If sourceId is provided, verify ownership
+    if (body.sourceId) {
+      const source = await prisma.source.findUnique({
+        where: { id: body.sourceId },
+        select: { userId: true, id: true }
+      });
+
+      if (!source) {
+        return NextResponse.json(
+          { error: 'Source not found' },
+          { status: 404 }
+        );
+      }
+
+      if (source.userId !== user.userId) {
+        console.warn(`🚨 Security: User ${user.userId} attempted to access source ${body.sourceId} owned by ${source.userId}`);
+        return NextResponse.json(
+          { error: 'Source not found' }, // Don't reveal that it exists but belongs to another user
+          { status: 404 }
+        );
+      }
     }
 
     // Get API keys from environment variables
@@ -139,6 +166,15 @@ L'articolo deve essere originale, coinvolgente e formattato ESCLUSIVAMENTE in HT
 
   } catch (error) {
     console.error('API Error:', error);
+
+    // Handle authentication errors
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }

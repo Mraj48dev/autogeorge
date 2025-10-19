@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/shared/database/prisma';
+import { requireAuth } from '@/lib/auth';
 import { SingleStepArticleGenerationService } from '@/modules/content/infrastructure/services/SingleStepArticleGenerationService';
 import { Article } from '@/modules/content/domain/entities/Article';
 import { determineArticleCategories, getCategorySource } from '@/shared/utils/categoryUtils';
@@ -14,6 +15,11 @@ import { determineArticleCategories, getCategorySource } from '@/shared/utils/ca
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Starting unified single-step article generation...');
+
+    // Require authentication and get user context
+    const user = await requireAuth(request);
+    console.log('✅ User authenticated:', { userId: user.userId, email: user.email });
+
     const body = await request.json();
 
     // Validate required fields
@@ -24,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the feed item with source information
+    // Get the feed item with source information AND verify ownership
     const feedItem = await prisma.feedItem.findUnique({
       where: { id: body.feedItemId },
       include: {
@@ -35,6 +41,15 @@ export async function POST(request: NextRequest) {
     if (!feedItem) {
       return NextResponse.json(
         { error: 'Feed item not found' },
+        { status: 404 }
+      );
+    }
+
+    // SECURITY: Verify that the feedItem belongs to the user via source ownership
+    if (feedItem.source.userId !== user.userId) {
+      console.warn(`🚨 Security: User ${user.userId} attempted to access feedItem ${body.feedItemId} owned by ${feedItem.source.userId}`);
+      return NextResponse.json(
+        { error: 'Feed item not found' }, // Don't reveal that it exists but belongs to another user
         { status: 404 }
       );
     }
@@ -394,6 +409,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('💥 Manual article generation API error:', error);
+
+    // Handle authentication errors
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: 'Internal server error',

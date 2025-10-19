@@ -78,6 +78,12 @@ export interface SourceRepository {
    * Gets source statistics
    */
   getStatistics(): Promise<Result<SourceStatistics, Error>>;
+
+  /**
+   * System operation: Gets all active sources for polling (multi-tenant)
+   * Used by RSS polling cron - bypasses user filtering
+   */
+  findAllActiveForPolling(): Promise<Result<Source[], Error>>;
 }
 
 // Options for finding sources
@@ -88,6 +94,7 @@ export interface FindSourcesOptions {
   sortOrder?: 'asc' | 'desc';
   type?: SourceType;
   status?: SourceStatus;
+  userId?: string; // NEW: Multi-tenant filtering
 }
 
 // Paginated results

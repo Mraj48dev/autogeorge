@@ -202,6 +202,12 @@ export class PrismaSourceRepository implements SourceRepository {
       const skip = (page - 1) * limit;
 
       const where: any = {};
+
+      // NEW: Multi-tenant filtering
+      if (options.userId) {
+        where.userId = options.userId;
+      }
+
       if (options.type) {
         // Handle both string and value object types
         where.type = typeof options.type === 'string' ? options.type : options.type.getValue();
@@ -251,6 +257,12 @@ export class PrismaSourceRepository implements SourceRepository {
       const skip = (page - 1) * limit;
 
       const where: any = {};
+
+      // NEW: Multi-tenant filtering
+      if (options.userId) {
+        where.userId = options.userId;
+      }
+
       if (options.type) {
         // Handle both string and value object types
         where.type = typeof options.type === 'string' ? options.type : options.type.getValue();
@@ -517,5 +529,35 @@ export class PrismaSourceRepository implements SourceRepository {
     }
 
     return source.status === 'active' && !source.lastFetchAt;
+  }
+
+  /**
+   * System operation: Gets all active sources for polling (multi-tenant)
+   * Used by RSS polling cron - bypasses user filtering
+   */
+  async findAllActiveForPolling(): Promise<Result<Source[], Error>> {
+    try {
+      console.log('🔍 [PrismaSourceRepository] Finding all active sources for polling (multi-tenant)');
+
+      const sources = await this.prisma.source.findMany({
+        where: {
+          status: 'active',
+          isActive: true,
+          type: 'rss',
+          url: { not: null }
+        },
+        orderBy: { lastFetchAt: 'asc' }, // Prioritize sources that haven't been fetched recently
+      });
+
+      console.log(`📊 [PrismaSourceRepository] Found ${sources.length} active sources for polling`);
+
+      const domainSources = sources.map(source => this.toDomainSource(source));
+
+      return Result.success(domainSources);
+
+    } catch (error) {
+      console.error('❌ [PrismaSourceRepository] Failed to find active sources for polling:', error);
+      return Result.failure(new Error(`Failed to find active sources for polling: ${error instanceof Error ? error.message : 'Unknown error'}`));
+    }
   }
 }

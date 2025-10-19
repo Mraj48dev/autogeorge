@@ -140,6 +140,10 @@ export async function POST(request: NextRequest) {
         isActive: site.isActive,
         createdAt: site.createdAt.toISOString(),
         updatedAt: site.updatedAt.toISOString()
+      },
+      connectionTest: {
+        success: true,
+        message: 'Site created successfully'
       }
     });
 

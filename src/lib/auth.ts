@@ -38,7 +38,7 @@ export async function getCurrentUser(request: NextRequest): Promise<AuthContext 
 
     const user = {
       id: 'cmgwzvkez00008bbfmq13rddr', // The user we created
-      email: 'test@autogeorge.dev',
+      email: 'mraj48bis@gmail.com', // Your real email
       clerkUserId,
       role: 'CONTENT_MANAGER',
       isActive: true

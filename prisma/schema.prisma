@@ -221,8 +221,8 @@ model WordPressSite {
   userId               String
   name                 String
   url                  String
-  username             String
-  password             String
+  username             String?          // Optional for non-WordPress sites or content-only mode
+  password             String?          // Optional for non-WordPress sites or content-only mode
   defaultCategory      String?
   defaultStatus        String           @default("draft")
   defaultAuthor        String?

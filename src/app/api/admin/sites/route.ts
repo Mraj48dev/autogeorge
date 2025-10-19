@@ -99,10 +99,10 @@ export async function POST(request: NextRequest) {
       enableAutoGeneration = false
     } = body;
 
-    // Validation
-    if (!name || !url || !username || !password) {
+    // Validation - only name and url are required
+    if (!name || !url) {
       return NextResponse.json({
-        error: 'Missing required fields: name, url, username, password'
+        error: 'Missing required fields: name, url'
       }, { status: 400 });
     }
 

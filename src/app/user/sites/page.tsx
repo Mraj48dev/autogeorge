@@ -310,32 +310,33 @@ export default function UserSites() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Username WordPress
+                      Username WordPress <span className="text-gray-400">(opzionale)</span>
                     </label>
                     <input
                       type="text"
                       value={formData.username}
                       onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Admin username WordPress"
+                      placeholder="Username admin WordPress (se necessario)"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Solo se vuoi la pubblicazione automatica su WordPress
+                    </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password WordPress
+                      Password WordPress <span className="text-gray-400">(opzionale)</span>
                     </label>
                     <input
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Password admin WordPress"
+                      placeholder="Password admin WordPress (se necessario)"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Credenziali per accedere all'admin di WordPress
+                      Lascia vuoto se vuoi solo generare articoli senza pubblicazione automatica
                     </p>
                   </div>
 

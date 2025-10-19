@@ -244,8 +244,8 @@ export default function Sources() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-green-800">
-                <strong>Database Reale Connesso:</strong> API /api/admin/sources multi-tenant.
-                Dati salvati in PostgreSQL con isolamento utente.
+                <strong>Database Multi-Tenant ATTIVO:</strong> Schema aggiornato con userId field.
+                Persistenza reale PostgreSQL con isolamento utente completo.
               </p>
             </div>
           </div>

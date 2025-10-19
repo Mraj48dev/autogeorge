@@ -21,27 +21,25 @@ export default function GenerateArticle() {
     setError('');
 
     try {
-      const response = await fetch('/api/admin/generate-article-manually', {
+      const response = await fetch('/api/admin/generate-article', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topic: topic.trim(),
-          siteId: siteId,
-          customPrompts: {
-            title: `Crea un titolo accattivante per un articolo su: ${topic}`,
-            content: `Scrivi un articolo completo e dettagliato sull'argomento: ${topic}. L'articolo deve essere informativo, ben strutturato e coinvolgente.`,
-            seo: `Genera meta description e parole chiave SEO per un articolo su: ${topic}`
-          }
+          prompt: topic.trim(),
+          targetWordCount: 800,
+          tone: 'professionale',
+          style: 'giornalistico',
+          model: 'gpt-4o-mini'
         }),
       });
 
       const result = await response.json();
 
-      if (result.success) {
+      if (result.success && result.article) {
         // Successo: reindirizza alla pagina articoli
-        alert('Articolo generato con successo!');
+        alert(`Articolo "${result.article.title}" generato con successo!`);
         router.push(`/user/${siteId}/articles`);
       } else {
         setError(result.error || 'Errore nella generazione dell\'articolo');

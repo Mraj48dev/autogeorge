@@ -31,6 +31,9 @@ export default function RootLayout({
       <html lang="it">
         <body className="min-h-screen bg-gray-50 antialiased">
           {children}
+          <div className="fixed bottom-0 right-0 text-xs text-gray-400 p-1 bg-white/80 rounded-tl">
+            Deploy: {new Date().toLocaleString('it-IT')}
+          </div>
         </body>
       </html>
     </ClerkProvider>

@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  // Force regeneration: 2025-10-21T10:45:00Z
 }
 
 datasource db {

@@ -7,14 +7,22 @@ declare global {
 }
 
 const createPrismaClient = () => {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
+  try {
+    console.log('🔧 Creating PrismaClient...');
+    const client = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
       },
-    },
-  });
+    });
+    console.log('✅ PrismaClient created successfully');
+    return client;
+  } catch (error) {
+    console.error('❌ Error creating PrismaClient:', error);
+    throw error;
+  }
 };
 
 export const prisma = globalThis.prisma ?? createPrismaClient();

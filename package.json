@@ -1,6 +1,6 @@
 {
   "name": "autogeorge",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Automated article generation and publishing platform with Clean Architecture",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "build:prod": "npm run build && prisma db push",
     "build:vercel": "prisma generate && next build",
     "start": "next start",
-    "vercel-build": "prisma generate && next build",
+    "vercel-build": "npx prisma@5.22.0 generate && next build",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",

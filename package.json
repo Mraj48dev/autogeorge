@@ -1,6 +1,6 @@
 {
   "name": "autogeorge",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Automated article generation and publishing platform with Clean Architecture",
   "private": true,
   "scripts": {
@@ -36,7 +36,8 @@
     "docker:logs": "docker-compose logs -f",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "npx husky install || exit 0"
+    "prepare": "npx husky install || exit 0",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.33.5",

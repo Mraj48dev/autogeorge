@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  // Force regeneration for multi-tenant support
+  // Force regeneration: 2025-10-21T10:45:00Z
 }
 
 datasource db {
@@ -8,14 +8,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Article {
-  id               String          @id @default(cuid())
+model accounts {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  users             users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model articles {
+  id               String            @id
   title            String
   content          String
-  status           String          @default("generated")
+  status           String            @default("generated")
   sourceId         String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime
   aiModel          String?
   aiPrompts        Json?
   authorId         Int?
@@ -63,113 +81,45 @@ model Article {
   wordpressGuid    Json?
   wordpressType    String?
   articleData      Json?
-  featuredMedia    WordPressMedia? @relation("FeaturedMedia", fields: [featuredMediaId, wordpressSiteId], references: [wordpressId, wordpressSiteId])
-  source           Source?         @relation(fields: [sourceId], references: [id])
-  wordpressSite    WordPressSite?  @relation(fields: [wordpressSiteId], references: [id])
-  featuredImages   FeaturedImage[]
+  wordpress_media  wordpress_media?  @relation(fields: [featuredMediaId, wordpressSiteId], references: [wordpressId, wordpressSiteId])
+  sources          sources?          @relation(fields: [sourceId], references: [id])
+  wordpress_sites  wordpress_sites?  @relation(fields: [wordpressSiteId], references: [id])
+  featured_images  featured_images[]
 
-  @@index([wordpressId, wordpressSiteId])
-  @@index([publishedAt])
-  @@index([status])
-  @@index([sourceType])
   @@index([createdAt])
-  @@map("articles")
+  @@index([publishedAt])
+  @@index([sourceType])
+  @@index([status])
+  @@index([wordpressId, wordpressSiteId])
 }
 
-model Source {
-  id              String     @id @default(cuid())
-  userId          String?    // NEW: Multi-tenant user association (nullable during migration)
-  name            String
-  type            String
-  status          String     @default("active")
-  url             String?
-  defaultCategory String?
-  configuration   Json?
-  metadata        Json?
-  lastFetchAt     DateTime?
-  lastErrorAt     DateTime?
-  lastError       String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  isActive        Boolean    @default(true)
-  lastFetchStatus String?
-  user            User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  articles        Article[]
-  feedItems       FeedItem[]
+model featured_images {
+  id               String   @id
+  userId           String?
+  articleId        String
+  aiPrompt         String
+  filename         String
+  altText          String
+  url              String?
+  status           String
+  searchQuery      String?
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  wordpressMediaId Int?
+  wordpressUrl     String?
+  articles         articles @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  users            users?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([articleId])
+  @@index([createdAt])
+  @@index([status])
   @@index([userId])
-  @@index([userId, type])
-  // @@unique([userId, type, url]) // TODO: Add after migration completes
-  @@unique([type, url]) // Keep original constraint for now
-  @@map("sources")
+  @@index([wordpressMediaId])
 }
 
-model User {
-  id                  String           @id @default(cuid())
-  name                String?
-  email               String           @unique
-  emailVerified       DateTime?
-  image               String?
-  provider            String           @default("credentials")
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  clerkUserId         String?          @unique
-  failedLoginAttempts Int              @default(0)
-  isActive            Boolean          @default(true)
-  lastLoginAt         DateTime?
-  organizationId      String?
-  role                UserRole         @default(CONTENT_VIEWER)
-  accounts            Account[]
-  sessions            Session[]
-  userPermissions     UserPermission[]
-  sources             Source[]           // NEW: User's sources relationship
-  publications        Publication[]      // NEW: User's publications relationship
-  featuredImages      FeaturedImage[]    // NEW: User's featured images relationship
-  imagePrompts        ImagePrompt[]      // NEW: User's image prompts relationship
-
-  @@map("users")
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
-
-model FeedItem {
-  id          String   @id @default(cuid())
+model feed_items {
+  id          String   @id
   sourceId    String
   guid        String?
   title       String
@@ -180,17 +130,16 @@ model FeedItem {
   processed   Boolean  @default(false)
   articleId   String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime
   status      String   @default("pending")
-  source      Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sources     sources  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
 
   @@index([sourceId, publishedAt])
   @@index([status])
-  @@map("feed_items")
 }
 
-model GenerationSettings {
-  id                      String   @id @default(cuid())
+model generation_settings {
+  id                      String   @id
   userId                  String   @unique
   titlePrompt             String
   contentPrompt           String
@@ -202,7 +151,7 @@ model GenerationSettings {
   defaultStyle            String   @default("giornalistico")
   defaultTargetAudience   String   @default("generale")
   createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  updatedAt               DateTime
   imagePrompt             String   @default("in stile cartoon. Individua un dettaglio rappresentativo dell'idea base dell'articolo. Non usare scritte né simboli.")
   imageStyle              String   @default("natural")
   imageModel              String   @default("dall-e-3")
@@ -212,151 +161,10 @@ model GenerationSettings {
   imageGenerationMode     String   @default("manual")
   promptEngineeringModel  String   @default("gpt-4")
   promptTemplate          String?
-
-  @@map("generation_settings")
 }
 
-model WordPressSite {
-  id                   String           @id @default(cuid())
-  userId               String
-  name                 String
-  url                  String
-  username             String?          // Optional for non-WordPress sites or content-only mode
-  password             String?          // Optional for non-WordPress sites or content-only mode
-  defaultCategory      String?
-  defaultStatus        String           @default("draft")
-  defaultAuthor        String?
-  enableAutoPublish    Boolean          @default(false)
-  enableFeaturedImage  Boolean          @default(true)
-  enableTags           Boolean          @default(true)
-  enableCategories     Boolean          @default(true)
-  customFields         Json?
-  isActive             Boolean          @default(true)
-  lastPublishAt        DateTime?
-  lastError            String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  enableAutoGeneration Boolean          @default(false)
-  articles             Article[]
-  media                WordPressMedia[]
-
-  @@map("wordpress_sites")
-}
-
-model WordPressMedia {
-  id                String        @id @default(cuid())
-  wordpressId       Int
-  wordpressSiteId   String
-  status            String
-  slug              String?
-  author            Int?
-  uploadedAt        DateTime?
-  uploadedAtGmt     DateTime?
-  modifiedAt        DateTime?
-  modifiedAtGmt     DateTime?
-  title             String?
-  altText           String?
-  caption           String?
-  description       String?
-  mediaType         String?
-  mimeType          String?
-  sourceUrl         String
-  link              String?
-  fileSize          Int?
-  fileName          String?
-  width             Int?
-  height            Int?
-  guid              Json?
-  mediaDetails      Json?
-  postId            Int?
-  customFields      Json?
-  metaFields        Json?
-  wordpressData     Json?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  lastSyncAt        DateTime?
-  articlesAsFeature Article[]     @relation("FeaturedMedia")
-  wordpressSite     WordPressSite @relation(fields: [wordpressSiteId], references: [id])
-
-  @@unique([wordpressId, wordpressSiteId])
-  @@index([mediaType])
-  @@index([uploadedAt])
-  @@map("wordpress_media")
-}
-
-model Publication {
-  id          String    @id @default(cuid())
-  userId      String?   // NEW: Multi-tenant user association (nullable during migration)
-  articleId   String
-  externalId  String
-  externalUrl String
-  status      String
-  platform    String
-  target      Json
-  content     Json
-  metadata    Json
-  publishedAt DateTime?
-  retryCount  Int       @default(0)
-  lastError   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("publications")
-}
-
-model FeaturedImage {
-  id               String   @id @default(cuid())
-  userId           String?  // NEW: Multi-tenant user association (nullable during migration)
-  articleId        String
-  aiPrompt         String
-  filename         String
-  altText          String
-  url              String?
-  status           String
-  searchQuery      String?
-  errorMessage     String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  wordpressMediaId Int?
-  wordpressUrl     String?
-  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  article          Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([articleId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([wordpressMediaId])
-  @@map("featured_images")
-}
-
-model ImagePrompt {
-  id               String   @id @default(cuid())
-  userId           String?  // NEW: Multi-tenant user association (nullable during migration)
-  articleId        String
-  articleTitle     String
-  articleExcerpt   String
-  generatedPrompt  String
-  originalTemplate String
-  aiModel          String
-  status           String
-  metadata         String?
-  errorMessage     String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([articleId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("image_prompts")
-}
-
-model HealthCheck {
-  id           String   @id @default(cuid())
+model health_checks {
+  id           String   @id
   timestamp    DateTime @default(now())
   status       String
   responseTime Int
@@ -367,39 +175,13 @@ model HealthCheck {
   alertType    String?
   createdAt    DateTime @default(now())
 
-  @@index([timestamp])
-  @@index([status])
   @@index([alertSent])
-  @@map("health_checks")
-}
-
-model SystemAlert {
-  id                String    @id @default(cuid())
-  type              String
-  service           String
-  severity          String
-  status            String
-  title             String
-  message           String
-  details           Json?
-  triggeredAt       DateTime  @default(now())
-  resolvedAt        DateTime?
-  acknowledgedAt    DateTime?
-  notificationsSent Json?
-  occurrenceCount   Int       @default(1)
-  lastOccurrence    DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([type, service])
-  @@index([severity])
   @@index([status])
-  @@index([triggeredAt])
-  @@map("system_alerts")
+  @@index([timestamp])
 }
 
-model HealthReport {
-  id                  String    @id @default(cuid())
+model health_reports {
+  id                  String    @id
   timestamp           DateTime  @default(now())
   reportType          String
   periodStart         DateTime
@@ -417,26 +199,222 @@ model HealthReport {
   emailRecipients     Json?
   createdAt           DateTime  @default(now())
 
-  @@index([timestamp])
-  @@index([reportType])
   @@index([overallStatus])
   @@index([periodStart, periodEnd])
-  @@map("health_reports")
+  @@index([reportType])
+  @@index([timestamp])
 }
 
-model UserPermission {
-  id         String   @id @default(cuid())
+model image_prompts {
+  id               String   @id
+  userId           String?
+  articleId        String
+  articleTitle     String
+  articleExcerpt   String
+  generatedPrompt  String
+  originalTemplate String
+  aiModel          String
+  status           String
+  metadata         String?
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  users            users?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId])
+}
+
+model publications {
+  id          String    @id
+  userId      String?
+  articleId   String
+  externalId  String
+  externalUrl String
+  status      String
+  platform    String
+  target      Json
+  content     Json
+  metadata    Json
+  publishedAt DateTime?
+  retryCount  Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  users       users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model sessions {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model sources {
+  id              String       @id
+  userId          String?
+  name            String
+  type            String
+  status          String       @default("active")
+  url             String?
+  defaultCategory String?
+  configuration   Json?
+  metadata        Json?
+  lastFetchAt     DateTime?
+  lastErrorAt     DateTime?
+  lastError       String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime
+  isActive        Boolean      @default(true)
+  lastFetchStatus String?
+  articles        articles[]
+  feed_items      feed_items[]
+  users           users?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([type, url])
+  @@index([userId])
+  @@index([userId, type])
+}
+
+model system_alerts {
+  id                String    @id
+  type              String
+  service           String
+  severity          String
+  status            String
+  title             String
+  message           String
+  details           Json?
+  triggeredAt       DateTime  @default(now())
+  resolvedAt        DateTime?
+  acknowledgedAt    DateTime?
+  notificationsSent Json?
+  occurrenceCount   Int       @default(1)
+  lastOccurrence    DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
+
+  @@index([severity])
+  @@index([status])
+  @@index([triggeredAt])
+  @@index([type, service])
+}
+
+model user_permissions {
+  id         String   @id
   userId     String
   permission String
   resource   String?
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt  DateTime
+  users      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, permission, resource])
-  @@index([userId])
   @@index([permission])
-  @@map("user_permissions")
+  @@index([userId])
+}
+
+model users {
+  id                  String             @id
+  name                String?
+  email               String             @unique
+  emailVerified       DateTime?
+  image               String?
+  provider            String             @default("credentials")
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime
+  clerkUserId         String?            @unique
+  failedLoginAttempts Int                @default(0)
+  isActive            Boolean            @default(true)
+  lastLoginAt         DateTime?
+  organizationId      String?
+  role                UserRole           @default(CONTENT_VIEWER)
+  accounts            accounts[]
+  featured_images     featured_images[]
+  image_prompts       image_prompts[]
+  publications        publications[]
+  sessions            sessions[]
+  sources             sources[]
+  user_permissions    user_permissions[]
+}
+
+model verification_tokens {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model wordpress_media {
+  id              String          @id
+  wordpressId     Int
+  wordpressSiteId String
+  status          String
+  slug            String?
+  author          Int?
+  uploadedAt      DateTime?
+  uploadedAtGmt   DateTime?
+  modifiedAt      DateTime?
+  modifiedAtGmt   DateTime?
+  title           String?
+  altText         String?
+  caption         String?
+  description     String?
+  mediaType       String?
+  mimeType        String?
+  sourceUrl       String
+  link            String?
+  fileSize        Int?
+  fileName        String?
+  width           Int?
+  height          Int?
+  guid            Json?
+  mediaDetails    Json?
+  postId          Int?
+  customFields    Json?
+  metaFields      Json?
+  wordpressData   Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  lastSyncAt      DateTime?
+  articles        articles[]
+  wordpress_sites wordpress_sites @relation(fields: [wordpressSiteId], references: [id])
+
+  @@unique([wordpressId, wordpressSiteId])
+  @@index([mediaType])
+  @@index([uploadedAt])
+}
+
+model wordpress_sites {
+  id                   String            @id
+  userId               String
+  name                 String
+  url                  String
+  username             String?
+  password             String?
+  defaultCategory      String?
+  defaultStatus        String            @default("draft")
+  defaultAuthor        String?
+  enableAutoPublish    Boolean           @default(false)
+  enableFeaturedImage  Boolean           @default(true)
+  enableTags           Boolean           @default(true)
+  enableCategories     Boolean           @default(true)
+  customFields         Json?
+  isActive             Boolean           @default(true)
+  lastPublishAt        DateTime?
+  lastError            String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime
+  enableAutoGeneration Boolean           @default(false)
+  articles             articles[]
+  wordpress_media      wordpress_media[]
 }
 
 enum UserRole {
